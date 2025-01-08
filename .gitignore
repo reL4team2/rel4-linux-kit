@@ -1,0 +1,10 @@
+# 忽略构建文件
+/target/
+/build/
+/patch/
+/.env/
+
+# 忽略 log 文件和临时文件
+*.log
+**.pcap
+mount.img

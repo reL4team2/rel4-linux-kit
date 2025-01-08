@@ -1,0 +1,13 @@
+[[services]]
+name = "kernel-thread"
+file = "../../build/kernel-thread.elf"
+
+[[services]]
+name = "block-thread"
+file = "../../build/blk-thread.elf"
+mmio = [[0x1000_3000, 0x1000, 0x1000]]
+dma = [[0x1_0000_3000, 0x1000]]
+
+[[services]]
+name = "net-thread"
+file = "../../build/net-thread.elf"

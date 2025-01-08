@@ -1,0 +1,39 @@
+[workspace]
+
+resolver = "2"
+
+members = [
+    "root-task",
+    "crates/crate-consts",
+    "crates/task-helper",
+    "crates/common",
+    "services/blk-thread",
+    "services/fat-thread", 
+    "crates/slot-manager",
+]
+
+# 对于一些公共性的依赖，统一在这里指定版本号
+# 在使用的地方加上 xxx = { workspace = true }
+[workspace.dependencies]
+# rust-sel4 相关依赖
+sel4 = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-ctors-dtors = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-dlmalloc = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-root-task = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-elf-header = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-initialize-tls = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-logging = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-panicking = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-panicking-env = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-runtime-common = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-stack = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-sync = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+
+# 一些公共包
+crate-consts = { path = "crates/crate-consts" }
+task-helper = { path = "crates/task-helper" }
+common = { path = "crates/common" }
+slot-manager = { path = "crates/slot-manager" }
+
+[patch."https://github.com/rcore-os/virtio-drivers"]
+virtio-drivers = { path = "patch/virtio-drivers" }

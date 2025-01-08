@@ -1,0 +1,28 @@
+[package]
+name = "fat-thread"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+sel4 = { workspace = true }
+sel4-ctors-dtors = { workspace = true}
+sel4-panicking = { workspace = true, features = ["alloc"] }
+sel4-panicking-env = { workspace = true }
+sel4-logging = { workspace = true }
+sel4-dlmalloc = { workspace = true }
+sel4-sync = { workspace = true }
+sel4-runtime-common = { workspace = true, features = [
+    "start",
+    "tls",
+    "unwinding",
+] }
+spin = "0.9.8"
+log = "0.4"
+common = { workspace = true }
+crate-consts = { workspace = true }
+
+[dependencies.fatfs]
+git = "https://github.com/rafalh/rust-fatfs.git"
+default-features = false
+features = ["alloc", "lfn", "log_level_debug", "unicode"]
