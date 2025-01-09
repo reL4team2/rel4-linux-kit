@@ -39,8 +39,12 @@ fn main() -> ! {
     log::debug!("Starting...");
 
     // 探索服务，并尝试 ping
-    ROOT_SERVICE.find_service("ext4-thread", FS_SERVICE.leaf_slot()).unwrap();
-    ROOT_SERVICE.find_service("uart-thread", UART_SERVICE.leaf_slot()).unwrap();
+    ROOT_SERVICE
+        .find_service("ext4-thread", FS_SERVICE.leaf_slot())
+        .unwrap();
+    ROOT_SERVICE
+        .find_service("uart-thread", UART_SERVICE.leaf_slot())
+        .unwrap();
     FS_SERVICE.ping().unwrap();
     UART_SERVICE.ping().unwrap();
 

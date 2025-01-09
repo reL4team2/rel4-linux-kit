@@ -62,11 +62,11 @@ static TASK_FILES: &[(&str, &[u8], &[(usize, usize, usize)])] = &[
         include_bytes_aligned!(16, "../../build/ext4-thread.elf"),
         &[],
     ),
-    (
-        "ramdisk-thread",
-        include_bytes_aligned!(16, "../../build/ramdisk-thread.elf"),
-        &[],
-    ),
+    // (
+    //     "ramdisk-thread",
+    //     include_bytes_aligned!(16, "../../build/ramdisk-thread.elf"),
+    //     &[],
+    // ),
     (
         "simple-cli",
         include_bytes_aligned!(16, "../../build/simple-cli.elf"),
@@ -185,16 +185,22 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
     tasks[1].map_large_page(VIRTIO_MMIO_VIRT_ADDR, pl011_device_frame_cap);
 
+    // FIXME: This is a general pattern.
     // Map DMA frame.
-    let page = OBJ_ALLOCATOR
+    let page1 = OBJ_ALLOCATOR
         .lock()
         .allocate_and_retyped_fixed_sized::<Granule>();
-    tasks[0].map_page(DMA_ADDR_START, page);
+    let page2 = OBJ_ALLOCATOR
+        .lock()
+        .allocate_and_retyped_fixed_sized::<Granule>();
 
-    let page = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<Granule>();
-    tasks[0].map_page(DMA_ADDR_START + PAGE_SIZE, page);
+    assert_eq!(
+        page2.frame_get_address().unwrap() - page1.frame_get_address().unwrap(),
+        PAGE_SIZE
+    );
+
+    tasks[0].map_page(DMA_ADDR_START, page1);
+    tasks[0].map_page(DMA_ADDR_START + PAGE_SIZE, page2);
 
     // Start tasks
     run_tasks(&tasks);

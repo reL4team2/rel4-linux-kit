@@ -10,7 +10,11 @@ use common::{
     VIRTIO_MMIO_VIRT_ADDR,
 };
 use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, SERIAL_DEVICE_IRQ};
-use sel4::{cap::{Endpoint, IrqHandler, Notification}, init_thread::slot::CNODE, with_ipc_buffer_mut, MessageInfoBuilder};
+use sel4::{
+    cap::{Endpoint, IrqHandler, Notification},
+    init_thread::slot::CNODE,
+    with_ipc_buffer_mut, MessageInfoBuilder,
+};
 
 mod runtime;
 

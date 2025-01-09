@@ -50,7 +50,6 @@ qemu_cmd := \
 		-serial mon:stdio \
 		-nographic \
 		-kernel $(image)
-#		-trace enable=virtio*
 
 run: $(image)
 	$(qemu_cmd)

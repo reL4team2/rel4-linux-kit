@@ -29,7 +29,6 @@ pub fn translate_address(vaddr: usize) -> usize {
             paddr
         }
     };
-    log::debug!("Translate: {:#x} -> {:#x}", vaddr, paddr);
     paddr
 }
 
@@ -41,11 +40,6 @@ unsafe impl Hal for HalImpl {
         let vaddr = DMA_ADDR.load(Ordering::Acquire);
         DMA_ADDR.store(vaddr + pages * PAGE_SIZE, Ordering::Release);
 
-        log::debug!("allocated ptr: {:#x?}", vaddr);
-        // let paddr = ROOT_SERVICE
-        //     .translate_addr(vaddr)
-        //     .expect("can't translate address");
-        // (paddr, NonNull::new(vaddr as *mut u8).unwrap())
         (
             translate_address(vaddr),
             NonNull::new(vaddr as *mut u8).unwrap(),

@@ -38,6 +38,3 @@ crate-consts = { path = "crates/crate-consts" }
 task-helper = { path = "crates/task-helper" }
 common = { path = "crates/common" }
 slot-manager = { path = "crates/slot-manager" }
-
-[patch."https://github.com/rcore-os/virtio-drivers"]
-virtio-drivers = { path = "patch/virtio-drivers" }

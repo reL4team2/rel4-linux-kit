@@ -30,8 +30,6 @@ fn main() -> ! {
     common::init_log!(log::LevelFilter::Trace);
     common::init_recv_slot();
 
-    loop {}
-
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
         MmioTransport::new(NonNull::new(VIRTIO_MMIO_BLK_VIRT_ADDR as *mut VirtIOHeader).unwrap())
             .unwrap()
@@ -63,38 +61,6 @@ fn main() -> ! {
     let mut resp = BlkResp::default();
     let mut buffer = [0u8; 512];
 
-    log::debug!("virt queue size: {}", virtio_blk.virt_queue_size());
-    log::debug!("Capacity: {:#x}", virtio_blk.capacity() / 2 / 1024);
-    for block_id in 0..8 {
-        // virtio_blk.read_blocks(block_id, &mut buffer).unwrap();
-        let token = unsafe {
-            virtio_blk
-                .read_blocks_nb(block_id, &mut request, &mut buffer, &mut resp)
-                .unwrap()
-        };
-
-        log::debug!("token: {}", token);
-        log::debug!("peek used: {:?}", virtio_blk.peek_used());
-
-        log::debug!("Waiting for VIRTIO Net IRQ notification");
-        sel4::r#yield();
-        ntfn.wait();
-
-        irq_handler.irq_handler_ack().unwrap();
-        // virtio_blk.ack_interrupt();
-
-        log::debug!("peek used: {:?}", virtio_blk.peek_used());
-
-        // virtio_blk
-        //     .complete_read_blocks(token, &request, &mut buffer, &mut resp)
-        //     .unwrap();
-
-        log::debug!("Received for VIRTIO Net IRQ notification");
-        log::debug!("Get Data Len: {}, 0..4: {:?}", buffer.len(), &buffer[0..4]);
-    }
-
-    loop {}
-
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = serve_ep.recv(());
@@ -102,7 +68,6 @@ fn main() -> ! {
             Ok(label) => label,
             Err(_) => continue,
         };
-        log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
         match msg_label {
             BlockServiceLabel::Ping => {
                 with_ipc_buffer_mut(|ib| {
@@ -112,20 +77,21 @@ fn main() -> ! {
             BlockServiceLabel::ReadBlock => {
                 let block_id = with_ipc_buffer(|ib| ib.msg_regs()[0]) as _;
 
-                log::debug!("reading block: {}", block_id);
-                unsafe {
+                let token = unsafe {
                     virtio_blk
                         .read_blocks_nb(block_id, &mut request, &mut buffer, &mut resp)
-                        .unwrap();
-                }
-                log::debug!("Waiting for notification");
+                        .unwrap()
+                };
                 ntfn.wait();
                 irq_handler.irq_handler_ack().unwrap();
-                // virtio_blk.ack_interrupt();
-                // slot::CNODE.cap().relative_bits_with_depth(0x22, 64).save_caller().unwrap();
-                log::debug!("Block Read: {}", block_id);
+                virtio_blk.ack_interrupt();
 
-                log::debug!("Block Read End");
+                unsafe {
+                    virtio_blk
+                        .complete_read_blocks(token, &request, &mut buffer, &mut resp)
+                        .unwrap();
+                }
+
                 with_ipc_buffer_mut(|ib| {
                     ib.msg_bytes_mut()[..buffer.len()].copy_from_slice(&buffer);
                     sel4::reply(ib, rev_msg.length(buffer.len() / REG_LEN).build());

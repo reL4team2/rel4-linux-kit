@@ -20,9 +20,9 @@ pub enum BlockServiceLabel {
 //      reply_ok();
 //      reply_error();
 //      reply_msg(|ipc_buffer| {} -> msg);
-// 
+//
 // 其他：可以使用类似 Builder 的链式操作构建 MessageBuffer.
-// 
+//
 impl BlockServiceLabel {
     fn msg(&self) -> MessageInfoBuilder {
         MessageInfoBuilder::default().label((*self).into())
@@ -43,7 +43,11 @@ impl BlockService {
     }
 
     pub fn call(&self, msg: MessageInfo) -> Result<MessageInfo, ()> {
-        Ok(self.ep_cap.call(msg))
+        let msg = self.ep_cap.call(msg);
+        if msg.label() != 0 {
+            return Err(());
+        }
+        Ok(msg)
     }
 
     pub fn ping(&self) -> Result<MessageInfo, ()> {

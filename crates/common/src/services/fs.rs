@@ -2,7 +2,6 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sel4::{cap::Endpoint, MessageInfo, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
-
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
 pub enum FileServiceLabel {
@@ -24,9 +23,7 @@ impl FileSerivce {
     }
 
     pub const fn new(endpoint: Endpoint) -> Self {
-        Self{
-            ep_cap: endpoint
-        }
+        Self { ep_cap: endpoint }
     }
 
     pub fn call(&self, msg: MessageInfo) -> Result<MessageInfo, ()> {

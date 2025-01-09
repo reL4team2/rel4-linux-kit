@@ -74,7 +74,7 @@ fn main() -> ! {
     log::info!("Booting...");
 
     ROOT_SERVICE
-        .find_service("ramdisk-thread", LeafSlot::new(0x21))
+        .find_service("block-thread", LeafSlot::new(0x21))
         .unwrap();
 
     BLK_SERVICE.ping().unwrap();
