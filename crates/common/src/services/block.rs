@@ -3,7 +3,7 @@ use sel4::{
     cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder, Word,
 };
 
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
 pub enum BlockServiceLabel {
     Ping,
@@ -11,11 +11,33 @@ pub enum BlockServiceLabel {
     WriteBlock,
 }
 
+// FIXME: 公共 patten 就是:
+//      1. Label 转换为 message
+//      2. Service 的初始化 new from_bits
+//      3. Call Message, 甚至 包含 ping?
+//
+// 其他：可以将 reply 封装为闭包函数
+//      reply_ok();
+//      reply_error();
+//      reply_msg(|ipc_buffer| {} -> msg);
+// 
+// 其他：可以使用类似 Builder 的链式操作构建 MessageBuffer.
+// 
+impl BlockServiceLabel {
+    fn msg(&self) -> MessageInfoBuilder {
+        MessageInfoBuilder::default().label((*self).into())
+    }
+}
+
 pub struct BlockService {
     ep_cap: Endpoint,
 }
 
 impl BlockService {
+    pub const fn from_bits(bits: u64) -> Self {
+        Self::new(Endpoint::from_bits(bits))
+    }
+
     pub const fn new(ep_cap: Endpoint) -> Self {
         Self { ep_cap }
     }
@@ -25,9 +47,7 @@ impl BlockService {
     }
 
     pub fn ping(&self) -> Result<MessageInfo, ()> {
-        let ping_msg = MessageInfoBuilder::default()
-            .label(BlockServiceLabel::Ping.into())
-            .build();
+        let ping_msg = BlockServiceLabel::Ping.msg().build();
         self.call(ping_msg)
     }
 
@@ -35,17 +55,12 @@ impl BlockService {
         with_ipc_buffer_mut(|ipc_buf| {
             ipc_buf.msg_regs_mut()[0] = block_id as _;
         });
-        let msg = MessageInfoBuilder::default()
-            .label(BlockServiceLabel::ReadBlock.into())
-            .length(1)
-            .build();
-        log::debug!("read block start");
+        let msg = BlockServiceLabel::ReadBlock.msg().length(1).build();
         // Send and Wait a message
-        let msg = self.call(msg)?;
-        log::debug!("read block reply: {:?}", msg);
+        self.call(msg)?;
         // Copy data from the buffer of the ipc message.
         with_ipc_buffer(|ipc_buf| {
-            let len = ipc_buf.user_data() as usize;
+            let len = 0x200;
             buffer[..len].copy_from_slice(&ipc_buf.msg_bytes()[..len]);
         });
         Ok(())

@@ -1,5 +1,5 @@
 [package]
-name = "fat-thread"
+name = "ramdisk-thread"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,9 +20,3 @@ spin = "0.9.8"
 log = "0.4"
 common = { workspace = true }
 crate-consts = { workspace = true }
-slot-manager = { workspace = true }
-
-[dependencies.fatfs]
-git = "https://github.com/rafalh/rust-fatfs.git"
-default-features = false
-features = ["alloc", "lfn", "log_level_debug", "unicode"]

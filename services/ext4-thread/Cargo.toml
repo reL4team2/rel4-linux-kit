@@ -1,9 +1,10 @@
 [package]
-name = "fat-thread"
+name = "ext4-thread"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
 sel4 = { workspace = true }
 sel4-ctors-dtors = { workspace = true}
 sel4-panicking = { workspace = true, features = ["alloc"] }
@@ -22,7 +23,5 @@ common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
-[dependencies.fatfs]
-git = "https://github.com/rafalh/rust-fatfs.git"
-default-features = false
-features = ["alloc", "lfn", "log_level_debug", "unicode"]
+# ext4 依赖
+ext4_rs = { git = "https://github.com/yuoo655/ext4_rs.git", rev="04286c7"}

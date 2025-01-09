@@ -29,10 +29,8 @@ CARGO_BUILD_ARGS := --target-dir $(abspath $(BUILD_DIR)/target) \
 # configuration and libsel4 headers.
 .INTERMDIATE: $(app).intermediate
 $(app).intermediate:
-	cargo build $(CARGO_BUILD_ARGS) \
-		-p blk-thread -p fat-thread
-	cargo build $(CARGO_BUILD_ARGS) \
-		-p $(app_crate)
+	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
+	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 
 image := $(BUILD_DIR)/image.elf
 
@@ -51,8 +49,8 @@ qemu_cmd := \
 		-machine virt,virtualization=on -cpu cortex-a57 -m size=1G \
 		-serial mon:stdio \
 		-nographic \
-		-trace enable=virtio* \
 		-kernel $(image)
+#		-trace enable=virtio*
 
 run: $(image)
 	$(qemu_cmd)

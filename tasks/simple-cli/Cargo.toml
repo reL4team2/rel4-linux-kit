@@ -1,5 +1,5 @@
 [package]
-name = "fat-thread"
+name = "simple-cli"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,8 +21,3 @@ log = "0.4"
 common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
-
-[dependencies.fatfs]
-git = "https://github.com/rafalh/rust-fatfs.git"
-default-features = false
-features = ["alloc", "lfn", "log_level_debug", "unicode"]

@@ -1,9 +1,10 @@
 [package]
-name = "fat-thread"
+name = "uart-thread"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
 sel4 = { workspace = true }
 sel4-ctors-dtors = { workspace = true}
 sel4-panicking = { workspace = true, features = ["alloc"] }
@@ -21,8 +22,4 @@ log = "0.4"
 common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
-
-[dependencies.fatfs]
-git = "https://github.com/rafalh/rust-fatfs.git"
-default-features = false
-features = ["alloc", "lfn", "log_level_debug", "unicode"]
+arm_pl011 = { git = "https://github.com/Byte-OS/arm_pl011.git", rev = "8a66e24" }

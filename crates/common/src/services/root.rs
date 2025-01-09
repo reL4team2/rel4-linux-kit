@@ -4,6 +4,7 @@ use sel4::{
     init_thread, with_ipc_buffer, with_ipc_buffer_mut, AbsoluteCPtr, MessageInfo,
     MessageInfoBuilder,
 };
+use slot_manager::LeafSlot;
 
 use crate::services::REG_LEN;
 
@@ -42,10 +43,10 @@ impl RootService {
     }
 
     /// FIXME: This is not implemented
-    pub fn find_service(&self, name: &str, target_slot: AbsoluteCPtr) -> Result<(), ()> {
+    pub fn find_service(&self, name: &str, target_slot: LeafSlot) -> Result<(), ()> {
         let len = name.as_bytes().len();
         let origin_slot = with_ipc_buffer_mut(|ipc_buf| {
-            ipc_buf.set_recv_slot(&target_slot);
+            ipc_buf.set_recv_slot(&target_slot.abs_cptr());
             ipc_buf.msg_regs_mut()[0] = len as _;
             ipc_buf.msg_bytes_mut()[REG_LEN..REG_LEN + len].copy_from_slice(name.as_bytes());
 

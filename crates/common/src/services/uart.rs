@@ -1,0 +1,52 @@
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use sel4::{cap::Endpoint, with_ipc_buffer, MessageInfo, MessageInfoBuilder};
+use slot_manager::LeafSlot;
+
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[repr(u64)]
+pub enum UartServiceLabel {
+    Ping,
+    GetChar,
+}
+
+pub struct UartService {
+    ep_cap: Endpoint,
+}
+
+impl UartService {
+    pub const fn from_bits(bits: u64) -> Self {
+        Self::new(Endpoint::from_bits(bits))
+    }
+
+    pub const fn leaf_slot(&self) -> LeafSlot {
+        LeafSlot::new(self.ep_cap.bits() as _)
+    }
+
+    pub const fn new(endpoint: Endpoint) -> Self {
+        Self { ep_cap: endpoint }
+    }
+
+    pub fn call(&self, msg: MessageInfo) -> Result<MessageInfo, ()> {
+        let msg = self.ep_cap.call(msg);
+        if msg.label() != 0 {
+            return Err(());
+        }
+        Ok(msg)
+    }
+
+    pub fn ping(&self) -> Result<MessageInfo, ()> {
+        let ping_msg = MessageInfoBuilder::default()
+            .label(UartServiceLabel::Ping.into())
+            .build();
+        self.call(ping_msg)
+    }
+
+    pub fn getchar(&self) -> Result<u8, ()> {
+        let message = MessageInfoBuilder::default()
+            .label(UartServiceLabel::GetChar.into())
+            .build();
+        let msg = self.call(message)?;
+        assert_ne!(msg.length(), 0);
+        with_ipc_buffer(|ipc_buffer| Ok(ipc_buffer.msg_bytes()[0]))
+    }
+}

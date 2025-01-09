@@ -30,6 +30,8 @@ fn main() -> ! {
     common::init_log!(log::LevelFilter::Trace);
     common::init_recv_slot();
 
+    loop {}
+
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
         MmioTransport::new(NonNull::new(VIRTIO_MMIO_BLK_VIRT_ADDR as *mut VirtIOHeader).unwrap())
             .unwrap()
@@ -65,27 +67,27 @@ fn main() -> ! {
     log::debug!("Capacity: {:#x}", virtio_blk.capacity() / 2 / 1024);
     for block_id in 0..8 {
         // virtio_blk.read_blocks(block_id, &mut buffer).unwrap();
-        unsafe {
-            let token = virtio_blk
+        let token = unsafe {
+            virtio_blk
                 .read_blocks_nb(block_id, &mut request, &mut buffer, &mut resp)
-                .unwrap();
-
-            log::debug!("token: {}", token);
-            log::debug!("peek used: {:?}", virtio_blk.peek_used());
-
-            log::debug!("Waiting for VIRTIO Net IRQ notification");
-            sel4::r#yield();
-            ntfn.wait();
-
-            irq_handler.irq_handler_ack().unwrap();
-            // virtio_blk.ack_interrupt();
-
-            log::debug!("peek used: {:?}", virtio_blk.peek_used());
-
-            // virtio_blk
-            //     .complete_read_blocks(token, &request, &mut buffer, &mut resp)
-            //     .unwrap();
+                .unwrap()
         };
+
+        log::debug!("token: {}", token);
+        log::debug!("peek used: {:?}", virtio_blk.peek_used());
+
+        log::debug!("Waiting for VIRTIO Net IRQ notification");
+        sel4::r#yield();
+        ntfn.wait();
+
+        irq_handler.irq_handler_ack().unwrap();
+        // virtio_blk.ack_interrupt();
+
+        log::debug!("peek used: {:?}", virtio_blk.peek_used());
+
+        // virtio_blk
+        //     .complete_read_blocks(token, &request, &mut buffer, &mut resp)
+        //     .unwrap();
 
         log::debug!("Received for VIRTIO Net IRQ notification");
         log::debug!("Get Data Len: {}, 0..4: {:?}", buffer.len(), &buffer[0..4]);

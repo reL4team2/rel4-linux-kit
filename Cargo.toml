@@ -4,12 +4,16 @@ resolver = "2"
 
 members = [
     "root-task",
-    "crates/crate-consts",
-    "crates/task-helper",
     "crates/common",
-    "services/blk-thread",
-    "services/fat-thread", 
+    "crates/crate-consts",
     "crates/slot-manager",
+    "crates/task-helper",
+    "services/blk-thread",
+    "services/ramdisk-thread",
+    "services/fat-thread",
+    "services/ext4-thread",
+    "services/uart-thread",
+    "tasks/simple-cli", 
 ]
 
 # 对于一些公共性的依赖，统一在这里指定版本号

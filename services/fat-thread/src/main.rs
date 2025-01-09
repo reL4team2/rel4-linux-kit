@@ -7,7 +7,8 @@ extern crate alloc;
 use common::services::{block::BlockService, root::RootService};
 use crate_consts::DEFAULT_PARENT_EP;
 use cursor::DiskCursor;
-use sel4::{cap::Endpoint, init_thread::slot};
+use sel4::cap::Endpoint;
+use slot_manager::LeafSlot;
 
 mod cursor;
 mod runtime;
@@ -23,10 +24,10 @@ fn main() -> ! {
 
     // FIXME: Using Common Consts instead of fixed constants
     let blk_ep = BlockService::new(BLK_THREAD_EP_SLOT);
-    let blk_ep_abscptr = slot::CNODE.cap().absolute_cptr(BLK_THREAD_EP_SLOT);
+    let blk_ep_slot = LeafSlot::new(0x21);
 
     ROOT_SERVICE
-        .find_service("block-thread", blk_ep_abscptr)
+        .find_service("block-thread", blk_ep_slot)
         .expect("Can't find blk-thread service");
 
     blk_ep.ping().expect("Can't ping blk-thread service");

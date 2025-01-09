@@ -17,6 +17,7 @@ pub use utils::*;
 
 // FIXME: Make this variable more generic.
 pub const VIRTIO_MMIO_ADDR: usize = 0xa003e00;
+pub const PL011_ADDR: usize = 0x0900_0000;
 
 pub const VIRTIO_MMIO_VIRT_ADDR: usize = 0x1_2000_0000;
 

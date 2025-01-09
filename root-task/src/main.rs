@@ -36,8 +36,6 @@ use utils::*;
 ///     },
 ///     irqs: []
 /// }
-///
-
 static TASK_FILES: &[(&str, &[u8], &[(usize, usize, usize)])] = &[
     // (
     //     "kernel-thread",
@@ -53,6 +51,26 @@ static TASK_FILES: &[(&str, &[u8], &[(usize, usize, usize)])] = &[
         // be found from both regular memory and device memory. If it is
         // not found, panic !!
         &[(0x10_2000_0000, VIRTIO_MMIO_ADDR, 0x1000)],
+    ),
+    (
+        "uart-thread",
+        include_bytes_aligned!(16, "../../build/uart-thread.elf"),
+        &[],
+    ),
+    (
+        "ext4-thread",
+        include_bytes_aligned!(16, "../../build/ext4-thread.elf"),
+        &[],
+    ),
+    (
+        "ramdisk-thread",
+        include_bytes_aligned!(16, "../../build/ramdisk-thread.elf"),
+        &[],
+    ),
+    (
+        "simple-cli",
+        include_bytes_aligned!(16, "../../build/simple-cli.elf"),
+        &[],
     ),
     // (
     //     "fat-thread",
@@ -143,6 +161,30 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     assert!(blk_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
 
     tasks[0].map_large_page(VIRTIO_MMIO_VIRT_ADDR, blk_device_frame_cap);
+
+    let (pl011_untyped_cap, _) = device_untypes
+        .iter()
+        .find(|(_, desc)| {
+            (desc.paddr()..(desc.paddr() + (1 << desc.size_bits()))).contains(&PL011_ADDR)
+        })
+        .expect("[RootTask] can't find device memory");
+
+    let leaf_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+    let pl011_device_frame_cap = LargePage::from_bits(leaf_slot.raw() as _);
+
+    pl011_untyped_cap
+        .untyped_retype(
+            &ObjectBlueprintArm::LargePage.into(),
+            &leaf_slot.cnode_abs_cptr(),
+            leaf_slot.offset_of_cnode(),
+            1,
+        )
+        .unwrap();
+
+    assert!(pl011_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
+
+    tasks[1].map_large_page(VIRTIO_MMIO_VIRT_ADDR, pl011_device_frame_cap);
+
     // Map DMA frame.
     let page = OBJ_ALLOCATOR
         .lock()

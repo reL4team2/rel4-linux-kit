@@ -12,6 +12,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "arm_pl011"
+version = "0.1.0"
+source = "git+https://github.com/Byte-OS/arm_pl011.git?rev=8a66e24#8a66e24c7e6ac2a01841cd29c5e1690323aa1d8d"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -176,6 +184,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "ext4-thread"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crate-consts",
+ "ext4_rs",
+ "log",
+ "sel4",
+ "sel4-ctors-dtors",
+ "sel4-dlmalloc",
+ "sel4-logging",
+ "sel4-panicking",
+ "sel4-panicking-env",
+ "sel4-runtime-common",
+ "sel4-sync",
+ "slot-manager",
+ "spin",
+]
+
+[[package]]
+name = "ext4_rs"
+version = "1.0.0"
+source = "git+https://github.com/yuoo655/ext4_rs.git?rev=04286c7#04286c79da45154a7e007a7ef73bcbe5cad073e1"
+dependencies = [
+ "bitflags",
+ "log",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -197,6 +234,7 @@ dependencies = [
  "sel4-panicking-env",
  "sel4-runtime-common",
  "sel4-sync",
+ "slot-manager",
  "spin",
 ]
 
@@ -434,6 +472,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "ramdisk-thread"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crate-consts",
+ "log",
+ "sel4",
+ "sel4-ctors-dtors",
+ "sel4-dlmalloc",
+ "sel4-logging",
+ "sel4-panicking",
+ "sel4-panicking-env",
+ "sel4-runtime-common",
+ "sel4-sync",
+ "spin",
 ]
 
 [[package]]
@@ -795,6 +851,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "simple-cli"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crate-consts",
+ "log",
+ "sel4",
+ "sel4-ctors-dtors",
+ "sel4-dlmalloc",
+ "sel4-logging",
+ "sel4-panicking",
+ "sel4-panicking-env",
+ "sel4-runtime-common",
+ "sel4-sync",
+ "slot-manager",
+ "spin",
+]
+
+[[package]]
 name = "slot-manager"
 version = "0.1.0"
 dependencies = [
@@ -853,6 +928,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tock-registers"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
+
+[[package]]
 name = "toml"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -891,6 +972,26 @@ name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
+
+[[package]]
+name = "uart-thread"
+version = "0.1.0"
+dependencies = [
+ "arm_pl011",
+ "common",
+ "crate-consts",
+ "log",
+ "sel4",
+ "sel4-ctors-dtors",
+ "sel4-dlmalloc",
+ "sel4-logging",
+ "sel4-panicking",
+ "sel4-panicking-env",
+ "sel4-runtime-common",
+ "sel4-sync",
+ "slot-manager",
+ "spin",
+]
 
 [[package]]
 name = "ucd-trie"
