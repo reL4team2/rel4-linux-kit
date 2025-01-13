@@ -5,6 +5,7 @@ resolver = "2"
 members = [
     "root-task",
     "crates/common",
+    "crates/common-macros",
     "crates/crate-consts",
     "crates/slot-manager",
     "crates/task-helper",
@@ -20,7 +21,7 @@ members = [
 # 在使用的地方加上 xxx = { workspace = true }
 [workspace.dependencies]
 # rust-sel4 相关依赖
-sel4 = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4 = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd", default-features = false }
 sel4-ctors-dtors = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-dlmalloc = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-root-task = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
@@ -37,4 +38,5 @@ sel4-sync = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 crate-consts = { path = "crates/crate-consts" }
 task-helper = { path = "crates/task-helper" }
 common = { path = "crates/common" }
+common-macros = { path = "crates/common-macros" }
 slot-manager = { path = "crates/slot-manager" }

@@ -1,6 +1,8 @@
 #![no_std]
 #![feature(str_from_raw_parts)]
 
+extern crate alloc;
+
 pub mod log_impl;
 mod obj_allocator;
 pub mod services;

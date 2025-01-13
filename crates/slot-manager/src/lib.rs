@@ -91,6 +91,22 @@ impl LeafSlot {
     pub const fn cap<T: CapType>(&self) -> Cap<T> {
         Slot::from_index(self.idx).cap()
     }
+
+    /// 获取这个位置后面的一个 [LeafSlot]
+    /// 
+    /// slot 的数量不应该大于 CSpace 构建的最大数量
+    pub const fn next_slot(&self) -> LeafSlot {
+        assert!(self.idx < usize::MAX);
+        LeafSlot::new(self.idx)
+    }
+
+    /// 获取这个位置后面第 n 个位置的 [LeafSlot]
+    /// 
+    /// slot 的数量不应该大于 CSpace 构建的最大数量
+    pub const fn next_nth_slot(&self, n: usize) -> LeafSlot {
+        assert!((self.idx + n) <= usize::MAX);
+        LeafSlot::new(self.idx + n)
+    }
 }
 
 /// Slot Manager
@@ -125,6 +141,16 @@ impl SlotManager {
     #[inline]
     pub fn alloc_slot(&mut self) -> LeafSlot {
         let idx = self.empty_slots.next().unwrap();
+        LeafSlot::new(idx)
+    }
+
+    /// 申请多个 slot
+    /// 
+    /// 返回的是开始位置的 LeafSlot
+    #[inline]
+    pub fn alloc_slots(&mut self, num: usize) -> LeafSlot {
+        let idx = self.empty_slots.next().unwrap();
+        self.empty_slots.start += num - 1;
         LeafSlot::new(idx)
     }
 }

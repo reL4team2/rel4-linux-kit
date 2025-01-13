@@ -116,6 +116,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "common-macros",
  "crate-consts",
  "log",
  "num_enum",
@@ -123,6 +124,10 @@ dependencies = [
  "sel4",
  "slot-manager",
 ]
+
+[[package]]
+name = "common-macros"
+version = "0.1.0"
 
 [[package]]
 name = "cpufeatures"

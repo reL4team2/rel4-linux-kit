@@ -1,5 +1,11 @@
+use alloc::vec::Vec;
 use core::ops::Range;
-use sel4::{cap::Untyped, init_thread::slot::CNODE};
+use sel4::{
+    cap::{Granule, Untyped},
+    cap_type,
+    init_thread::slot::CNODE,
+    CapTypeForObjectOfFixedSize,
+};
 use slot_manager::{LeafSlot, SlotManager};
 
 pub struct ObjectAllocator {
@@ -41,6 +47,7 @@ impl ObjectAllocator {
 }
 
 impl ObjectAllocator {
+    /// TODO: 申请多个位置，且判断位置是否超出
     pub fn allocate_slot(&mut self) -> LeafSlot {
         let leaf_slot = self.slot_manager.alloc_slot();
 
@@ -104,5 +111,29 @@ impl ObjectAllocator {
     ) -> sel4::Cap<T> {
         self.allocate_and_retype(T::object_blueprint(size_bits))
             .cast()
+    }
+
+    /// 申请一个物理页
+    pub fn alloc_page(&mut self) -> Granule {
+        self.allocate_and_retype(cap_type::Granule::object_blueprint())
+            .cast()
+    }
+
+    /// 申请多个页
+    pub fn alloc_pages(&mut self, pages: usize) -> Vec<Granule> {
+        let leaf_slot = self.slot_manager.alloc_slots(pages);
+
+        self.ut
+            .untyped_retype(
+                &cap_type::Granule::object_blueprint(),
+                &leaf_slot.cnode_abs_cptr(),
+                leaf_slot.offset_of_cnode(),
+                pages,
+            )
+            .unwrap();
+
+        (0..pages)
+            .map(|x| leaf_slot.next_nth_slot(x).cap())
+            .collect()
     }
 }

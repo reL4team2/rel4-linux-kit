@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 sel4 = { workspace = true }
+common-macros = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 object = { version = "0.36.1", default-features = false, features = ["read"] }

@@ -8,80 +8,62 @@ mod task;
 mod thread;
 mod utils;
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
+use common::services::IpcBufferRW;
 use common::*;
 use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
 use sel4::{
     cap::{LargePage, Untyped},
-    cap_type::{Endpoint, Granule},
+    cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer, with_ipc_buffer_mut, Cap, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
+    with_ipc_buffer_mut, Cap, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
 };
 use sel4_root_task::{root_task, Never};
-use services::REG_LEN;
 use spin::Mutex;
 use task::*;
 use utils::*;
 
 /// Equivalent structure
-/// pub struct KernelServices {
-///     name: String,
-///     file: &[u8]
-///     mem: {
-///         virtual_address: usize,
-///         physical_address: usize,
-///         map_size: usize,
-///     },
-///     irqs: []
-/// }
-static TASK_FILES: &[(&str, &[u8], &[(usize, usize, usize)])] = &[
-    // (
-    //     "kernel-thread",
-    //     include_bytes_aligned!(16, "../../../build/kernel-thread.elf"),
-    //     &[],
-    // ),
-    (
-        "block-thread",
-        include_bytes_aligned!(16, "../../build/blk-thread.elf"),
-        // (Virtual address, physical address, mapping size).
-        // If the physical address is equal to 0, a random regular memory will
-        // be allocated. If an address is specified, the corresponding one will
-        // be found from both regular memory and device memory. If it is
-        // not found, panic !!
-        &[(0x10_2000_0000, VIRTIO_MMIO_ADDR, 0x1000)],
-    ),
-    (
-        "uart-thread",
-        include_bytes_aligned!(16, "../../build/uart-thread.elf"),
-        &[],
-    ),
-    (
-        "ext4-thread",
-        include_bytes_aligned!(16, "../../build/ext4-thread.elf"),
-        &[],
-    ),
-    // (
-    //     "ramdisk-thread",
-    //     include_bytes_aligned!(16, "../../build/ramdisk-thread.elf"),
-    //     &[],
-    // ),
-    (
-        "simple-cli",
-        include_bytes_aligned!(16, "../../build/simple-cli.elf"),
-        &[],
-    ),
-    // (
-    //     "fat-thread",
-    //     include_bytes_aligned!(16, "../../../build/fat-thread.elf"),
-    //     &[],
-    // ),
-    // (
-    //     "net-thread",
-    //     include_bytes_aligned!(16, "../../../build/net-thread.elf"),
-    //     &[],
-    // ),
+pub struct KernelServices {
+    name: &'static str,
+    file: &'static [u8],
+    // (Virtual address, physical address, mapping size).
+    // If the physical address is equal to 0, a random regular memory will
+    // be allocated. If an address is specified, the corresponding one will
+    // be found from both regular memory and device memory. If it is
+    // not found, panic !!
+    mem: &'static [(usize, usize, usize)],
+    /// 格式： (开始地址, 内存大小)
+    dma: &'static [(usize, usize)],
+}
+
+static TASK_FILES: &[KernelServices] = &[
+    KernelServices {
+        name: "block-thread",
+        file: include_bytes_aligned!(16, "../../target/blk-thread.elf"),
+        mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
+        dma: &[(DMA_ADDR_START, 0x2000)],
+    },
+    KernelServices {
+        name: "uart-thread",
+        file: include_bytes_aligned!(16, "../../target/uart-thread.elf"),
+        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+        dma: &[],
+    },
+    KernelServices {
+        name: "ext4-thread",
+        file: include_bytes_aligned!(16, "../../target/ext4-thread.elf"),
+        mem: &[],
+        dma: &[],
+    },
+    KernelServices {
+        name: "simple-cli",
+        file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+        mem: &[],
+        dma: &[],
+    },
 ];
 
 /// The object allocator for the root task.
@@ -133,85 +115,65 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     for task in TASK_FILES.iter() {
         tasks.push(build_kernel_thread(
             (fault_ep, tasks.len() as _),
-            task.0,
-            task.1,
+            task.name,
+            task.file,
             unsafe { init_free_page_addr(bootinfo) },
         )?);
     }
 
-    let (blk_device_untyped_cap, _) = device_untypes
-        .iter()
-        .find(|(_, desc)| {
-            (desc.paddr()..(desc.paddr() + (1 << desc.size_bits()))).contains(&VIRTIO_MMIO_ADDR)
-        })
-        .expect("[RootTask] can't find device memory");
+    // 处理所有定义的任务
+    TASK_FILES.iter().enumerate().for_each(|(t_idx, t)| {
+        // 映射设备内存，应该保证映射到指定的物理地址上
+        // 一般情况下映射的大小不会超过一个页
+        // NOTICE: 目前不支持多个人物共享一个物理页表的情况
+        // TODO: 实现申请指定物理内存到映射到特定物理地址的操作
+        for (vaddr, paddr, size) in t.mem {
+            let (blk_device_untyped_cap, _) = device_untypes
+                .iter()
+                .find(|(_, desc)| {
+                    (desc.paddr()..(desc.paddr() + (1 << desc.size_bits()))).contains(paddr)
+                })
+                .expect("[RootTask] can't find device memory");
+            let leaf_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+            let blk_device_frame_cap = LargePage::from_bits(leaf_slot.raw() as _);
 
-    let leaf_slot = OBJ_ALLOCATOR.lock().allocate_slot();
-    let blk_device_frame_cap = LargePage::from_bits(leaf_slot.raw() as _);
+            blk_device_untyped_cap
+                .untyped_retype(
+                    &ObjectBlueprintArm::LargePage.into(),
+                    &leaf_slot.cnode_abs_cptr(),
+                    leaf_slot.offset_of_cnode(),
+                    1,
+                )
+                .unwrap();
 
-    blk_device_untyped_cap
-        .untyped_retype(
-            &ObjectBlueprintArm::LargePage.into(),
-            &leaf_slot.cnode_abs_cptr(),
-            leaf_slot.offset_of_cnode(),
-            1,
-        )
-        .unwrap();
+            debug_println!("[MapPage] {:#x} -> {:#x}", vaddr, blk_device_frame_cap.frame_get_address().unwrap());
+            assert!(blk_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
 
-    assert!(blk_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
+            tasks[t_idx].map_large_page(*vaddr, blk_device_frame_cap);
+        }
 
-    tasks[0].map_large_page(VIRTIO_MMIO_VIRT_ADDR, blk_device_frame_cap);
+        // 映射 DMA 内存，应该随机分配任意内存即可
+        for (start, size) in t.dma {
+            // 申请多个页表
+            // TODO: 检查页表是否连续
+            let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
 
-    let (pl011_untyped_cap, _) = device_untypes
-        .iter()
-        .find(|(_, desc)| {
-            (desc.paddr()..(desc.paddr() + (1 << desc.size_bits()))).contains(&PL011_ADDR)
-        })
-        .expect("[RootTask] can't find device memory");
+            // 映射多个页表
+            pages_cap.into_iter().enumerate().for_each(|(i, page)| {
+                tasks[t_idx].map_page(start + i * PAGE_SIZE, page);
+            });
+        }
+    });
 
-    let leaf_slot = OBJ_ALLOCATOR.lock().allocate_slot();
-    let pl011_device_frame_cap = LargePage::from_bits(leaf_slot.raw() as _);
-
-    pl011_untyped_cap
-        .untyped_retype(
-            &ObjectBlueprintArm::LargePage.into(),
-            &leaf_slot.cnode_abs_cptr(),
-            leaf_slot.offset_of_cnode(),
-            1,
-        )
-        .unwrap();
-
-    assert!(pl011_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
-
-    tasks[1].map_large_page(VIRTIO_MMIO_VIRT_ADDR, pl011_device_frame_cap);
-
-    // FIXME: This is a general pattern.
-    // Map DMA frame.
-    let page1 = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<Granule>();
-    let page2 = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<Granule>();
-
-    assert_eq!(
-        page2.frame_get_address().unwrap() - page1.frame_get_address().unwrap(),
-        PAGE_SIZE
-    );
-
-    tasks[0].map_page(DMA_ADDR_START, page1);
-    tasks[0].map_page(DMA_ADDR_START + PAGE_SIZE, page2);
-
-    // Start tasks
     run_tasks(&tasks);
 
     loop {
-        handle_ep(tasks.as_mut_slice(), fault_ep)
+        with_ipc_buffer_mut(|ib| handle_ep(tasks.as_mut_slice(), fault_ep, ib))
     }
 }
 
 /// Handle the end point.
-fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>) {
+fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer) {
     let rev_msg = MessageInfoBuilder::default();
     let (message, badge) = fault_ep.recv(());
     let msg_label = match services::root::RootMessageLabel::try_from(message.label()) {
@@ -225,11 +187,10 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>) {
     );
 
     match msg_label {
-        services::root::RootMessageLabel::Ping => {
-            with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()))
-        }
+        services::root::RootMessageLabel::Ping => sel4::reply(ib, rev_msg.build()),
         services::root::RootMessageLabel::TranslateAddr => {
-            let addr = with_ipc_buffer(|ipc_buffer| ipc_buffer.msg_regs()[0]) as usize;
+            let mut off = 0;
+            let addr = usize::read_buffer(ib, &mut off);
 
             let phys_addr = tasks[badge as usize]
                 .mapped_page
@@ -237,36 +198,26 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>) {
                 .map(|x| x.frame_get_address().unwrap())
                 .unwrap();
 
-            with_ipc_buffer_mut(|ipc_buffer| {
-                ipc_buffer.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-                sel4::reply(ipc_buffer, rev_msg.length(1).build())
-            });
+            ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
+            sel4::reply(ib, rev_msg.length(off).build());
         }
         services::root::RootMessageLabel::FindService => {
-            let task = with_ipc_buffer(|ipc_buffer| {
-                let len = ipc_buffer.msg_regs()[0] as usize;
-                let name = String::from_utf8_lossy(&ipc_buffer.msg_bytes()[REG_LEN..REG_LEN + len]);
-                tasks.iter().find(|task| task.name == name)
-            });
-            match task {
+            let name = <&str>::read_buffer(ib, &mut 0);
+            let task = tasks.iter().find(|task| task.name == name);
+            let msg = match task {
                 Some(task) => {
-                    with_ipc_buffer_mut(|ipc_buffer| {
-                        ipc_buffer.caps_or_badges_mut()[0] = task.srv_ep.bits();
-                        sel4::reply(ipc_buffer, rev_msg.extra_caps(1).build())
-                    });
+                    ib.caps_or_badges_mut()[0] = task.srv_ep.bits();
+                    rev_msg.extra_caps(1).build()
                 }
-                None => {
-                    // 发生错误时返回值 不为 -1
-                    with_ipc_buffer_mut(|ipc_buffer| {
-                        sel4::reply(ipc_buffer, rev_msg.label(1).build());
-                    })
-                }
-            }
+                // 发生错误时返回值 不为 -1
+                None => rev_msg.label(1).build(),
+            };
+            sel4::reply(ib, msg);
         }
         // Allocate a irq handler capability
         // Transfer it to the requested service
         services::root::RootMessageLabel::RegisterIRQ => {
-            let irq = with_ipc_buffer(|ipc_buffer| ipc_buffer.msg_regs()[0]);
+            let irq = ib.msg_regs()[0];
 
             let dst_slot = &slot::CNODE.cap().absolute_cptr(slot::NULL.cptr());
             slot::IRQ_CONTROL
@@ -274,10 +225,9 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>) {
                 .irq_control_get(irq, dst_slot)
                 .unwrap();
 
-            with_ipc_buffer_mut(|buffer| {
-                buffer.caps_or_badges_mut()[0] = 0;
-                sel4::reply(buffer, rev_msg.extra_caps(1).build());
-            });
+            ib.caps_or_badges_mut()[0] = 0;
+            sel4::reply(ib, rev_msg.extra_caps(1).build());
+
             slot::CNODE
                 .cap()
                 .absolute_cptr(slot::NULL.cptr())
@@ -290,10 +240,8 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>) {
                 .lock()
                 .retype_to_first(sel4::ObjectBlueprint::Notification);
 
-            with_ipc_buffer_mut(|buffer| {
-                buffer.caps_or_badges_mut()[0] = 0;
-                sel4::reply(buffer, rev_msg.extra_caps(1).build());
-            });
+            ib.caps_or_badges_mut()[0] = 0;
+            sel4::reply(ib, rev_msg.extra_caps(1).build());
 
             slot::CNODE
                 .cap()

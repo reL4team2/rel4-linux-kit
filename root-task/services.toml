@@ -6,6 +6,7 @@ file = "../../build/kernel-thread.elf"
 name = "block-thread"
 file = "../../build/blk-thread.elf"
 mmio = [[0x1000_3000, 0x1000, 0x1000]]
+# 需要确保连续 dma 
 dma = [[0x1_0000_3000, 0x1000]]
 
 [[services]]

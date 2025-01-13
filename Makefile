@@ -1,4 +1,4 @@
-BUILD_DIR := build
+BUILD_DIR := target
 TARGET := aarch64-sel4
 
 # sel4 installation directory
@@ -20,8 +20,7 @@ qemu_args += -device virtio-blk-device,drive=x0
 
 $(app): $(app).intermediate
 
-CARGO_BUILD_ARGS := --target-dir $(abspath $(BUILD_DIR)/target) \
-			--artifact-dir $(BUILD_DIR) \
+CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 			--target $(TARGET) \
 			--release
 

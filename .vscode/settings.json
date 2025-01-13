@@ -1,5 +1,12 @@
 {
-    "rust-analyzer.cargo.target": "aarch64-sel4",
-    "rust-analyzer.cargo.targetDir": "build/target",
+    // 这里的设置并不真正参加编译，只是为了方便 rust-analyzer 解析语法
+    // 如果这里的是 aarch64-sel4，那么需要编译 core 和 alloc 库
+    // 会有很多 core, alloc 库中的内容解析异常，虽然不报错，但是也没提示
+    // 使用 aarch64-unknown-none 没有 tls 也会报错
+    // 用 aarch64-unknown-linux-gnu 比较合适，只是为了语法提示
+    "rust-analyzer.cargo.target": "aarch64-unknown-linux-gnu",
+    // "rust-analyzer.cargo.targetDir": "build/target",
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.cargo.buildScripts.useRustcWrapper": true,
     "rust-analyzer.check.allTargets": false,
 }
