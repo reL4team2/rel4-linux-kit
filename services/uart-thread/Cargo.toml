@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 
 sel4 = { workspace = true }
-sel4-ctors-dtors = { workspace = true}
+sel4-ctors-dtors = { workspace = true }
 sel4-panicking = { workspace = true, features = ["alloc"] }
 sel4-panicking-env = { workspace = true }
 sel4-logging = { workspace = true }

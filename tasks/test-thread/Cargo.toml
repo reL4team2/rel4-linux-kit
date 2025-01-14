@@ -1,0 +1,24 @@
+[package]
+name = "test-thread"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sel4 = { workspace = true }
+log = "0.4"
+sel4-panicking = { workspace = true }
+sel4-panicking-env = { workspace = true }
+sel4-runtime-common = { workspace = true, features = [
+    "start",
+    "tls",
+    "unwinding",
+] }
+sel4-dlmalloc = { workspace = true }
+sel4-sync = { workspace = true }
+
+syscalls = { version = "0.6", default-features = false }
+
+common = { workspace = true }
+crate-consts = { workspace = true }

@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
 use core::ops::Range;
 use sel4::{
-    cap::{Granule, Untyped},
+    cap::{CNode, Endpoint, Granule, Notification, Tcb, Untyped, VSpace, PT},
     cap_type,
-    init_thread::slot::CNODE,
+    init_thread::slot,
     CapTypeForObjectOfFixedSize,
 };
 use slot_manager::{LeafSlot, SlotManager};
@@ -35,9 +35,7 @@ impl ObjectAllocator {
         self.ut
             .untyped_retype(
                 &T::object_blueprint(size_bits),
-                &sel4::init_thread::slot::CNODE
-                    .cap()
-                    .absolute_cptr_for_self(),
+                &slot::CNODE.cap().absolute_cptr_for_self(),
                 leaf_slot.offset_of_cnode(),
                 1,
             )
@@ -89,7 +87,7 @@ impl ObjectAllocator {
         self.ut
             .untyped_retype(
                 &blueprint,
-                &CNODE.cap().absolute_cptr_from_bits_with_depth(0, 52),
+                &slot::CNODE.cap().absolute_cptr_from_bits_with_depth(0, 52),
                 0,
                 1,
             )
@@ -113,13 +111,51 @@ impl ObjectAllocator {
             .cast()
     }
 
-    /// 申请一个物理页
+    /// 申请一个物理页 [Granule]
+    #[inline]
     pub fn alloc_page(&mut self) -> Granule {
         self.allocate_and_retype(cap_type::Granule::object_blueprint())
             .cast()
     }
 
+    /// 申请一个 [Endpoint]
+    #[inline]
+    pub fn alloc_endpoint(&mut self) -> Endpoint {
+        self.allocate_and_retype(cap_type::Endpoint::object_blueprint())
+            .cast()
+    }
+
+    /// 申请一个 [CNode]
+    #[inline]
+    pub fn alloc_cnode(&mut self, size_bits: usize) -> CNode {
+        self.allocate_and_retyped_variable_sized::<cap_type::CNode>(size_bits)
+    }
+
+    /// 申请一个 [VSpace]
+    #[inline]
+    pub fn alloc_vspace(&mut self) -> VSpace {
+        self.allocate_and_retyped_fixed_sized::<cap_type::VSpace>()
+    }
+
+    /// 申请一个页表 [PT]
+    #[inline]
+    pub fn alloc_pt(&mut self) -> PT {
+        self.allocate_and_retyped_fixed_sized::<cap_type::PT>()
+    }
+
+    /// 申请一个进程控制块 [Tcb]
+    #[inline]
+    pub fn alloc_tcb(&mut self) -> Tcb {
+        self.allocate_and_retyped_fixed_sized::<cap_type::Tcb>()
+    }
+
+    /// 申请一个 Notification [Notification]
+    pub fn alloc_notification(&mut self) -> Notification {
+        self.allocate_and_retyped_fixed_sized::<cap_type::Notification>()
+    }
+
     /// 申请多个页
+    #[inline]
     pub fn alloc_pages(&mut self, pages: usize) -> Vec<Granule> {
         let leaf_slot = self.slot_manager.alloc_slots(pages);
 

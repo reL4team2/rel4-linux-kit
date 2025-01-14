@@ -27,7 +27,7 @@ mod virtio;
 static ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
+    common::init_log!(log::LevelFilter::Error);
     common::init_recv_slot();
 
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
@@ -82,9 +82,11 @@ fn main() -> ! {
                         .read_blocks_nb(block_id, &mut request, &mut buffer, &mut resp)
                         .unwrap()
                 };
+                // 顺序不能变，先等待中断，然后处理 virtio_blk 的中断
+                // 最后 ACK 中断
                 ntfn.wait();
-                irq_handler.irq_handler_ack().unwrap();
                 virtio_blk.ack_interrupt();
+                irq_handler.irq_handler_ack().unwrap();
 
                 unsafe {
                     virtio_blk

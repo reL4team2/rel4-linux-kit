@@ -10,11 +10,13 @@ members = [
     "crates/slot-manager",
     "crates/task-helper",
     "services/blk-thread",
-    "services/ramdisk-thread",
     "services/fat-thread",
     "services/ext4-thread",
     "services/uart-thread",
+    "services/kernel-thread",
     "tasks/simple-cli", 
+    "tasks/test-thread",
+    "tasks/shim",
 ]
 
 # 对于一些公共性的依赖，统一在这里指定版本号

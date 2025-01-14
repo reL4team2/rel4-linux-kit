@@ -21,6 +21,7 @@ use sel4::{
     with_ipc_buffer_mut, Cap, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
 };
 use sel4_root_task::{root_task, Never};
+use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
 use utils::*;
@@ -58,9 +59,15 @@ static TASK_FILES: &[KernelServices] = &[
         mem: &[],
         dma: &[],
     },
+    // KernelServices {
+    //     name: "simple-cli",
+    //     file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+    //     mem: &[],
+    //     dma: &[],
+    // },
     KernelServices {
-        name: "simple-cli",
-        file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+        name: "kernel-thread",
+        file: include_bytes_aligned!(16, "../../target/kernel-thread.elf"),
         mem: &[],
         dma: &[],
     },
@@ -106,10 +113,9 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     rebuild_cspace();
 
     // Used for fault and normal IPC ( Reuse )
-    let fault_ep = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<Endpoint>();
+    let fault_ep = OBJ_ALLOCATOR.lock().alloc_endpoint();
 
+    // 开始创建任务
     let mut tasks: Vec<Sel4Task> = Vec::new();
 
     for task in TASK_FILES.iter() {
@@ -146,7 +152,6 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                 )
                 .unwrap();
 
-            debug_println!("[MapPage] {:#x} -> {:#x}", vaddr, blk_device_frame_cap.frame_get_address().unwrap());
             assert!(blk_device_frame_cap.frame_get_address().unwrap() < VIRTIO_MMIO_ADDR);
 
             tasks[t_idx].map_large_page(*vaddr, blk_device_frame_cap);
@@ -160,6 +165,11 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
             // 映射多个页表
             pages_cap.into_iter().enumerate().for_each(|(i, page)| {
+                debug_println!(
+                    "RootTask Mapping {:#x} -> {:#x}",
+                    start + i * PAGE_SIZE,
+                    page.frame_get_address().unwrap()
+                );
                 tasks[t_idx].map_page(start + i * PAGE_SIZE, page);
             });
         }
@@ -218,24 +228,20 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
         // Transfer it to the requested service
         services::root::RootMessageLabel::RegisterIRQ => {
             let irq = ib.msg_regs()[0];
-
-            let dst_slot = &slot::CNODE.cap().absolute_cptr(slot::NULL.cptr());
+            let dst_slot = LeafSlot::new(0);
             slot::IRQ_CONTROL
                 .cap()
-                .irq_control_get(irq, dst_slot)
+                .irq_control_get(irq, &dst_slot.abs_cptr())
                 .unwrap();
 
             ib.caps_or_badges_mut()[0] = 0;
             sel4::reply(ib, rev_msg.extra_caps(1).build());
 
-            slot::CNODE
-                .cap()
-                .absolute_cptr(slot::NULL.cptr())
-                .delete()
-                .unwrap();
+            dst_slot.delete().unwrap();
         }
         // Allocate a notification capability
         services::root::RootMessageLabel::AllocNotification => {
+            // 在 0 的 slot 出创建一个 Capability
             OBJ_ALLOCATOR
                 .lock()
                 .retype_to_first(sel4::ObjectBlueprint::Notification);
@@ -243,11 +249,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
             ib.caps_or_badges_mut()[0] = 0;
             sel4::reply(ib, rev_msg.extra_caps(1).build());
 
-            slot::CNODE
-                .cap()
-                .absolute_cptr(slot::NULL.cptr())
-                .delete()
-                .unwrap();
+            LeafSlot::new(0).delete().unwrap();
         }
     }
 }

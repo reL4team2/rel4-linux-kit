@@ -5,12 +5,12 @@ use core::ops::DerefMut;
 use crate_consts::CNODE_RADIX_BITS;
 use object::{File, Object};
 use sel4::{
-    cap::{Endpoint, Null},
-    cap_type::{self, CNode, SmallPage, Tcb, PT},
-    debug_println,
+    cap::{Endpoint, Granule, Null, PT},
+    cap_type, debug_println,
     init_thread::slot,
     CNodeCapData, CapRights,
 };
+use slot_manager::LeafSlot;
 use task_helper::{Sel4TaskHelper, TaskHelperTrait};
 use xmas_elf::ElfFile;
 
@@ -20,38 +20,33 @@ pub type Sel4Task = Sel4TaskHelper<TaskImpl>;
 impl TaskHelperTrait<Sel4TaskHelper<Self>> for TaskImpl {
     const DEFAULT_STACK_TOP: usize = 0x1_0000_0000;
 
-    fn allocate_pt(_task: &mut Self::Task) -> sel4::cap::PT {
-        OBJ_ALLOCATOR
-            .lock()
-            .allocate_and_retyped_fixed_sized::<PT>()
+    fn allocate_pt(_task: &mut Self::Task) -> PT {
+        OBJ_ALLOCATOR.lock().alloc_pt()
     }
 
-    fn allocate_page(_task: &mut Self::Task) -> sel4::cap::SmallPage {
-        OBJ_ALLOCATOR
-            .lock()
-            .allocate_and_retyped_fixed_sized::<SmallPage>()
+    fn allocate_page(_task: &mut Self::Task) -> Granule {
+        OBJ_ALLOCATOR.lock().alloc_page()
     }
 }
 
 pub fn rebuild_cspace() {
     let cnode = OBJ_ALLOCATOR
         .lock()
-        .allocate_variable_sized_origin::<CNode>(CNODE_RADIX_BITS);
+        .allocate_variable_sized_origin::<cap_type::CNode>(CNODE_RADIX_BITS);
     cnode
         .absolute_cptr_from_bits_with_depth(0, CNODE_RADIX_BITS)
         .mint(
-            &slot::CNODE.cap().absolute_cptr(slot::CNODE.cap()),
+            &LeafSlot::from_slot(slot::CNODE).abs_cptr(),
             CapRights::all(),
             CNodeCapData::skip(0).into_word(),
         )
         .unwrap();
 
     // load
-    slot::CNODE
-        .cap()
-        .absolute_cptr(Null::from_bits(0))
+    LeafSlot::new(0)
+        .abs_cptr()
         .mutate(
-            &slot::CNODE.cap().absolute_cptr(slot::CNODE.cap()),
+            &LeafSlot::from_slot(slot::CNODE).abs_cptr(),
             CNodeCapData::skip_high_bits(CNODE_RADIX_BITS).into_word(),
         )
         .unwrap();
@@ -65,11 +60,7 @@ pub fn rebuild_cspace() {
         )
         .unwrap();
 
-    slot::CNODE
-        .cap()
-        .absolute_cptr(Null::from_bits(0))
-        .delete()
-        .unwrap();
+    LeafSlot::new(0).delete().unwrap();
 
     slot::TCB
         .cap()
@@ -89,9 +80,7 @@ pub fn build_kernel_thread(
     free_page_addr: usize,
 ) -> sel4::Result<Sel4Task> {
     // make 新线程的虚拟地址空间
-    let cnode = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_variable_sized::<CNode>(CNODE_RADIX_BITS);
+    let cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
     let mut mapped_page = BTreeMap::new();
     let (vspace, ipc_buffer_addr, ipc_buffer_cap) = make_child_vspace(
         cnode,
@@ -102,13 +91,8 @@ pub fn build_kernel_thread(
         slot::ASID_POOL.cap(),
     );
 
-    let tcb = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<Tcb>();
-
-    let srv_ep = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_fixed_sized::<cap_type::Endpoint>();
+    let tcb = OBJ_ALLOCATOR.lock().alloc_tcb();
+    let srv_ep = OBJ_ALLOCATOR.lock().alloc_endpoint();
 
     let mut task = Sel4Task::new(
         tcb,
@@ -166,9 +150,7 @@ pub(crate) fn make_child_vspace<'a>(
     free_page_addr: usize,
     asid_pool: sel4::cap::AsidPool,
 ) -> (sel4::cap::VSpace, usize, sel4::cap::Granule) {
-    let inner_cnode = OBJ_ALLOCATOR
-        .lock()
-        .allocate_and_retyped_variable_sized::<CNode>(CNODE_RADIX_BITS);
+    let inner_cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
     let mut allocator = OBJ_ALLOCATOR.lock();
     let allocator = allocator.deref_mut();
     let child_vspace = allocator.allocate_and_retyped_fixed_sized::<sel4::cap_type::VSpace>();
@@ -181,15 +163,17 @@ pub(crate) fn make_child_vspace<'a>(
             CNodeCapData::skip(0).into_word() as _,
         )
         .unwrap();
-    abs_cptr(Null::from_bits(0))
+    LeafSlot::new(0)
+        .abs_cptr()
         .mutate(
-            &abs_cptr(cnode),
+            &LeafSlot::new(cnode.bits() as _).abs_cptr(),
             CNodeCapData::skip_high_bits(2 * CNODE_RADIX_BITS).into_word() as _,
         )
         .unwrap();
-    abs_cptr(cnode)
+    LeafSlot::new(cnode.bits() as _)
+        .abs_cptr()
         .mutate(
-            &abs_cptr(Null::from_bits(0)),
+            &LeafSlot::new(0).abs_cptr(),
             CNodeCapData::skip_high_bits(2 * CNODE_RADIX_BITS).into_word() as _,
         )
         .unwrap();
@@ -217,7 +201,7 @@ pub(crate) fn make_child_vspace<'a>(
 
     // make ipc buffer
     let ipc_buffer_addr = image_footprint.end;
-    let ipc_buffer_cap = allocator.allocate_and_retyped_fixed_sized::<sel4::cap_type::Granule>();
+    let ipc_buffer_cap = allocator.alloc_page();
     ipc_buffer_cap
         .frame_map(
             child_vspace,

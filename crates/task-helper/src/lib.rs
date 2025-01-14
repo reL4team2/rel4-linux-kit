@@ -1,4 +1,9 @@
+//! task-helper 提供一套快速构建 sel4 task 的工具
+//!
+//! 此 crate 中内置了一些设定，帮助构建一套通用的体系来服务于 Service 的构建
+
 #![no_std]
+#![deny(missing_docs)]
 #![feature(associated_type_defaults)]
 
 extern crate alloc;
@@ -15,8 +20,10 @@ use crate_consts::{
 };
 use sel4::{
     cap::{self, Granule, Notification, Null},
-    debug_println, init_thread, AbsoluteCPtr, CNodeCapData, CPtr, CPtrBits, CapRights, Error,
-    HasCPtrWithDepth, VmAttributes as VMAttributes,
+    debug_println,
+    init_thread::{self, slot},
+    AbsoluteCPtr, CNodeCapData, CPtr, CPtrBits, CapRights, Error, HasCPtrWithDepth,
+    VmAttributes as VMAttributes,
 };
 use sel4_sync::{lock_api::Mutex, MutexSyncOpsWithNotification};
 use xmas_elf::{program, ElfFile};
@@ -36,31 +43,43 @@ impl MutexSyncOpsWithNotification for ThreadNotification {
 // pub type NotiMutex<T> = Mutex<GenericRawMutex<ThreadNotification>, T>;
 pub type NotiMutex<T> = Mutex<spin::Mutex<()>, T>;
 
-/// The Trait the help task implement quickly.
+/// sel4 的任务的抽象，实现这个 Trait 能够帮助你快速实现一个 sel4 的任务
 pub trait TaskHelperTrait<V> {
+    /// 任务类型
     type Task = V;
-    /// The default stack top address.
+    /// 默认的栈顶
     const DEFAULT_STACK_TOP: usize;
-    /// Allocate a new page table.
+    /// 申请一个页表
     fn allocate_pt(task: &mut V) -> sel4::cap::PT;
-    /// Allocate a new Page.
+    /// 申请一个页
     fn allocate_page(task: &mut V) -> sel4::cap::Granule;
 }
 
-/// Help to create a new task quickly.
+/// sel4 任务类型的助手函数，帮助快速实现一个sel
 pub struct Sel4TaskHelper<H: TaskHelperTrait<Self>> {
+    /// 任务名称
     pub name: String,
+    /// TCB Capability
     pub tcb: cap::Tcb,
+    /// CSpace 的 Root Capability
+    /// 有点类似于页表的入口
     pub cnode: cap::CNode,
+    /// 地址空间 Capability
     pub vspace: cap::VSpace,
+    /// 服务端口，向外提供服务
     pub srv_ep: cap::Endpoint,
+    /// 已经映射的页表
     pub mapped_pt: Arc<NotiMutex<Vec<cap::PT>>>,
+    /// 已经映射的页
     pub mapped_page: BTreeMap<usize, cap::Granule>,
+    /// 栈底
     pub stack_bottom: usize,
+    /// 幽灵类型
     pub phantom: PhantomData<H>,
 }
 
 impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
+    /// 创建一个新的 Task
     pub fn new(
         tcb: cap::Tcb,
         cnode: cap::CNode,
@@ -94,24 +113,18 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
 
         // Copy ASIDPool to the task, children can assign another children.
         task.abs_cptr(init_thread::slot::ASID_POOL.cptr_bits())
-            .copy(
-                &cnode_relative(init_thread::slot::ASID_POOL.cap()),
-                CapRights::all(),
-            )
+            .copy(&cnode_relative(slot::ASID_POOL.cap()), CapRights::all())
             .unwrap();
 
         // Copy ASIDControl to the task, children can assign another children.
         task.abs_cptr(init_thread::slot::ASID_CONTROL.cptr_bits())
-            .copy(
-                &cnode_relative(init_thread::slot::ASID_CONTROL.cap()),
-                CapRights::all(),
-            )
+            .copy(&cnode_relative(slot::ASID_CONTROL.cap()), CapRights::all())
             .unwrap();
 
         task
     }
 
-    /// Map a [sel4::Granule] to vaddr.
+    /// 映射一个页表 [sel4::cap::Granule] 到指定的虚拟地址
     pub fn map_page(&mut self, vaddr: usize, page: sel4::cap::Granule) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         for _ in 0..sel4::vspace_levels::NUM_LEVELS {
@@ -141,7 +154,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         unreachable!("Failed to map page!")
     }
 
-    /// Map a [sel4::Granule] to vaddr.
+    /// 映射一个大页 [sel4::cap::LargePage] 到指定的虚拟地址
     pub fn map_large_page(&mut self, vaddr: usize, page: sel4::cap::LargePage) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         for _ in 0..sel4::vspace_levels::NUM_LEVELS {
@@ -208,7 +221,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         )
     }
 
-    /// Map specified count pages to the stack bottom.
+    /// 映射指定数量的页到栈底
     pub fn map_stack(&mut self, page_count: usize) {
         self.stack_bottom -= page_count * PAGE_SIZE;
         for i in 0..page_count {
@@ -237,6 +250,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         }
     }
 
+    /// FIXME: 创建一个上下文结构
     pub fn with_context(&self, image: &ElfFile) {
         let mut user_context = sel4::UserContext::default();
         *user_context.pc_mut() = image.header.pt2.entry_point();
@@ -253,11 +267,12 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
             .expect("can't write pc reg to tcb")
     }
 
+    /// 设置任务名称
     pub fn set_name(&mut self, name: &str) {
         self.name = name.to_string();
     }
 
-    /// Run current task
+    /// 将任务设置为运行状态
     pub fn run(&self) {
         self.tcb.tcb_resume().unwrap();
     }

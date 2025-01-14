@@ -6,13 +6,10 @@ use sel4_panicking::catch_unwind;
 use sel4_panicking_env::abort;
 use sel4_sync::PanickingRawMutex;
 
-extern crate sel4_panicking;
-sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
-
-const STACK_SIZE: usize = 0x18000;
+const STACK_SIZE: usize = 1024 * 64;
 sel4_runtime_common::declare_stack!(STACK_SIZE);
 
-const HEAP_SIZE: usize = 0x18000;
+const HEAP_SIZE: usize = 1024 * 64;
 static STATIC_HEAP: StaticHeap<HEAP_SIZE> = StaticHeap::new();
 
 #[global_allocator]
@@ -44,7 +41,7 @@ fn inner_entry() -> ! {
     match catch_unwind(main) {
         #[allow(unreachable_patterns)]
         Ok(never) => never,
-        Err(_) => abort!("[BlockThread] main() panicked"),
+        Err(_) => abort!("[KernelThread] main() panicked"),
     }
 }
 

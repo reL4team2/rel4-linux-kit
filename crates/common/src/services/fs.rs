@@ -19,6 +19,10 @@ impl FileSerivce {
         Self::new(Endpoint::from_bits(bits))
     }
 
+    pub const fn from_leaf_slot(ls: LeafSlot) -> Self {
+        Self::from_bits(ls.raw() as _)
+    }
+
     pub const fn leaf_slot(&self) -> LeafSlot {
         LeafSlot::new(self.ep_cap.bits() as _)
     }

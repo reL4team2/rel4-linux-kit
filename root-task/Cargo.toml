@@ -12,9 +12,10 @@ sel4-initialize-tls = { workspace = true }
 sel4-stack = { workspace = true }
 
 # 自定义依赖
-crate-consts = { workspace = true }
-task-helper = { workspace = true }
 common = { workspace = true }
+crate-consts = { workspace = true }
+slot-manager = { workspace = true }
+task-helper = { workspace = true }
 
 # 其他依赖
 spin = { version = "0.9.8" }

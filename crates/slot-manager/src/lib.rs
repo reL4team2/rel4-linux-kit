@@ -37,7 +37,7 @@ use core::ops::Range;
 
 use sel4::{
     init_thread::{slot, Slot},
-    AbsoluteCPtr, Cap, CapType,
+    AbsoluteCPtr, Cap, CapRights, CapType,
 };
 
 /// 叶子 slot
@@ -54,6 +54,20 @@ impl LeafSlot {
     /// 创建新的 Slot
     pub const fn new(idx: usize) -> Self {
         Self { idx }
+    }
+
+    /// 从 [Slot] 中创建一个 [LeafSlot]
+    pub const fn from_slot<T: CapType>(slot: Slot<T>) -> Self {
+        Self {
+            idx: slot.cptr_bits() as _,
+        }
+    }
+
+    /// 从 [Cap] 中创建一个 [LeafSlot]
+    pub const fn from_cap<T: CapType>(cap: Cap<T>) -> Self {
+        Self {
+            idx: cap.bits() as _,
+        }
     }
 
     /// 获取当前节点的绝对位置
@@ -93,7 +107,7 @@ impl LeafSlot {
     }
 
     /// 获取这个位置后面的一个 [LeafSlot]
-    /// 
+    ///
     /// slot 的数量不应该大于 CSpace 构建的最大数量
     pub const fn next_slot(&self) -> LeafSlot {
         assert!(self.idx < usize::MAX);
@@ -101,11 +115,36 @@ impl LeafSlot {
     }
 
     /// 获取这个位置后面第 n 个位置的 [LeafSlot]
-    /// 
+    ///
     /// slot 的数量不应该大于 CSpace 构建的最大数量
     pub const fn next_nth_slot(&self, n: usize) -> LeafSlot {
         assert!((self.idx + n) <= usize::MAX);
         LeafSlot::new(self.idx + n)
+    }
+
+    /// 从 `other_slot` 中复制一个 Capability
+    ///
+    /// 如果发生错误将返回 [sel4::Error]
+    #[inline]
+    pub fn copy_from(&self, other: &LeafSlot, rights: CapRights) -> Result<(), sel4::Error> {
+        self.abs_cptr().copy(&other.abs_cptr(), rights)
+    }
+
+    /// 删除当前 [LeafSlot] 中的 Capability
+    ///
+    /// 如果需要删除 [sel4::cap::CNode] 下面的所有 Capability，需要先使用 [Self::revoke] 删除
+    /// 派生出的 Capability，然后在调用 [delete] 删除 slot 中的 Capability
+    #[inline]
+    pub fn delete(&self) -> Result<(), sel4::Error> {
+        self.abs_cptr().delete()
+    }
+
+    /// 删除当前 [LeafSlot] 中派生出的 Capability
+    ///
+    /// 不会删除自身，需要调用 [Self::delete] 删除自身
+    #[inline]
+    pub fn revoke(&self) -> Result<(), sel4::Error> {
+        self.abs_cptr().revoke()
     }
 }
 
@@ -126,7 +165,7 @@ impl SlotManager {
     }
 
     /// 从 empty slots 创建 Slot Manager
-    pub fn new(empty_slots: Range<usize>) -> Self {
+    pub const fn new(empty_slots: Range<usize>) -> Self {
         Self { empty_slots }
     }
 
@@ -145,7 +184,7 @@ impl SlotManager {
     }
 
     /// 申请多个 slot
-    /// 
+    ///
     /// 返回的是开始位置的 LeafSlot
     #[inline]
     pub fn alloc_slots(&mut self, num: usize) -> LeafSlot {
