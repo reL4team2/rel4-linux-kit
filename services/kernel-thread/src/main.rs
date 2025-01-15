@@ -56,7 +56,7 @@ fn main() -> ! {
     // 寻找 fs_service 并尝试 ping
     let fs_service = FileSerivce::from_leaf_slot(OBJ_ALLOCATOR.lock().allocate_slot());
     ROOT_SERVICE
-        .find_service("ext4-thread", fs_service.leaf_slot())
+        .find_service("fs-thread", fs_service.leaf_slot())
         .unwrap();
     fs_service.ping().unwrap();
 
@@ -68,8 +68,7 @@ fn main() -> ! {
     uart_service.ping().unwrap();
 
     test_func!("[KernelThread] Test Thread", {
-        let ep = OBJ_ALLOCATOR.lock().alloc_endpoint();
-        child_test::test_child(ep).unwrap()
+        child_test::test_child().unwrap();
     });
     debug_println!("[KernelThread] Say Goodbye");
     slot::TCB.cap().tcb_suspend().unwrap();

@@ -18,7 +18,8 @@ use sel4::{
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer_mut, Cap, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
+    with_ipc_buffer_mut, Cap, CapRights, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm,
+    UntypedDesc,
 };
 use sel4_root_task::{root_task, Never};
 use slot_manager::LeafSlot;
@@ -54,17 +55,23 @@ static TASK_FILES: &[KernelServices] = &[
         dma: &[],
     },
     KernelServices {
-        name: "ext4-thread",
+        name: "fs-thread",
         file: include_bytes_aligned!(16, "../../target/ext4-thread.elf"),
         mem: &[],
         dma: &[],
     },
     // KernelServices {
-    //     name: "simple-cli",
-    //     file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+    //     name: "fs-thread",
+    //     file: include_bytes_aligned!(16, "../../target/fat-thread.elf"),
     //     mem: &[],
     //     dma: &[],
     // },
+    KernelServices {
+        name: "simple-cli",
+        file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+        mem: &[],
+        dma: &[],
+    },
     KernelServices {
         name: "kernel-thread",
         file: include_bytes_aligned!(16, "../../target/kernel-thread.elf"),
@@ -172,6 +179,16 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                 );
                 tasks[t_idx].map_page(start + i * PAGE_SIZE, page);
             });
+        }
+
+        // FIXME: 将分配内存的逻辑写成一个通用的逻辑
+        if t.name == "kernel-thread" {
+            let (mem_cap, _) = mem_untypes.pop().unwrap();
+            tasks[t_idx]
+                .cnode
+                .absolute_cptr_from_bits_with_depth(DEFAULT_CUSTOM_SLOT, 64)
+                .copy(&LeafSlot::from_cap(mem_cap).abs_cptr(), CapRights::all())
+                .unwrap()
         }
     });
 

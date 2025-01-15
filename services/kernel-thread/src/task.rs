@@ -5,12 +5,13 @@ use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
+use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
 use sel4::{
     cap_type::{Granule, PT},
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
 };
+use slot_manager::LeafSlot;
 use xmas_elf::{program, ElfFile};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -106,15 +107,32 @@ impl Drop for Sel4Task {
 }
 
 impl Sel4Task {
-    pub fn new() -> Sel4Task {
+    pub fn new() -> Result<Self, sel4::Error> {
         static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+        let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         let vspace = OBJ_ALLOCATOR.lock().alloc_vspace();
         let tcb = OBJ_ALLOCATOR.lock().alloc_tcb();
         let cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
         slot::ASID_POOL.cap().asid_pool_assign(vspace).unwrap();
 
-        Sel4Task {
-            id: ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize,
+        // 构建 CSpace 需要的结构
+        cnode
+            .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
+            .copy(&LeafSlot::from_cap(tcb).abs_cptr(), CapRights::all())
+            .unwrap();
+
+        // Copy EndPoint to child
+        cnode
+            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP, CNODE_RADIX_BITS)
+            .mint(
+                &LeafSlot::new(DEFAULT_SERVE_EP as _).abs_cptr(),
+                CapRights::all(),
+                tid as u64,
+            )?;
+
+
+        Ok(Sel4Task {
+            id: tid,
             pid: 0,
             tcb,
             cnode,
@@ -124,7 +142,7 @@ impl Sel4Task {
             heap: 0x2_0000_0000,
             exit: None,
             clear_child_tid: None,
-        }
+        })
     }
 
     /// To find a free area in the vspace.

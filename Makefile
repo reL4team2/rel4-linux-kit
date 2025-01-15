@@ -28,6 +28,7 @@ CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 # configuration and libsel4 headers.
 .INTERMDIATE: $(app).intermediate
 $(app).intermediate:
+	cargo build $(CARGO_BUILD_ARGS) -p shim
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 

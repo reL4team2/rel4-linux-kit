@@ -2,10 +2,10 @@ use crate::{syscall::handle_ipc_call, task::Sel4Task, utils::align_bits, OBJ_ALL
 use alloc::collections::btree_map::BTreeMap;
 use common::{CustomMessageLabel, USPACE_STACK_TOP};
 use core::cmp;
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, PAGE_SIZE_BITS};
+use crate_consts::{CNODE_RADIX_BITS, DEFAULT_SERVE_EP, PAGE_SIZE, PAGE_SIZE_BITS};
 use sel4::{
-    cap::Endpoint, cap_type::Granule, debug_println, init_thread::slot, reply, with_ipc_buffer,
-    with_ipc_buffer_mut, CNodeCapData, CapRights, Fault, MessageInfo, Result, Word,
+    cap_type::Granule, debug_println, init_thread::slot, reply, with_ipc_buffer,
+    with_ipc_buffer_mut, CNodeCapData, Fault, MessageInfo, Result, Word,
 };
 use slot_manager::LeafSlot;
 use spin::Mutex;
@@ -16,25 +16,11 @@ const CHILD_ELF: &[u8] = include_bytes!("../../../target/test-thread.elf");
 
 pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());
 
-pub fn test_child(ep: Endpoint) -> Result<()> {
+pub fn test_child() -> Result<()> {
+    let ep = LeafSlot::new(DEFAULT_SERVE_EP as _).cap();
     let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
     debug_println!("[KernelThread] Child Task Start, busybox args: {:?}", args);
-    let mut task = Sel4Task::new();
-
-    // Copy tcb to child
-    task.cnode
-        .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
-        .copy(&LeafSlot::from_cap(task.tcb).abs_cptr(), CapRights::all())
-        .unwrap();
-
-    // Copy EndPoint to child
-    task.cnode
-        .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP, CNODE_RADIX_BITS)
-        .mint(
-            &LeafSlot::from_cap(ep).abs_cptr(),
-            CapRights::all(),
-            task.id as u64,
-        )?;
+    let mut task = Sel4Task::new()?;
 
     debug_println!("[KernelThread] Child Task Mapping ELF...");
     task.load_elf(CHILD_ELF);

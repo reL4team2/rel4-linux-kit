@@ -108,7 +108,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
 
         // Move SRV EP to child process
         task.abs_cptr(DEFAULT_SERVE_EP)
-            .mint(&cnode_relative(srv_ep), CapRights::all(), badge)
+            .copy(&cnode_relative(srv_ep), CapRights::all())
             .unwrap();
 
         // Copy ASIDPool to the task, children can assign another children.

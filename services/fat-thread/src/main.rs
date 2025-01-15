@@ -4,17 +4,18 @@
 #[macro_use]
 extern crate alloc;
 
-use common::services::{block::BlockService, root::RootService};
-use crate_consts::DEFAULT_PARENT_EP;
+use common::services::{block::BlockService, fs::FileServiceLabel, root::RootService};
+use crate_consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP};
 use cursor::DiskCursor;
-use sel4::cap::Endpoint;
+use sel4::{cap::Endpoint, debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
 mod cursor;
 mod runtime;
 
-static ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
+const ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
 const BLK_THREAD_EP_SLOT: Endpoint = Endpoint::from_bits(0x21);
+const SERVE_EP: Endpoint = Endpoint::from_bits(DEFAULT_SERVE_EP);
 
 fn main() -> ! {
     common::init_log!(log::LevelFilter::Trace);
@@ -33,11 +34,34 @@ fn main() -> ! {
     blk_ep.ping().expect("Can't ping blk-thread service");
 
     let cursor: DiskCursor = DiskCursor::default();
-    let inner = fatfs::FileSystem::new(cursor, fatfs::FsOptions::new()).expect("open fs wrong");
+    let fs = fatfs::FileSystem::new(cursor, fatfs::FsOptions::new()).expect("open fs wrong");
 
-    inner.root_dir().iter().for_each(|f| {
-        log::debug!("dir entry: {:?}", f);
-    });
-    log::debug!("display entry end");
-    loop {}
+    let rev_msg = MessageInfoBuilder::default();
+    loop {
+        let (message, _) = SERVE_EP.recv(());
+        let msg_label = match FileServiceLabel::try_from(message.label()) {
+            Ok(label) => label,
+
+            Err(_) => continue,
+        };
+        log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
+        match msg_label {
+            FileServiceLabel::Ping => {
+                with_ipc_buffer_mut(|ib| {
+                    sel4::reply(ib, rev_msg.build());
+                });
+            }
+            // FIXME: 应该返回一个结构，或者数组表示所有文件
+            // 类似于 getdents
+            FileServiceLabel::ReadDir => {
+                log::debug!("Read Dir Message");
+
+                fs.root_dir().iter().for_each(|f| {
+                    debug_print!("{}\t", f.unwrap().file_name());
+                });
+                debug_println!();
+                with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()));
+            }
+        }
+    }
 }

@@ -1,13 +1,14 @@
 use core::{cmp, ops::DerefMut};
 
 use common::{footprint, map_image, CloneArgs, CloneFlags, USPACE_STACK_SIZE, USPACE_STACK_TOP};
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, GRANULE_SIZE};
+use crate_consts::{CNODE_RADIX_BITS, GRANULE_SIZE};
 use object::File;
 use sel4::{
     cap::Endpoint,
     cap_type::{self},
     init_thread, CNodeCapData, Cap, CapRights, VmAttributes,
 };
+use slot_manager::LeafSlot;
 use syscalls::Errno;
 use xmas_elf::ElfFile;
 
@@ -144,53 +145,29 @@ pub(crate) fn sys_clone(
         return Err(Errno::EINVAL);
     }
     let clone_args: CloneArgs = read_item(task, clone_args)?;
-
     let clone_flags = CloneFlags::from_bits(clone_args.flags).ok_or(Errno::EINVAL)?;
 
     // Default to clone without any flags
-    let mut new_task = Sel4Task::new();
-    // Copy tcb to child
-    new_task
-        .cnode
-        .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
-        .copy(
-            &init_thread::slot::CNODE.cap().absolute_cptr(task.tcb),
-            CapRights::all(),
-        )
-        .unwrap();
-    // Copy EndPoint to child
-    let badge = new_task.id as u64;
-    new_task
-        .cnode
-        .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP, CNODE_RADIX_BITS)
-        .mint(
-            &init_thread::slot::CNODE.cap().absolute_cptr(fault_ep),
-            CapRights::all(),
-            badge,
-        )
-        .map_err(|_| Errno::ENOMEM)?;
+    let mut new_task = Sel4Task::new().map_err(|_| Errno::ENOMEM)?;
     if !clone_flags.contains(CloneFlags::CLONE_VM) {
         // Copy vspace to child
         clone_vspace(&mut new_task, &task);
     } else {
-        let new_vspace_index = OBJ_ALLOCATOR.lock().allocate_slot().raw();
-        let new_vspace = Cap::<cap_type::VSpace>::from_bits(new_vspace_index as u64);
-        init_thread::slot::CNODE
-            .cap()
-            .absolute_cptr(new_vspace)
-            .copy(
-                &init_thread::slot::CNODE.cap().absolute_cptr(task.vspace),
-                CapRights::all(),
-            )
+        let new_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+        let new_vspace = new_slot.cap::<cap_type::VSpace>();
+
+        new_slot
+            .copy_from(&LeafSlot::from_cap(task.vspace), CapRights::all())
             .unwrap();
 
         new_task.vspace = new_vspace;
     }
-    let ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
 
+    // 配置新任务 IPC Buffer
+    let ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
     let ipc_buffer_addr = 0x4_0000;
     new_task.map_page(ipc_buffer_addr as _, ipc_buffer_cap);
-    // Configure the child task
+    // 配置新任务 IPC 缓冲区 和 上下文
     new_task
         .tcb
         .tcb_configure(
@@ -214,7 +191,6 @@ pub(crate) fn sys_clone(
         *regs.pc_mut() = clone_args.init_fn as _;
         *regs.gpr_mut(0) = clone_args.init_argv as _;
     }
-
     if !clone_args.stack.is_null() {
         *regs.sp_mut() = clone_args.stack as _;
     }
@@ -223,12 +199,8 @@ pub(crate) fn sys_clone(
         .tcb
         .tcb_write_all_registers(false, &mut regs)
         .unwrap();
-
-    // task.tcb.tcb_set_affinity(0).unwrap();
-    new_task.tcb.debug_name(b"before name");
-
     new_task.tcb.tcb_resume().unwrap();
-    task_map.insert(badge, new_task);
+    task_map.insert(new_task.id as _, new_task);
 
     Ok(badge as usize)
 }

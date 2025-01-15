@@ -40,7 +40,7 @@ fn main() -> ! {
 
     // 探索服务，并尝试 ping
     ROOT_SERVICE
-        .find_service("ext4-thread", FS_SERVICE.leaf_slot())
+        .find_service("fs-thread", FS_SERVICE.leaf_slot())
         .unwrap();
     ROOT_SERVICE
         .find_service("uart-thread", UART_SERVICE.leaf_slot())
