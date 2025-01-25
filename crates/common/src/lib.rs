@@ -268,7 +268,3 @@ impl AlignedPage {
     }
 }
 
-/// Calculate how many registers this data occupies
-fn reg_num(data_len: usize) -> usize {
-    (data_len + REG_LEN - 1) / REG_LEN
-}

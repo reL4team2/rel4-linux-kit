@@ -1,10 +1,10 @@
 use crate::{syscall::handle_ipc_call, task::Sel4Task, utils::align_bits, OBJ_ALLOCATOR};
 use alloc::collections::btree_map::BTreeMap;
-use common::{CustomMessageLabel, USPACE_STACK_TOP};
+use common::{page::PhysPage, CustomMessageLabel, USPACE_STACK_TOP};
 use core::cmp;
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_SERVE_EP, PAGE_SIZE, PAGE_SIZE_BITS};
 use sel4::{
-    cap_type::Granule, debug_println, init_thread::slot, reply, with_ipc_buffer,
+    debug_println, init_thread::slot, reply, with_ipc_buffer,
     with_ipc_buffer_mut, CNodeCapData, Fault, MessageInfo, Result, Word,
 };
 use slot_manager::LeafSlot;
@@ -28,12 +28,12 @@ pub fn test_child() -> Result<()> {
 
     let sp_ptr = task.map_stack(0, USPACE_STACK_TOP - 16 * PAGE_SIZE, USPACE_STACK_TOP, args);
 
-    let ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
+    let ipc_buf_page = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
     let max = child_elf_file
         .section_iter()
         .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()));
     let ipc_buffer_addr = max.div_ceil(4096) * 4096;
-    task.map_page(ipc_buffer_addr as _, ipc_buffer_cap);
+    task.map_page(ipc_buffer_addr as _, ipc_buf_page);
 
     // Configure the child task
     task.tcb.tcb_configure(
@@ -42,7 +42,7 @@ pub fn test_child() -> Result<()> {
         CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
         task.vspace,
         ipc_buffer_addr,
-        ipc_buffer_cap,
+        ipc_buf_page.cap(),
     )?;
     task.tcb.tcb_set_sched_params(slot::TCB.cap(), 0, 255)?;
 
@@ -74,9 +74,7 @@ pub fn test_child() -> Result<()> {
             match fault {
                 Fault::VmFault(vmfault) => {
                     let vaddr = align_bits(vmfault.addr() as usize, PAGE_SIZE_BITS);
-                    let page_cap = OBJ_ALLOCATOR
-                        .lock()
-                        .allocate_and_retyped_fixed_sized::<Granule>();
+                    let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
                     let mut task_map = TASK_MAP.lock();
                     let task = task_map.get_mut(&badge).unwrap();
                     task.map_page(vaddr, page_cap);

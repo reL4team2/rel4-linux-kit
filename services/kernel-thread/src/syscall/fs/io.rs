@@ -20,7 +20,7 @@ pub(crate) fn sys_write(badge: u64, fd: i32, buf: *const u8, mut count: usize) -
                 .cap()
                 .absolute_cptr(new_cap)
                 .copy(
-                    &init_thread::slot::CNODE.cap().absolute_cptr(*cap),
+                    &init_thread::slot::CNODE.cap().absolute_cptr(cap.cap()),
                     CapRights::all(),
                 )
                 .unwrap();

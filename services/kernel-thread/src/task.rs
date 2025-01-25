@@ -1,6 +1,6 @@
-use crate::{page_seat_vaddr, OBJ_ALLOCATOR};
+use crate::OBJ_ALLOCATOR;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::USPACE_BASE;
+use common::{page::PhysPage, USPACE_BASE};
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
@@ -8,8 +8,9 @@ use core::{
 use crate_consts::{
     CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE,
 };
+use memory_addr::MemoryAddr;
 use sel4::{
-    cap_type::{Granule, PT},
+    cap_type::PT,
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
 };
@@ -76,7 +77,7 @@ pub struct Sel4Task {
     pub cnode: sel4::cap::CNode,
     pub vspace: sel4::cap::VSpace,
     pub mapped_pt: Vec<sel4::cap::PT>,
-    pub mapped_page: BTreeMap<usize, sel4::cap::SmallPage>,
+    pub mapped_page: BTreeMap<usize, PhysPage>,
     pub heap: usize,
     pub exit: Option<i32>,
     /// The clear thread tid field
@@ -101,9 +102,9 @@ impl Drop for Sel4Task {
             root_cnode.absolute_cptr(*cap).revoke().unwrap();
             root_cnode.absolute_cptr(*cap).delete().unwrap();
         });
-        self.mapped_page.values().for_each(|cap| {
-            root_cnode.absolute_cptr(*cap).revoke().unwrap();
-            root_cnode.absolute_cptr(*cap).delete().unwrap();
+        self.mapped_page.values().for_each(|phys_page| {
+            root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
+            root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
         });
     }
 }
@@ -161,10 +162,10 @@ impl Sel4Task {
         Some(last_addr)
     }
 
-    pub fn map_page(&mut self, vaddr: usize, page: sel4::cap::SmallPage) {
+    pub fn map_page(&mut self, vaddr: usize, page: PhysPage) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         for _ in 0..sel4::vspace_levels::NUM_LEVELS {
-            let res: core::result::Result<(), sel4::Error> = page.frame_map(
+            let res: core::result::Result<(), sel4::Error> = page.cap().frame_map(
                 self.vspace,
                 vaddr as _,
                 CapRights::all(),
@@ -189,9 +190,9 @@ impl Sel4Task {
         }
     }
 
-    pub fn unmap_page(&mut self, vaddr: usize, page: sel4::cap::SmallPage) {
+    pub fn unmap_page(&mut self, vaddr: usize, page: PhysPage) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
-        let res = page.frame_unmap();
+        let res = page.cap().frame_unmap();
         match res {
             Ok(_) => {
                 self.mapped_page.remove(&vaddr);
@@ -212,44 +213,22 @@ impl Sel4Task {
         let mut stack_ptr = end;
 
         for vaddr in (start..end).step_by(PAGE_SIZE) {
-            let page_cap = OBJ_ALLOCATOR
-                .lock()
-                .allocate_and_retyped_fixed_sized::<Granule>();
+            let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
             if vaddr == end - PAGE_SIZE {
-                page_cap
-                    .frame_map(
-                        init_thread::slot::VSPACE.cap(),
-                        page_seat_vaddr(),
-                        CapRights::all(),
-                        VmAttributes::DEFAULT,
-                    )
-                    .unwrap();
-
+                let mut page_writer = page_cap.lock();
                 let args_ptr: Vec<_> = args
                     .iter()
                     .map(|arg| {
                         // TODO: set end bit was zeroed manually.
-                        stack_ptr = (stack_ptr - arg.bytes().len() - 1) / STACK_ALIGN_SIZE
-                            * STACK_ALIGN_SIZE;
-                        unsafe {
-                            core::ptr::copy_nonoverlapping(
-                                arg.as_bytes().as_ptr(),
-                                (page_seat_vaddr() + stack_ptr % PAGE_SIZE) as *mut u8,
-                                arg.bytes().len(),
-                            );
-                        }
+                        stack_ptr = (stack_ptr - arg.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                        page_writer.write_bytes(stack_ptr % PAGE_SIZE, arg.as_bytes());
                         stack_ptr
                     })
                     .collect();
 
                 let mut push_num = |num: usize| {
                     stack_ptr = stack_ptr - core::mem::size_of::<usize>();
-
-                    unsafe {
-                        ((page_seat_vaddr() + stack_ptr % PAGE_SIZE) as *mut usize)
-                            .write_volatile(num);
-                    }
-
+                    page_writer.write_usize(stack_ptr % PAGE_SIZE, num);
                     stack_ptr
                 };
 
@@ -277,9 +256,6 @@ impl Sel4Task {
                 });
                 // push argv
                 push_num(args_ptr.len());
-
-                // Unmap Frame
-                page_cap.frame_unmap().unwrap();
             }
             self.map_page(vaddr, page_cap);
         }
@@ -289,9 +265,9 @@ impl Sel4Task {
     pub fn load_elf(&mut self, elf_data: &[u8]) {
         let file = ElfFile::new(elf_data).expect("This is not a valid elf file");
 
-        let mut mapped_page: BTreeMap<usize, sel4::cap::SmallPage> = BTreeMap::new();
+        let mut mapped_page: BTreeMap<usize, PhysPage> = BTreeMap::new();
 
-        // Load data from elf file.
+        // 从 elf 文件中读取数据
         file.program_iter()
             .filter(|ph| ph.get_type() == Ok(program::Type::Load))
             .for_each(|ph| {
@@ -303,43 +279,20 @@ impl Sel4Task {
                 while vaddr < vaddr_end {
                     let page_cap = match mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
                         Some(page_cap) => {
-                            page_cap.frame_unmap().unwrap();
+                            page_cap.cap().frame_unmap().unwrap();
                             page_cap
                         }
-                        None => OBJ_ALLOCATOR
-                            .lock()
-                            .allocate_and_retyped_fixed_sized::<Granule>(),
+                        None => PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page()),
                     };
 
-                    // If need to read data from elf file.
+                    // 将 elf 中特定段的内容写入对应的物理页中
                     if offset < end {
-                        // Map to root task to write datas.
-                        page_cap
-                            .frame_map(
-                                init_thread::slot::VSPACE.cap(),
-                                page_seat_vaddr(),
-                                CapRights::all(),
-                                VmAttributes::DEFAULT,
-                            )
-                            .unwrap();
-
                         let rsize = cmp::min(PAGE_SIZE - vaddr % PAGE_SIZE, end - offset);
-                        // Copy data from elf file's data to the correct position.
-                        unsafe {
-                            core::ptr::copy_nonoverlapping(
-                                elf_data.as_ptr().add(offset),
-                                (page_seat_vaddr() + offset % PAGE_SIZE) as *mut u8,
-                                rsize,
-                            )
-                        }
-
-                        page_cap.frame_unmap().unwrap();
-
+                        page_cap.lock()[..rsize].copy_from_slice(&elf_data[offset..offset + rsize]);
                         offset += rsize;
                     }
 
                     self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
-
                     mapped_page.insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
 
                     // Calculate offset
@@ -353,9 +306,7 @@ impl Sel4Task {
             return self.heap;
         }
         for vaddr in (self.heap..value).step_by(PAGE_SIZE) {
-            let page_cap = OBJ_ALLOCATOR
-                .lock()
-                .allocate_and_retyped_fixed_sized::<Granule>();
+            let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
             self.map_page(vaddr, page_cap);
         }
         value

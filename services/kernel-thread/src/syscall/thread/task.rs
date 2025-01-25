@@ -1,6 +1,6 @@
 use core::{cmp, ops::DerefMut};
 
-use common::{footprint, map_image, CloneArgs, CloneFlags, USPACE_STACK_SIZE, USPACE_STACK_TOP};
+use common::{footprint, map_image, page::PhysPage, CloneArgs, CloneFlags, USPACE_STACK_SIZE, USPACE_STACK_TOP};
 use crate_consts::{CNODE_RADIX_BITS, GRANULE_SIZE};
 use object::File;
 use sel4::{
@@ -84,7 +84,7 @@ pub(crate) fn sys_exec(
     );
 
     let file = ElfFile::new(CHILD_ELF).expect("can't load elf file");
-    let ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
+    let ipc_buffer_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
     let max = file
         .section_iter()
         .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()));
@@ -101,7 +101,7 @@ pub(crate) fn sys_exec(
             CNodeCapData::new(0, sel4::WORD_SIZE - 12),
             task.vspace,
             ipc_buffer_addr,
-            ipc_buffer_cap,
+            ipc_buffer_cap.cap(),
         )
         .unwrap();
 
@@ -164,7 +164,7 @@ pub(crate) fn sys_clone(
     }
 
     // 配置新任务 IPC Buffer
-    let ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
+    let ipc_buffer_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
     let ipc_buffer_addr = 0x4_0000;
     new_task.map_page(ipc_buffer_addr as _, ipc_buffer_cap);
     // 配置新任务 IPC 缓冲区 和 上下文
@@ -176,7 +176,7 @@ pub(crate) fn sys_clone(
             CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
             new_task.vspace,
             ipc_buffer_addr,
-            ipc_buffer_cap,
+            ipc_buffer_cap.cap(),
         )
         .map_err(|_| Errno::ENOMEM)?;
     new_task
@@ -211,10 +211,11 @@ fn clone_vspace(dst: &mut Sel4Task, src: &Sel4Task) {
         FreePagePlaceHolder([0; GRANULE_SIZE]);
 
     for (vaddr, page_cap) in src.mapped_page.iter() {
-        let new_page_cap = OBJ_ALLOCATOR.lock().alloc_page();
+        let new_page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
 
         // READ data from src page to new_page
         new_page_cap
+            .cap()
             .frame_map(
                 init_thread::slot::VSPACE.cap(),
                 core::ptr::addr_of!(EXT_FREE_PAGE_PLACEHOLDER) as _,
@@ -228,7 +229,7 @@ fn clone_vspace(dst: &mut Sel4Task, src: &Sel4Task) {
             .cap()
             .absolute_cptr(temp_cap)
             .copy(
-                &init_thread::slot::CNODE.cap().absolute_cptr(*page_cap),
+                &init_thread::slot::CNODE.cap().absolute_cptr(page_cap.cap()),
                 CapRights::all(),
             )
             .unwrap();
@@ -258,7 +259,7 @@ fn clone_vspace(dst: &mut Sel4Task, src: &Sel4Task) {
             .delete()
             .unwrap();
 
-        new_page_cap.frame_unmap().unwrap();
+        new_page_cap.cap().frame_unmap().unwrap();
 
         dst.map_page(*vaddr, new_page_cap);
     }

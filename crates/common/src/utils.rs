@@ -8,7 +8,7 @@ use object::{
 };
 use sel4::{init_thread::slot, with_ipc_buffer_mut};
 
-use crate::ObjectAllocator;
+use crate::{page::PhysPage, ObjectAllocator};
 // 计算 elf image 的虚地址空间范围
 pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {
     let min: usize = image
@@ -57,7 +57,7 @@ pub fn map_intermediate_translation_tables(
 /// 将 ELF image 映射到物理页
 pub fn map_image<'a>(
     allocator: &mut ObjectAllocator,
-    mapped_page: &mut BTreeMap<usize, sel4::cap::Granule>,
+    mapped_page: &mut BTreeMap<usize, PhysPage>,
     vspace: sel4::cap::VSpace,
     footprint: Range<usize>,
     image: &'a impl Object<'a>,
@@ -125,7 +125,7 @@ pub fn map_image<'a>(
         page_cap
             .frame_map(vspace, addr, rights.build(), sel4::VmAttributes::DEFAULT)
             .unwrap();
-        mapped_page.insert(addr, page_cap);
+        mapped_page.insert(addr, PhysPage::new(page_cap));
     }
 }
 

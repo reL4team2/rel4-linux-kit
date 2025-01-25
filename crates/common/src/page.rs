@@ -34,6 +34,7 @@ static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder = FreePagePlaceHolder([0; 
 static PAGE_MAP_LOCK: AtomicBool = AtomicBool::new(false);
 
 /// 物理页表的抽象，提供一系列方法，用于操作物理页。
+#[derive(Clone, Copy)]
 pub struct PhysPage {
     cap: Granule,
 }
@@ -50,6 +51,11 @@ impl PhysPage {
         self.cap
             .frame_get_address()
             .expect("can't get address of the physical page")
+    }
+
+    /// 获取页表的 Capability
+    pub const fn cap(&self) -> Granule {
+        self.cap
     }
 
     /// 锁定物理页表，返回一个物理页锁，可以在这个对象上进行读写
@@ -75,6 +81,25 @@ impl PhysPage {
 pub struct PhysPageLocker<'a> {
     cap: Granule,
     data: &'a mut [u8],
+}
+
+impl<'a> PhysPageLocker<'a> {
+    /// 在 `offset` 处写入一个 usize 数据
+    ///
+    /// 需要保证 `offset` 为 `sizeof(usize)` 的整数倍
+    #[inline]
+    pub fn write_usize(&mut self, offset: usize, data: usize) {
+        let len = core::mem::size_of::<usize>();
+        self.data[offset..offset + len].copy_from_slice(&data.to_le_bytes());
+    }
+
+    /// 在 `offset` 出写入一个 bytes 序列
+    ///
+    /// 需要保证 offset + data.len() <= 4096 且 `offset` 为 `sizeof(usize)` 的整数倍
+    #[inline]
+    pub fn write_bytes(&mut self, offset: usize, data: &[u8]) {
+        self.data[offset..offset + data.len()].copy_from_slice(data);
+    }
 }
 
 impl<'a> Deref for PhysPageLocker<'a> {

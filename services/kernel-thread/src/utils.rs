@@ -1,4 +1,5 @@
 use alloc::format;
+use common::page::PhysPage;
 use crate_consts::GRANULE_SIZE;
 use memory_addr::{MemoryAddr, VirtAddr, PAGE_SIZE_4K};
 use sel4::{debug_println, init_thread, Cap, CapRights, VmAttributes};
@@ -55,17 +56,18 @@ where
     let mut len = core::mem::size_of::<T>() * number;
     while len > 0 {
         if let Some(cap) = task.mapped_page.get(&align_bits(buf_addr.as_usize(), 12)) {
-            let new_cap = Cap::<sel4::cap_type::SmallPage>::from_bits(0);
+            let new_cap = PhysPage::new(Cap::<sel4::cap_type::SmallPage>::from_bits(0));
             init_thread::slot::CNODE
                 .cap()
-                .absolute_cptr(new_cap)
+                .absolute_cptr(new_cap.cap())
                 .copy(
-                    &init_thread::slot::CNODE.cap().absolute_cptr(*cap),
+                    &init_thread::slot::CNODE.cap().absolute_cptr(cap.cap()),
                     CapRights::all(),
                 )
                 .unwrap();
 
             new_cap
+                .cap()
                 .frame_map(
                     init_thread::slot::VSPACE.cap(),
                     page_seat_vaddr(),
@@ -82,10 +84,10 @@ where
             len -= copy_len;
             buf_addr += copy_len;
 
-            new_cap.frame_unmap().unwrap();
+            new_cap.cap().frame_unmap().unwrap();
             init_thread::slot::CNODE
                 .cap()
-                .absolute_cptr(new_cap)
+                .absolute_cptr(new_cap.cap())
                 .delete()
                 .unwrap();
         } else {

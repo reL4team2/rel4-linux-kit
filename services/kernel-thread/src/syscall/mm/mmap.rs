@@ -1,3 +1,4 @@
+use common::page::PhysPage;
 use memory_addr::{MemoryAddr, PageIter4K, VirtAddr};
 use sel4::{debug_println, CapRights, CapRightsBuilder};
 use syscalls::Errno;
@@ -82,9 +83,7 @@ pub(crate) fn sys_mmap(
         if task.mapped_page.get(&(vaddr.as_usize())).is_some() {
             continue;
         }
-        let page_cap = OBJ_ALLOCATOR
-            .lock()
-            .allocate_and_retyped_fixed_sized::<sel4::cap_type::Granule>();
+        let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
         debug_println!("vaddr: {:?}, page_cap: {:?}", vaddr, page_cap);
         task.map_page(vaddr.as_usize(), page_cap);
     }

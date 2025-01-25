@@ -13,6 +13,7 @@ use common::services::IpcBufferRW;
 use common::*;
 use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
+use page::PhysPage;
 use sel4::{
     cap::{LargePage, Untyped},
     cap_type::Endpoint,
@@ -177,7 +178,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                     start + i * PAGE_SIZE,
                     page.frame_get_address().unwrap()
                 );
-                tasks[t_idx].map_page(start + i * PAGE_SIZE, page);
+                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
             });
         }
 
@@ -222,7 +223,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
             let phys_addr = tasks[badge as usize]
                 .mapped_page
                 .get(&(addr & !0xfff))
-                .map(|x| x.frame_get_address().unwrap())
+                .map(|x| x.addr())
                 .unwrap();
 
             ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;

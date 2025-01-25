@@ -955,6 +955,7 @@ checksum = "43d0e35dc7d73976a53c7e6d7d177ef804a0c0ee774ec77bcc520c2216fd7cbe"
 name = "task-helper"
 version = "0.1.0"
 dependencies = [
+ "common",
  "crate-consts",
  "sel4",
  "sel4-sync",
