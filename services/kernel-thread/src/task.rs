@@ -5,7 +5,9 @@ use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
+use crate_consts::{
+    CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE,
+};
 use sel4::{
     cap_type::{Granule, PT},
     init_thread::{self, slot},
@@ -129,7 +131,6 @@ impl Sel4Task {
                 CapRights::all(),
                 tid as u64,
             )?;
-
 
         Ok(Sel4Task {
             id: tid,

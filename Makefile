@@ -55,6 +55,9 @@ run: $(image)
 	$(qemu_cmd)
 	rm $(image)
 
+busybox:
+	wget https://github.com/Azure-stars/rust-root-task-demo-mi-dev/raw/refs/heads/main/busybox
+
 clean:
 	rm -rf $(BUILD_DIR)
 

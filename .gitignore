@@ -8,3 +8,6 @@
 *.log
 **.pcap
 mount.img
+
+# 忽略测试文件
+/busybox
