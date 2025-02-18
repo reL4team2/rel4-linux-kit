@@ -5,7 +5,7 @@ use crate_consts::DEFAULT_CUSTOM_SLOT;
 use memory_addr::PAGE_SIZE_4K;
 use sel4::{init_thread, with_ipc_buffer_mut, Cap, CapRights, VmAttributes};
 
-use crate::{page_seat_vaddr, OBJ_ALLOCATOR};
+use crate::{page_seat_vaddr, utils::obj::OBJ_ALLOCATOR};
 
 fn send_net_ipc(label: NetRequsetabel, cap: Option<Cap<sel4::cap_type::SmallPage>>) {
     let ipc_ep = Cap::<sel4::cap_type::Endpoint>::from_bits(DEFAULT_CUSTOM_SLOT + 2);

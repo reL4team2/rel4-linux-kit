@@ -3,7 +3,7 @@ use memory_addr::{MemoryAddr, PageIter4K, VirtAddr};
 use sel4::{debug_println, CapRights, CapRightsBuilder};
 use syscalls::Errno;
 
-use crate::{child_test::TASK_MAP, syscall::SysResult, OBJ_ALLOCATOR};
+use crate::{child_test::TASK_MAP, syscall::SysResult, utils::obj::alloc_page};
 
 bitflags::bitflags! {
     #[derive(Debug, Clone)]
@@ -83,7 +83,7 @@ pub(crate) fn sys_mmap(
         if task.mapped_page.get(&(vaddr.as_usize())).is_some() {
             continue;
         }
-        let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+        let page_cap = PhysPage::new(alloc_page());
         debug_println!("vaddr: {:?}, page_cap: {:?}", vaddr, page_cap);
         task.map_page(vaddr.as_usize(), page_cap);
     }

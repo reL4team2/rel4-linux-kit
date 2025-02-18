@@ -6,7 +6,10 @@
 extern crate alloc;
 extern crate sel4_panicking;
 
+mod arch;
 mod child_test;
+mod device;
+mod fs;
 mod logging;
 mod runtime;
 mod syscall;
@@ -33,43 +36,28 @@ pub fn page_seat_vaddr() -> usize {
     unsafe { init_free_page_addr() }
 }
 
-/// The object allocator for the kernel thread.
-pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAllocator::empty());
-
 /// free page placeholder
 pub(crate) static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder =
     FreePagePlaceHolder([0; GRANULE_SIZE]);
 
-const ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
-
 fn main() -> ! {
     common::init_recv_slot();
+    // 初始化 LOG
     logging::init();
 
-    debug_println!("[KernelThread] EntryPoint");
-    OBJ_ALLOCATOR.lock().init(
-        DEFAULT_EMPTY_SLOT_INDEX..KERNEL_THREAD_SLOT_NUMS,
-        Cap::from_bits(DEFAULT_CUSTOM_SLOT as _),
-    );
-    debug_println!("[KernelThread] Object Allocator initialized");
+    // 初始化 object allocator
+    utils::obj::init();
 
-    // 寻找 fs_service 并尝试 ping
-    let fs_service = FileSerivce::from_leaf_slot(OBJ_ALLOCATOR.lock().allocate_slot());
-    ROOT_SERVICE
-        .find_service("fs-thread", fs_service.leaf_slot())
-        .unwrap();
-    fs_service.ping().unwrap();
+    // 初始化文件系统
+    fs::init();
 
-    // 寻找 uart_service 并尝试 ping
-    let uart_service = UartService::from_leaf_slot(OBJ_ALLOCATOR.lock().allocate_slot());
-    ROOT_SERVICE
-        .find_service("uart-thread", uart_service.leaf_slot())
-        .unwrap();
-    uart_service.ping().unwrap();
+    // 初始化设备
+    device::init();
 
-    test_func!("[KernelThread] Test Thread", {
-        child_test::test_child().unwrap();
-    });
+    // test_func!("[KernelThread] Test Thread", {
+    //     child_test::test_child().unwrap();
+    // });
+    child_test::test_child().unwrap();
     debug_println!("[KernelThread] Say Goodbye");
     slot::TCB.cap().tcb_suspend().unwrap();
     unreachable!()

@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(naked_functions)]
-#[macro_use]
 extern crate alloc;
 extern crate sel4_panicking;
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);

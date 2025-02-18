@@ -7,7 +7,7 @@ use sel4::{
 };
 use slot_manager::LeafSlot;
 
-use crate::services::{IpcBufferRW, REG_LEN};
+use crate::services::IpcBufferRW;
 
 #[ipc_msg]
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]

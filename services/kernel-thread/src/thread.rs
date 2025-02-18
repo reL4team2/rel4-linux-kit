@@ -1,4 +1,3 @@
-use crate::OBJ_ALLOCATOR;
 use alloc::boxed::Box;
 use sel4::{
     debug_println, init_thread, set_ipc_buffer, CNodeCapData, CapTypeForFrameObjectOfFixedSize,
@@ -9,16 +8,18 @@ use sel4_initialize_tls::{TlsImage, TlsReservationLayout, UncheckedTlsImage};
 use sel4_root_task::{abort, panicking::catch_unwind};
 use sel4_stack::Stack;
 
+use crate::utils::obj::{alloc_notification, alloc_page, alloc_pt, alloc_tcb};
+
 static SECONDARY_THREAD_STACK: Stack<4096> = Stack::new();
 
 const SECONDARY_THREAD_IPC_BUFFER_ADDR: usize = 0x10_0000_0000;
 
 #[allow(unused)]
 pub fn test_threads() {
-    let ntfn = OBJ_ALLOCATOR.lock().alloc_notification();
-    let thread_tcb = OBJ_ALLOCATOR.lock().alloc_tcb();
+    let ntfn = alloc_notification();
+    let thread_tcb = alloc_tcb();
 
-    let secondary_thread_ipc_buffer_cap = OBJ_ALLOCATOR.lock().alloc_page();
+    let secondary_thread_ipc_buffer_cap = alloc_page();
 
     loop {
         match secondary_thread_ipc_buffer_cap.frame_map(
@@ -33,9 +34,7 @@ pub fn test_threads() {
             }
             Err(Error::FailedLookup) => {
                 debug_println!("[RootTask] map device memory failed, try to allocate page table");
-                let pt = OBJ_ALLOCATOR
-                    .lock()
-                    .allocate_and_retyped_fixed_sized::<sel4::cap_type::PT>();
+                let pt = alloc_pt();
                 pt.pt_map(
                     init_thread::slot::VSPACE.cap(),
                     SECONDARY_THREAD_IPC_BUFFER_ADDR,

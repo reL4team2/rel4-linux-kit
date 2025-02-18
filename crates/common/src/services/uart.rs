@@ -54,3 +54,9 @@ impl UartService {
         with_ipc_buffer(|ipc_buffer| Ok(ipc_buffer.msg_bytes()[0]))
     }
 }
+
+impl From<LeafSlot> for UartService {
+    fn from(value: LeafSlot) -> Self {
+        Self::from_leaf_slot(value)
+    }
+}

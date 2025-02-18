@@ -13,7 +13,7 @@ use core::{
 };
 
 use alloc::slice;
-use crate_consts::GRANULE_SIZE;
+use crate_consts::{GRANULE_SIZE, PAGE_SIZE};
 use sel4::{cap::Granule, init_thread::slot, CapRights, VmAttributes};
 
 /// 空白页占位结构，保证数据 4k 对齐
@@ -86,19 +86,37 @@ pub struct PhysPageLocker<'a> {
 impl<'a> PhysPageLocker<'a> {
     /// 在 `offset` 处写入一个 usize 数据
     ///
+    /// - `offset` 需要写入的位置，如果大于页大小，就会取余数
+    /// - `data`   需要写入的数据
+    ///
     /// 需要保证 `offset` 为 `sizeof(usize)` 的整数倍
     #[inline]
-    pub fn write_usize(&mut self, offset: usize, data: usize) {
+    pub fn write_usize(&mut self, mut offset: usize, data: usize) {
+        offset %= PAGE_SIZE;
         let len = core::mem::size_of::<usize>();
         self.data[offset..offset + len].copy_from_slice(&data.to_le_bytes());
     }
 
-    /// 在 `offset` 出写入一个 bytes 序列
+    /// 在 `offset` 处写入一个 bytes 序列
+    ///
+    /// - `offset` 需要写入的位置，如果大于页大小，就会取余数
+    /// - `data`   需要写入的数据
     ///
     /// 需要保证 offset + data.len() <= 4096 且 `offset` 为 `sizeof(usize)` 的整数倍
     #[inline]
-    pub fn write_bytes(&mut self, offset: usize, data: &[u8]) {
+    pub fn write_bytes(&mut self, mut offset: usize, data: &[u8]) {
+        offset %= PAGE_SIZE;
         self.data[offset..offset + data.len()].copy_from_slice(data);
+    }
+
+    /// 在 `offset` 处写入一个 u8 数据
+    ///
+    /// - `offset` 需要写入的位置，如果大于页大小，就会取余数
+    /// - `data`   需要写入的数据
+    #[inline]
+    pub fn write_u8(&mut self, mut offset: usize, data: u8) {
+        offset %= PAGE_SIZE;
+        self.data[offset] = data;
     }
 }
 

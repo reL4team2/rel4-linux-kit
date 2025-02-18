@@ -1,5 +1,10 @@
-use crate::OBJ_ALLOCATOR;
+mod auxv;
+mod info;
+mod init;
+mod shim;
+
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+use auxv::AuxV;
 use common::{page::PhysPage, USPACE_BASE};
 use core::{
     cmp,
@@ -8,67 +13,16 @@ use core::{
 use crate_consts::{
     CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE,
 };
+use info::TaskInfo;
 use memory_addr::MemoryAddr;
 use sel4::{
-    cap_type::PT,
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
 };
 use slot_manager::LeafSlot;
 use xmas_elf::{program, ElfFile};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-#[allow(non_camel_case_types, dead_code)]
-pub enum AuxV {
-    /// end of vector
-    NULL = 0,
-    /// entry should be ignored
-    IGNORE = 1,
-    /// file descriptor of program
-    EXECFD = 2,
-    /// program headers for program
-    PHDR = 3,
-    /// size of program header entry
-    PHENT = 4,
-    /// number of program headers
-    PHNUM = 5,
-    /// system page size
-    PAGESZ = 6,
-    /// base address of interpreter
-    BASE = 7,
-    /// flags
-    FLAGS = 8,
-    /// entry point of program
-    ENTRY = 9,
-    /// program is not ELF
-    NOTELF = 10,
-    /// real uid
-    UID = 11,
-    /// effective uid
-    EUID = 12,
-    /// real gid
-    GID = 13,
-    /// effective gid
-    EGID = 14,
-    /// string identifying CPU for optimizations
-    PLATFORM = 15,
-    /// arch dependent hints at CPU capabilities
-    HWCAP = 16,
-    /// frequency at which times() increments
-    CLKTCK = 17,
-    // values 18 through 22 are reserved
-    DCACHEBSIZE = 19,
-    /// secure mode boolean
-    SECURE = 23,
-    /// string identifying real platform, may differ from AT_PLATFORM
-    BASE_PLATFORM = 24,
-    /// address of 16 random bytes
-    RANDOM = 25,
-    /// extension of AT_HWCAP
-    HWCAP2 = 26,
-    /// filename of program
-    EXECFN = 31,
-}
+use crate::utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace};
 
 pub struct Sel4Task {
     pub pid: usize,
@@ -86,6 +40,7 @@ pub struct Sel4Task {
     ///
     /// When the thread exits, the kernel clears the word at this address if it is not NULL.
     pub clear_child_tid: Option<usize>,
+    pub info: TaskInfo,
 }
 
 impl Drop for Sel4Task {
@@ -113,9 +68,9 @@ impl Sel4Task {
     pub fn new() -> Result<Self, sel4::Error> {
         static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
-        let vspace = OBJ_ALLOCATOR.lock().alloc_vspace();
-        let tcb = OBJ_ALLOCATOR.lock().alloc_tcb();
-        let cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
+        let vspace = alloc_vspace();
+        let tcb = alloc_tcb();
+        let cnode = alloc_cnode(CNODE_RADIX_BITS);
         slot::ASID_POOL.cap().asid_pool_assign(vspace).unwrap();
 
         // 构建 CSpace 需要的结构
@@ -144,6 +99,7 @@ impl Sel4Task {
             heap: 0x2_0000_0000,
             exit: None,
             clear_child_tid: None,
+            info: TaskInfo::default(),
         })
     }
 
@@ -177,9 +133,7 @@ impl Sel4Task {
                     return;
                 }
                 Err(Error::FailedLookup) => {
-                    let pt_cap = OBJ_ALLOCATOR
-                        .lock()
-                        .allocate_and_retyped_fixed_sized::<PT>();
+                    let pt_cap = alloc_pt();
                     pt_cap
                         .pt_map(self.vspace, vaddr, VmAttributes::DEFAULT)
                         .unwrap();
@@ -213,7 +167,7 @@ impl Sel4Task {
         let mut stack_ptr = end;
 
         for vaddr in (start..end).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+            let page_cap = PhysPage::new(alloc_page());
             if vaddr == end - PAGE_SIZE {
                 let mut page_writer = page_cap.lock();
                 let args_ptr: Vec<_> = args
@@ -265,8 +219,6 @@ impl Sel4Task {
     pub fn load_elf(&mut self, elf_data: &[u8]) {
         let file = ElfFile::new(elf_data).expect("This is not a valid elf file");
 
-        let mut mapped_page: BTreeMap<usize, PhysPage> = BTreeMap::new();
-
         // 从 elf 文件中读取数据
         file.program_iter()
             .filter(|ph| ph.get_type() == Ok(program::Type::Load))
@@ -277,12 +229,12 @@ impl Sel4Task {
                 let vaddr_end = vaddr + ph.mem_size() as usize;
 
                 while vaddr < vaddr_end {
-                    let page_cap = match mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
+                    let page_cap = match self.mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
                         Some(page_cap) => {
                             page_cap.cap().frame_unmap().unwrap();
                             page_cap
                         }
-                        None => PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page()),
+                        None => PhysPage::new(alloc_page()),
                     };
 
                     // 将 elf 中特定段的内容写入对应的物理页中
@@ -293,7 +245,8 @@ impl Sel4Task {
                     }
 
                     self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
-                    mapped_page.insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
+                    self.mapped_page
+                        .insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
 
                     // Calculate offset
                     vaddr += PAGE_SIZE - vaddr % PAGE_SIZE;
@@ -306,7 +259,7 @@ impl Sel4Task {
             return self.heap;
         }
         for vaddr in (self.heap..value).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+            let page_cap = PhysPage::new(alloc_page());
             self.map_page(vaddr, page_cap);
         }
         value

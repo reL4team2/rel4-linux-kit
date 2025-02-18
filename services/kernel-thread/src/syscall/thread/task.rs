@@ -1,6 +1,9 @@
-use core::{cmp, ops::DerefMut};
+use core::cmp;
 
-use common::{footprint, map_image, page::PhysPage, CloneArgs, CloneFlags, USPACE_STACK_SIZE, USPACE_STACK_TOP};
+use common::{
+    footprint, map_image, page::PhysPage, CloneArgs, CloneFlags, USPACE_STACK_SIZE,
+    USPACE_STACK_TOP,
+};
 use crate_consts::{CNODE_RADIX_BITS, GRANULE_SIZE};
 use object::File;
 use sel4::{
@@ -17,8 +20,11 @@ use crate::{
     page_seat_vaddr,
     syscall::SysResult,
     task::Sel4Task,
-    utils::{init_free_page_addr, read_item, FreePagePlaceHolder},
-    OBJ_ALLOCATOR,
+    utils::{
+        init_free_page_addr,
+        obj::{alloc_page, alloc_slot, OBJ_ALLOCATOR},
+        read_item, FreePagePlaceHolder,
+    },
 };
 
 pub(crate) fn sys_getpid(badge: u64) -> SysResult {
@@ -63,9 +69,9 @@ pub(crate) fn sys_exec(
     task.mapped_pt.clear();
 
     let child_image = File::parse(CHILD_ELF).unwrap();
-    let mut allocator = OBJ_ALLOCATOR.lock();
+    let mut obj_allocator = OBJ_ALLOCATOR.lock();
     map_image(
-        allocator.deref_mut(),
+        &mut obj_allocator,
         &mut task.mapped_page,
         task.vspace,
         footprint(&child_image),
@@ -73,8 +79,7 @@ pub(crate) fn sys_exec(
         init_thread::slot::VSPACE.cap(),
         unsafe { init_free_page_addr() },
     );
-
-    drop(allocator);
+    drop(obj_allocator);
 
     let sp_ptr = task.map_stack(
         0,
@@ -84,7 +89,7 @@ pub(crate) fn sys_exec(
     );
 
     let file = ElfFile::new(CHILD_ELF).expect("can't load elf file");
-    let ipc_buffer_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+    let ipc_buffer_cap = PhysPage::new(alloc_page());
     let max = file
         .section_iter()
         .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()));
@@ -153,7 +158,7 @@ pub(crate) fn sys_clone(
         // Copy vspace to child
         clone_vspace(&mut new_task, &task);
     } else {
-        let new_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+        let new_slot = alloc_slot();
         let new_vspace = new_slot.cap::<cap_type::VSpace>();
 
         new_slot
@@ -164,7 +169,7 @@ pub(crate) fn sys_clone(
     }
 
     // 配置新任务 IPC Buffer
-    let ipc_buffer_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+    let ipc_buffer_cap = PhysPage::new(alloc_page());
     let ipc_buffer_addr = 0x4_0000;
     new_task.map_page(ipc_buffer_addr as _, ipc_buffer_cap);
     // 配置新任务 IPC 缓冲区 和 上下文
@@ -211,7 +216,7 @@ fn clone_vspace(dst: &mut Sel4Task, src: &Sel4Task) {
         FreePagePlaceHolder([0; GRANULE_SIZE]);
 
     for (vaddr, page_cap) in src.mapped_page.iter() {
-        let new_page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+        let new_page_cap = PhysPage::new(alloc_page());
 
         // READ data from src page to new_page
         new_page_cap

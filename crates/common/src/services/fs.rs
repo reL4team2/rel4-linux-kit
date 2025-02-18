@@ -1,4 +1,3 @@
-use common_macros::ipc_msg;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sel4::{cap::Endpoint, MessageInfo, MessageInfoBuilder};
 use slot_manager::LeafSlot;
@@ -54,5 +53,11 @@ impl FileSerivce {
             .build();
         let msg = self.call(msg)?;
         Ok(())
+    }
+}
+
+impl From<LeafSlot> for FileSerivce {
+    fn from(value: LeafSlot) -> Self {
+        Self::from_leaf_slot(value)
     }
 }

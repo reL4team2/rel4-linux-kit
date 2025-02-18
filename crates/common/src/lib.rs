@@ -14,7 +14,6 @@ use core::cell::UnsafeCell;
 use crate_consts::PAGE_SIZE;
 pub use obj_allocator::*;
 use sel4::{with_ipc_buffer, with_ipc_buffer_mut, MessageInfo};
-use services::REG_LEN;
 pub use uspace::*;
 pub use utils::*;
 
@@ -267,4 +266,3 @@ impl AlignedPage {
         self.0.get() as _
     }
 }
-

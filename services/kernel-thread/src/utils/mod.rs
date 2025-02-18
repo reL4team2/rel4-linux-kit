@@ -1,19 +1,13 @@
-use alloc::format;
+pub mod obj;
+pub mod service;
+
 use common::page::PhysPage;
 use crate_consts::GRANULE_SIZE;
 use memory_addr::{MemoryAddr, VirtAddr, PAGE_SIZE_4K};
-use sel4::{debug_println, init_thread, Cap, CapRights, VmAttributes};
+use sel4::{init_thread, Cap, CapRights, VmAttributes};
 use syscalls::Errno;
 
 use crate::{page_seat_vaddr, syscall::SysResult, task::Sel4Task, FREE_PAGE_PLACEHOLDER};
-
-pub fn print_test(title: &str) {
-    debug_println!("{:=^60}", format!(" {} BEGIN", title));
-}
-
-pub fn print_test_end(title: &str) {
-    debug_println!("{:=^60}", format!(" {} PASSED ", title));
-}
 
 #[macro_export]
 macro_rules! test_func {

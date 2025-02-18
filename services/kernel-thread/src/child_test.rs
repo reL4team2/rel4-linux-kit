@@ -1,11 +1,16 @@
-use crate::{syscall::handle_ipc_call, task::Sel4Task, utils::align_bits, OBJ_ALLOCATOR};
+use crate::{
+    syscall::handle_ipc_call,
+    task::Sel4Task,
+    utils::{align_bits, obj::alloc_page},
+};
 use alloc::collections::btree_map::BTreeMap;
 use common::{page::PhysPage, CustomMessageLabel, USPACE_STACK_TOP};
 use core::cmp;
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_SERVE_EP, PAGE_SIZE, PAGE_SIZE_BITS};
+use object::{BinaryFormat, File};
 use sel4::{
-    debug_println, init_thread::slot, reply, with_ipc_buffer,
-    with_ipc_buffer_mut, CNodeCapData, Fault, MessageInfo, Result, Word,
+    debug_println, init_thread::slot, reply, with_ipc_buffer, with_ipc_buffer_mut, CNodeCapData,
+    Fault, MessageInfo, Result, Word,
 };
 use slot_manager::LeafSlot;
 use spin::Mutex;
@@ -24,11 +29,15 @@ pub fn test_child() -> Result<()> {
 
     debug_println!("[KernelThread] Child Task Mapping ELF...");
     task.load_elf(CHILD_ELF);
+
+    let file = File::parse(CHILD_ELF).expect("can't load elf file");
+    assert!(file.format() == BinaryFormat::Elf);
+    loop {}
     let child_elf_file = ElfFile::new(CHILD_ELF).expect("[KernelThread] can't load elf file");
 
     let sp_ptr = task.map_stack(0, USPACE_STACK_TOP - 16 * PAGE_SIZE, USPACE_STACK_TOP, args);
 
-    let ipc_buf_page = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+    let ipc_buf_page = PhysPage::new(alloc_page());
     let max = child_elf_file
         .section_iter()
         .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()));
@@ -74,7 +83,7 @@ pub fn test_child() -> Result<()> {
             match fault {
                 Fault::VmFault(vmfault) => {
                     let vaddr = align_bits(vmfault.addr() as usize, PAGE_SIZE_BITS);
-                    let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+                    let page_cap = PhysPage::new(alloc_page());
                     let mut task_map = TASK_MAP.lock();
                     let task = task_map.get_mut(&badge).unwrap();
                     task.map_page(vaddr, page_cap);
