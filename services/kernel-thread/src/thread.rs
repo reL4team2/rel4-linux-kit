@@ -112,7 +112,7 @@ fn make_user_context(f: ThreadFn) -> sel4::UserContext {
     *ctx.c_param_mut(0) = f.into_arg();
 
     let tls_reservation = TlsReservation::new(&get_tls_image());
-    *(&mut ctx.inner_mut().tpidr_el0) = tls_reservation.thread_pointer() as sel4::Word;
+    ctx.inner_mut().tpidr_el0 = tls_reservation.thread_pointer() as sel4::Word;
     core::mem::forget(tls_reservation);
 
     ctx

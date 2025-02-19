@@ -17,16 +17,8 @@ mod task;
 mod thread;
 mod utils;
 
-use common::{
-    services::{fs::FileSerivce, root::RootService, uart::UartService},
-    ObjectAllocator,
-};
-use crate_consts::{
-    DEFAULT_CUSTOM_SLOT, DEFAULT_EMPTY_SLOT_INDEX, DEFAULT_PARENT_EP, GRANULE_SIZE,
-    KERNEL_THREAD_SLOT_NUMS,
-};
-use sel4::{debug_println, init_thread::slot, Cap};
-use spin::Mutex;
+use crate_consts::GRANULE_SIZE;
+use sel4::{debug_println, init_thread::slot};
 use utils::{init_free_page_addr, FreePagePlaceHolder};
 
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);

@@ -90,7 +90,7 @@ pub fn sys_accept(
             let is_ipv4 = ans[1] != 0;
             let port = ans[2] as u16;
             let socket_addr = parse_ipaddr(is_ipv4, ans[3], ans[4], port);
-            write_item(task, addr, &socket_addr.into());
+            write_item(task, addr, &socket_addr.into()).unwrap();
             Ok(socket_id)
         }
         Err(AxError::InvalidInput) | Err(AxError::AddrInUse) => Err(Errno::EINVAL),
@@ -122,7 +122,7 @@ pub fn sys_sendto(
     let _remote_addr: SocketAddr = read_item(task, _addr)?.into();
     // TODO: copy the capabilities of the user thread and transmit it directly
     let mut payload = Vec::with_capacity(len);
-    read_item_list(task, buf, Some(len), payload.as_mut_slice());
+    read_item_list(task, buf, Some(len), payload.as_mut_slice()).unwrap();
     match tcp::send(socket_id, payload.as_slice()) {
         Ok(len) => Ok(len),
         Err(AxError::InvalidInput) | Err(AxError::AddrInUse) => Err(Errno::EINVAL),

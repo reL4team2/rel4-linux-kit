@@ -12,9 +12,9 @@ use crate::{page_seat_vaddr, syscall::SysResult, task::Sel4Task, FREE_PAGE_PLACE
 #[macro_export]
 macro_rules! test_func {
     ($title: literal, $test:block) => {{
-        crate::utils::print_test($title);
+        $crate::utils::print_test($title);
         $test;
-        crate::utils::print_test_end($title);
+        $crate::utils::print_test_end($title);
     }};
     ($title: literal, $test:expr) => {
         test_func!($title, { $test })

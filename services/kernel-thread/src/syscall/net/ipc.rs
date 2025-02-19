@@ -36,11 +36,8 @@ fn gen_cap<T: Sized + Copy>(item: *const T, num: Option<usize>) -> Cap<sel4::cap
         panic!("Item size is too large");
     }
     unsafe {
-        core::ptr::copy_nonoverlapping(
-            item as *const T,
-            page_seat_vaddr() as *mut T,
-            core::mem::size_of::<T>() * copy_num,
-        );
+        let count = core::mem::size_of::<T>() * copy_num;
+        core::ptr::copy_nonoverlapping(item, page_seat_vaddr() as *mut T, count);
     }
     new_cap
 }

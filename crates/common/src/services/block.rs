@@ -9,6 +9,8 @@ pub enum BlockServiceLabel {
     Ping,
     ReadBlock,
     WriteBlock,
+    #[num_enum(catch_all)]
+    Unknown(u64)
 }
 
 // FIXME: 公共 patten 就是:
@@ -111,6 +113,9 @@ pub trait BlockServiceAdapter {
                     with_ipc_buffer_mut(|ib| {
                         sel4::reply(ib, rev_msg.build());
                     });
+                },
+                BlockServiceLabel::Unknown(label) => {
+                    log::trace!("Unknown label: {}", label);
                 }
             }
         }

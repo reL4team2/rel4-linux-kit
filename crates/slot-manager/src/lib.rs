@@ -118,7 +118,7 @@ impl LeafSlot {
     ///
     /// slot 的数量不应该大于 CSpace 构建的最大数量
     pub const fn next_nth_slot(&self, n: usize) -> LeafSlot {
-        assert!((self.idx + n) <= usize::MAX);
+        assert!(self.idx <= usize::MAX - n);
         LeafSlot::new(self.idx + n)
     }
 

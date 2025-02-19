@@ -42,7 +42,7 @@ pub struct KernelServices {
     dma: &'static [(usize, usize)],
 }
 
-static TASK_FILES: &[KernelServices] = &[
+const TASK_FILES: &[KernelServices] = &[
     KernelServices {
         name: "block-thread",
         file: include_bytes_aligned!(16, "../../target/blk-thread.elf"),

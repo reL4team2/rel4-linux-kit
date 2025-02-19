@@ -109,6 +109,9 @@ fn main() -> ! {
                 // with_ipc_buffer_mut(|ib| {
                 //     sel4::reply(ib, rev_msg.build());
                 // });
+            },
+            BlockServiceLabel::Unknown(label) => {
+                log::error!("Unknown label: {}", label);
             }
         }
     }

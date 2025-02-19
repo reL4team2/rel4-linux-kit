@@ -7,6 +7,8 @@ use slot_manager::LeafSlot;
 pub enum FileServiceLabel {
     Ping,
     ReadDir,
+    #[num_enum(catch_all)]
+    Unknown(u64)
 }
 
 pub struct FileSerivce {

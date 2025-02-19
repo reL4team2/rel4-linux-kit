@@ -109,6 +109,9 @@ fn main() -> ! {
                 debug_println!();
                 with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()));
             }
+            FileServiceLabel::Unknown(label) => {
+                log::warn!("Unknown label: {}", label);
+            }
         }
     }
 }
