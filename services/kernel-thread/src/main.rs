@@ -33,7 +33,9 @@ pub(crate) static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder =
     FreePagePlaceHolder([0; GRANULE_SIZE]);
 
 fn main() -> ! {
+    // 初始化接收 IPC 传递的 Capability 的 Slot
     common::init_recv_slot();
+
     // 初始化 LOG
     logging::init();
 
@@ -46,9 +48,7 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
-    // test_func!("[KernelThread] Test Thread", {
-    //     child_test::test_child().unwrap();
-    // });
+    // 测试子任务
     child_test::test_child().unwrap();
     debug_println!("[KernelThread] Say Goodbye");
     slot::TCB.cap().tcb_suspend().unwrap();

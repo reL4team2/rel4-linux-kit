@@ -8,6 +8,8 @@ static mut LOGGER: Logger = sel4_logging::LoggerBuilder::const_default()
     .fmt(fmt_with_module)
     .build();
 
+// TODO: remove `allow（static_mut_regs)`
+#[allow(static_mut_refs)]
 pub fn init() {
     unsafe {
         LOGGER.level_filter = match option_env!("LOG") {

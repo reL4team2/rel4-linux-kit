@@ -1,5 +1,5 @@
 use common_macros::ipc_msg;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{
     cap::{Endpoint, Null},
     init_thread, with_ipc_buffer, with_ipc_buffer_mut, AbsoluteCPtr, MessageInfo,
@@ -10,14 +10,16 @@ use slot_manager::LeafSlot;
 use crate::services::IpcBufferRW;
 
 #[ipc_msg]
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
-pub enum RootMessageLabel {
+pub enum RootEvent {
     Ping = 0x200,
     RegisterIRQ,
     TranslateAddr,
     FindService,
     AllocNotification,
+    #[num_enum(catch_all)]
+    Unknown(u64),
 }
 
 pub struct RootService(Endpoint);
@@ -40,7 +42,7 @@ impl RootService {
     }
 
     pub fn ping(&self) -> Result<(), ()> {
-        self.call(MessageInfo::new(RootMessageLabel::Ping.into(), 0, 0, 0))?;
+        self.call(MessageInfo::new(RootEvent::Ping.into(), 0, 0, 0))?;
         Ok(())
     }
 
@@ -62,7 +64,7 @@ impl RootService {
                 .absolute_cptr(Null::from_bits(0))
         });
         let msg = MessageInfoBuilder::default()
-            .label(RootMessageLabel::FindService.into())
+            .label(RootEvent::FindService.into())
             .length(off)
             .build();
 
@@ -78,7 +80,7 @@ impl RootService {
 
         // Send a ipc message
         let msg = MessageInfoBuilder::default()
-            .label(RootMessageLabel::TranslateAddr.into())
+            .label(RootEvent::TranslateAddr.into())
             .length(1)
             .build();
         self.call(msg)?;
@@ -101,7 +103,7 @@ impl RootService {
         });
 
         let msg = MessageInfoBuilder::default()
-            .label(RootMessageLabel::RegisterIRQ.into())
+            .label(RootEvent::RegisterIRQ.into())
             .length(1)
             .build();
 
@@ -125,7 +127,7 @@ impl RootService {
         });
 
         let msg = MessageInfoBuilder::default()
-            .label(RootMessageLabel::AllocNotification.into())
+            .label(RootEvent::AllocNotification.into())
             .build();
 
         let recv_msg = self.call(msg).map_err(|_| sel4::Error::IllegalOperation)?;

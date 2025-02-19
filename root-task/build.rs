@@ -12,7 +12,7 @@ pub struct Service {
     name: String,
     file: String,
     mmio: Option<Vec<(usize, usize, usize)>>,
-    dma: Option<Vec<(usize, usize)>>
+    dma: Option<Vec<(usize, usize)>>,
 }
 
 fn main() {

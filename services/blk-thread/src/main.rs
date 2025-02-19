@@ -6,7 +6,7 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
-    services::{block::BlockServiceLabel, root::RootService, REG_LEN},
+    services::{block::BlockEvent, root::RootService, REG_LEN},
     VIRTIO_MMIO_BLK_VIRT_ADDR,
 };
 use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, VIRTIO_NET_IRQ};
@@ -64,17 +64,13 @@ fn main() -> ! {
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = serve_ep.recv(());
-        let msg_label = match BlockServiceLabel::try_from(message.label()) {
-            Ok(label) => label,
-            Err(_) => continue,
-        };
-        match msg_label {
-            BlockServiceLabel::Ping => {
+        match BlockEvent::from(message.label()) {
+            BlockEvent::Ping => {
                 with_ipc_buffer_mut(|ib| {
                     sel4::reply(ib, rev_msg.build());
                 });
             }
-            BlockServiceLabel::ReadBlock => {
+            BlockEvent::ReadBlock => {
                 let block_id = with_ipc_buffer(|ib| ib.msg_regs()[0]) as _;
 
                 let token = unsafe {
@@ -99,7 +95,7 @@ fn main() -> ! {
                     sel4::reply(ib, rev_msg.length(buffer.len() / REG_LEN).build());
                 });
             }
-            BlockServiceLabel::WriteBlock => {
+            BlockEvent::WriteBlock => {
                 unimplemented!("Write Block Operation")
                 // let (block_id, wlen) = with_ipc_buffer_mut(|ib| {
                 //     let regs = ib.msg_regs();
@@ -109,8 +105,8 @@ fn main() -> ! {
                 // with_ipc_buffer_mut(|ib| {
                 //     sel4::reply(ib, rev_msg.build());
                 // });
-            },
-            BlockServiceLabel::Unknown(label) => {
+            }
+            BlockEvent::Unknown(label) => {
                 log::error!("Unknown label: {}", label);
             }
         }

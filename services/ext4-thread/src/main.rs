@@ -6,7 +6,7 @@ extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
 
-use common::services::{block::BlockService, fs::FileServiceLabel, root::RootService};
+use common::services::{block::BlockService, fs::FileEvent, root::RootService};
 use crate_consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP};
 use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry};
 use sel4::{cap::Endpoint, debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
@@ -87,20 +87,17 @@ fn main() -> ! {
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = SERVE_EP.recv(());
-        let msg_label = match FileServiceLabel::try_from(message.label()) {
-            Ok(label) => label,
-            Err(_) => continue,
-        };
+        let msg_label = FileEvent::from(message.label());
         log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
         match msg_label {
-            FileServiceLabel::Ping => {
+            FileEvent::Ping => {
                 with_ipc_buffer_mut(|ib| {
                     sel4::reply(ib, rev_msg.build());
                 });
             }
             // FIXME: 应该返回一个结构，或者数组表示所有文件
             // 类似于 getdents
-            FileServiceLabel::ReadDir => {
+            FileEvent::ReadDir => {
                 log::debug!("Read Dir Message");
                 let dir_entry: Vec<Ext4DirEntry> = ext4.read_dir_entry(2);
                 for entry in dir_entry {
@@ -109,7 +106,7 @@ fn main() -> ! {
                 debug_println!();
                 with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()));
             }
-            FileServiceLabel::Unknown(label) => {
+            FileEvent::Unknown(label) => {
                 log::warn!("Unknown label: {}", label);
             }
         }

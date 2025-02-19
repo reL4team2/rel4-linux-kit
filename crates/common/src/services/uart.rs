@@ -4,7 +4,7 @@ use slot_manager::LeafSlot;
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
-pub enum UartServiceLabel {
+pub enum UartEvent {
     Ping,
     GetChar,
 }
@@ -40,14 +40,14 @@ impl UartService {
 
     pub fn ping(&self) -> Result<MessageInfo, ()> {
         let ping_msg = MessageInfoBuilder::default()
-            .label(UartServiceLabel::Ping.into())
+            .label(UartEvent::Ping.into())
             .build();
         self.call(ping_msg)
     }
 
     pub fn getchar(&self) -> Result<u8, ()> {
         let message = MessageInfoBuilder::default()
-            .label(UartServiceLabel::GetChar.into())
+            .label(UartEvent::GetChar.into())
             .build();
         let msg = self.call(message)?;
         assert_ne!(msg.length(), 0);

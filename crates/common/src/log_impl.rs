@@ -5,10 +5,6 @@ macro_rules! init_log {
             record: &log::Record,
             f: &mut core::fmt::Formatter,
         ) -> core::fmt::Result {
-            // let target = match record.target().is_empty() {
-            //     true => record.module_path().unwrap_or_default(),
-            //     false => record.target(),
-            // };
             let color_code = match record.level() {
                 log::Level::Error => 31u8, // Red
                 log::Level::Warn => 93,    // BrightYellow

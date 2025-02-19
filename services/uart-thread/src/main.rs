@@ -5,7 +5,7 @@ extern crate alloc;
 
 use arm_pl011::pl011;
 use common::{
-    services::{root::RootService, uart::UartServiceLabel},
+    services::{root::RootService, uart::UartEvent},
     VIRTIO_MMIO_VIRT_ADDR,
 };
 use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, SERIAL_DEVICE_IRQ};
@@ -50,17 +50,17 @@ fn main() -> ! {
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = serve_ep.recv(());
-        let msg_label = match UartServiceLabel::try_from(message.label()) {
+        let msg_label = match UartEvent::try_from(message.label()) {
             Ok(label) => label,
             Err(_) => continue,
         };
         match msg_label {
-            UartServiceLabel::Ping => {
+            UartEvent::Ping => {
                 with_ipc_buffer_mut(|ib| {
                     sel4::reply(ib, rev_msg.build());
                 });
             }
-            UartServiceLabel::GetChar => {
+            UartEvent::GetChar => {
                 ntfn.wait();
                 let char = pl011.getchar().unwrap();
                 pl011.ack_interrupts();
