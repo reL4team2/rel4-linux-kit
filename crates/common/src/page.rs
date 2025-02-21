@@ -8,13 +8,15 @@
 
 use core::{
     fmt::Debug,
+    hint::spin_loop,
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicBool, Ordering},
 };
 
 use alloc::slice;
-use crate_consts::{GRANULE_SIZE, PAGE_SIZE};
+use crate_consts::{DEFAULT_PAGE_PLACEHOLDER, GRANULE_SIZE, PAGE_SIZE};
 use sel4::{cap::Granule, init_thread::slot, CapRights, VmAttributes};
+use slot_manager::LeafSlot;
 
 /// 空白页占位结构，保证数据 4k 对齐
 #[repr(C, align(4096))]
@@ -60,18 +62,23 @@ impl PhysPage {
 
     /// 锁定物理页表，返回一个物理页锁，可以在这个对象上进行读写
     pub fn lock(&self) -> PhysPageLocker {
+        while PAGE_MAP_LOCK.load(Ordering::SeqCst) {
+            spin_loop();
+        }
         PAGE_MAP_LOCK.store(true, Ordering::SeqCst);
+        let slot = LeafSlot::new(DEFAULT_PAGE_PLACEHOLDER as _);
+        slot.copy_from(&self.cap.into(), CapRights::all()).unwrap();
         let addr = unsafe { FREE_PAGE_PLACEHOLDER.addr() };
-        self.cap
-            .frame_map(
-                slot::VSPACE.cap(),
-                addr,
-                CapRights::all(),
-                VmAttributes::DEFAULT,
-            )
-            .unwrap();
+        let cap: Granule = slot.cap();
+        cap.frame_map(
+            slot::VSPACE.cap(),
+            addr,
+            CapRights::all(),
+            VmAttributes::DEFAULT,
+        )
+        .unwrap();
         PhysPageLocker {
-            cap: self.cap,
+            cap,
             data: unsafe { slice::from_raw_parts_mut(addr as _, GRANULE_SIZE) },
         }
     }
@@ -137,6 +144,7 @@ impl<'a> DerefMut for PhysPageLocker<'a> {
 impl<'a> Drop for PhysPageLocker<'a> {
     fn drop(&mut self) {
         self.cap.frame_unmap().unwrap();
+        LeafSlot::from(self.cap).delete().unwrap();
         PAGE_MAP_LOCK.store(false, Ordering::SeqCst);
     }
 }

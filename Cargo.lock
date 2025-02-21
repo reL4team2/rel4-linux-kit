@@ -81,6 +81,7 @@ dependencies = [
  "sel4-panicking-env",
  "sel4-runtime-common",
  "sel4-sync",
+ "slot-manager",
  "spin",
  "virtio-drivers",
 ]
@@ -352,6 +353,7 @@ dependencies = [
  "bitflags",
  "common",
  "crate-consts",
+ "include_bytes_aligned",
  "log",
  "memory_addr",
  "num_enum",
@@ -875,6 +877,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sel4-runtime"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "slot-manager",
+ "spin",
+]
+
+[[package]]
 name = "sel4-runtime-common"
 version = "0.1.0"
 source = "git+https://github.com/seL4/rust-sel4?rev=5b9ebfd#5b9ebfd0a3a9805f28cc9222cd558e8d56a3919d"
@@ -985,22 +996,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "shim"
-version = "0.1.0"
-dependencies = [
- "common",
- "crate-consts",
- "log",
- "sel4",
- "sel4-dlmalloc",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
- "syscalls",
-]
-
-[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1072,24 +1067,9 @@ dependencies = [
  "crate-consts",
  "sel4",
  "sel4-sync",
+ "slot-manager",
  "spin",
  "xmas-elf",
-]
-
-[[package]]
-name = "test-thread"
-version = "0.1.0"
-dependencies = [
- "common",
- "crate-consts",
- "log",
- "sel4",
- "sel4-dlmalloc",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
- "syscalls",
 ]
 
 [[package]]

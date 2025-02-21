@@ -11,8 +11,10 @@ pub struct Config {
 pub struct Service {
     name: String,
     file: String,
-    mmio: Option<Vec<(usize, usize, usize)>>,
-    dma: Option<Vec<(usize, usize)>>,
+    #[serde(default)]
+    mmio: Vec<(usize, usize, usize)>,
+    #[serde(default)]
+    dma: Vec<(usize, usize)>,
 }
 
 fn main() {
@@ -23,6 +25,7 @@ fn main() {
         .unwrap()
         .parse(include_str!("template.rs.liquid"))
         .unwrap();
+    // let output = template.render(&liquid::object!(config)).unwrap();
     // template.render(liquid::object! {
     //     services: config
     // }).unwrap();

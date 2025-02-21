@@ -9,28 +9,16 @@ extern crate sel4_panicking;
 mod arch;
 mod child_test;
 mod device;
+mod exception;
 mod fs;
 mod logging;
 mod runtime;
-mod syscall;
+// mod syscall;
 mod task;
 mod thread;
 mod utils;
 
-use crate_consts::GRANULE_SIZE;
-use sel4::{debug_println, init_thread::slot};
-use utils::{init_free_page_addr, FreePagePlaceHolder};
-
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
-
-/// Get the virtual address of the page seat.
-pub fn page_seat_vaddr() -> usize {
-    unsafe { init_free_page_addr() }
-}
-
-/// free page placeholder
-pub(crate) static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder =
-    FreePagePlaceHolder([0; GRANULE_SIZE]);
 
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot
@@ -48,9 +36,9 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
-    // 测试子任务
-    child_test::test_child().unwrap();
-    debug_println!("[KernelThread] Say Goodbye");
-    slot::TCB.cap().tcb_suspend().unwrap();
-    unreachable!()
+    // 添加测试子任务
+    child_test::add_test_child().unwrap();
+
+    // 循环处理异常(含伪 syscall)
+    exception::waiting_and_handle();
 }

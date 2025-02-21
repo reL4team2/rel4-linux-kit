@@ -1,5 +1,6 @@
 BUILD_DIR := target
 TARGET := aarch64-sel4
+QEMU_LOG ?= n
 
 # sel4 installation directory
 SEL4_PREFIX :=  $(realpath .)/.env/seL4
@@ -18,6 +19,10 @@ qemu_args += -device virtio-blk-device,drive=x0
 # qemu_args += -device virtio-net-device,netdev=net0
 # qemu_args += -object filter-dump,id=net0,netdev=net0,file=packets.pcap
 
+ifeq ($(QEMU_LOG), y)
+	qemu_args += -D qemu.log -d in_asm,int,pcall,cpu_reset,guest_errors
+endif
+
 $(app): $(app).intermediate
 
 CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
@@ -28,7 +33,6 @@ CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 # configuration and libsel4 headers.
 .INTERMDIATE: $(app).intermediate
 $(app).intermediate:
-	cargo build $(CARGO_BUILD_ARGS) -p shim
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 

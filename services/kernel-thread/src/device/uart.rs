@@ -1,14 +1,14 @@
-use common::services::uart::UartService;
+use common::services::{root::find_service, uart::UartService};
 use spin::Once;
 
-use crate::utils::service::find_service;
+use crate::utils::obj::alloc_slot;
 
 static UART_SERVICE: Once<UartService> = Once::new();
 
 pub(super) fn init() {
     UART_SERVICE.call_once(|| {
-        find_service("uart-thread")
-            .expect("can't find service")
-            .into()
+        let slot = alloc_slot();
+        find_service("uart-thread", slot).expect("can't find service");
+        slot.into()
     });
 }

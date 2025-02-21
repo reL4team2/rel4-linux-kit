@@ -108,7 +108,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
             .unwrap();
 
         // Move SRV EP to child process
-        task.abs_cptr(DEFAULT_SERVE_EP)
+        task.abs_cptr(DEFAULT_SERVE_EP.bits())
             .copy(&cnode_relative(srv_ep), CapRights::all())
             .unwrap();
 

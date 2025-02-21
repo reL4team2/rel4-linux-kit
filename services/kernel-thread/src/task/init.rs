@@ -7,7 +7,7 @@ use super::{auxv::AuxV, Sel4Task};
 
 impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
-    fn init_stack(&mut self) {
+    pub fn init_stack(&mut self) -> usize {
         // Other Strings 以 STACK_ALIGN_SIZE 对齐
         //
         // +------------------+  <- 用户栈顶
@@ -34,7 +34,12 @@ impl Sel4Task {
         // │    ArgLen        │
         // +------------------+
         let mut stack_ptr = USPACE_STACK_TOP;
-        let mut page_writer = self.mapped_page.get(&USPACE_STACK_TOP).unwrap().lock();
+
+        let mut page_writer = self
+            .mapped_page
+            .get(&(USPACE_STACK_TOP - PAGE_SIZE))
+            .unwrap()
+            .lock();
 
         let args_ptr: Vec<_> = self
             .info
@@ -76,5 +81,6 @@ impl Sel4Task {
         args_ptr.iter().rev().for_each(|x| push_num(*x));
         // push argv
         push_num(args_ptr.len());
+        stack_ptr
     }
 }

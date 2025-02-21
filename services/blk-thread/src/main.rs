@@ -6,13 +6,16 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
-    services::{block::BlockEvent, root::RootService, REG_LEN},
+    services::{
+        block::BlockEvent,
+        root::{register_irq, register_notify},
+        REG_LEN,
+    },
     VIRTIO_MMIO_BLK_VIRT_ADDR,
 };
-use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, VIRTIO_NET_IRQ};
+use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_SERVE_EP, VIRTIO_NET_IRQ};
 use sel4::{
-    cap::{Endpoint, IrqHandler, Notification},
-    init_thread::slot::CNODE,
+    cap::{IrqHandler, Notification},
     with_ipc_buffer, with_ipc_buffer_mut, MessageInfoBuilder,
 };
 use virtio::HalImpl;
@@ -23,8 +26,6 @@ use virtio_drivers::{
 
 mod runtime;
 mod virtio;
-
-static ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
 
 fn main() -> ! {
     common::init_log!(log::LevelFilter::Error);
@@ -38,32 +39,25 @@ fn main() -> ! {
 
     log::debug!("Block device capacity: {:#x}", virtio_blk.capacity());
 
-    // Register interrupt handler and notification
-    // Allocate irq handler
+    // 向 root-task 申请一个中断
     let irq_handler = IrqHandler::from_bits(DEFAULT_CUSTOM_SLOT + 1);
-    ROOT_SERVICE
-        .register_irq(VIRTIO_NET_IRQ as _, CNODE.cap().absolute_cptr(irq_handler))
-        .expect("can't register interrupt handler");
+    register_irq(VIRTIO_NET_IRQ as _, irq_handler.into()).expect("Can't register irq handler");
 
-    // Allocate notification
+    // 向 root-task 申请一个通知
     let ntfn = Notification::from_bits(DEFAULT_CUSTOM_SLOT);
-    ROOT_SERVICE
-        .alloc_notification(CNODE.cap().absolute_cptr(ntfn))
-        .expect("Can't register interrupt handler");
+    register_notify(ntfn.into()).expect("Can't register notification");
 
-    let serve_ep = Endpoint::from_bits(DEFAULT_SERVE_EP);
-
+    // 设置中断信息
     irq_handler.irq_handler_set_notification(ntfn).unwrap();
     irq_handler.irq_handler_ack().unwrap();
 
-    // Read block device
     let mut request = BlkReq::default();
     let mut resp = BlkResp::default();
     let mut buffer = [0u8; 512];
 
     let rev_msg = MessageInfoBuilder::default();
     loop {
-        let (message, _) = serve_ep.recv(());
+        let (message, _) = DEFAULT_SERVE_EP.recv(());
         match BlockEvent::from(message.label()) {
             BlockEvent::Ping => {
                 with_ipc_buffer_mut(|ib| {

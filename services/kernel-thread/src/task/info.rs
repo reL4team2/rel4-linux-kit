@@ -7,8 +7,4 @@ pub struct TaskInfo {
     pub args: Vec<String>,
     /// 程序的入口地址
     pub entry: usize,
-    /// vsyscall 段的地址
-    pub vsyscall: usize,
-    /// shim 地址
-    pub shim_addr: usize,
 }

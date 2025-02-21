@@ -11,4 +11,5 @@ sel4-sync = { workspace = true }
 common = { workspace = true }
 xmas-elf = "0.9.1"
 crate-consts = { workspace = true }
-spin = { version = "0.9.8" }
+spin = { workspace = true }
+slot-manager = { workspace = true }

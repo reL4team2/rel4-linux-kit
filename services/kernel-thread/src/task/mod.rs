@@ -1,20 +1,15 @@
 mod auxv;
 mod info;
 mod init;
-mod shim;
 
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use auxv::AuxV;
 use common::{page::PhysPage, USPACE_BASE};
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{
-    CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE, STACK_ALIGN_SIZE,
-};
+use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE};
 use info::TaskInfo;
-use memory_addr::MemoryAddr;
 use sel4::{
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
@@ -83,7 +78,7 @@ impl Sel4Task {
         cnode
             .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP, CNODE_RADIX_BITS)
             .mint(
-                &LeafSlot::new(DEFAULT_SERVE_EP as _).abs_cptr(),
+                &LeafSlot::from(DEFAULT_SERVE_EP).abs_cptr(),
                 CapRights::all(),
                 tid as u64,
             )?;
@@ -155,65 +150,14 @@ impl Sel4Task {
         }
     }
 
-    pub fn map_stack(
-        &mut self,
-        entry_point: usize,
-        start: usize,
-        end: usize,
-        args: &[&str],
-    ) -> usize {
+    pub fn map_region(&mut self, start: usize, end: usize) {
         assert!(end % 0x1000 == 0);
         assert!(start % 0x1000 == 0);
-        let mut stack_ptr = end;
 
         for vaddr in (start..end).step_by(PAGE_SIZE) {
             let page_cap = PhysPage::new(alloc_page());
-            if vaddr == end - PAGE_SIZE {
-                let mut page_writer = page_cap.lock();
-                let args_ptr: Vec<_> = args
-                    .iter()
-                    .map(|arg| {
-                        // TODO: set end bit was zeroed manually.
-                        stack_ptr = (stack_ptr - arg.bytes().len()).align_down(STACK_ALIGN_SIZE);
-                        page_writer.write_bytes(stack_ptr % PAGE_SIZE, arg.as_bytes());
-                        stack_ptr
-                    })
-                    .collect();
-
-                let mut push_num = |num: usize| {
-                    stack_ptr = stack_ptr - core::mem::size_of::<usize>();
-                    page_writer.write_usize(stack_ptr % PAGE_SIZE, num);
-                    stack_ptr
-                };
-
-                let mut auxv = BTreeMap::new();
-                auxv.insert(AuxV::EXECFN, args_ptr[0]);
-                auxv.insert(AuxV::PAGESZ, PAGE_SIZE);
-                auxv.insert(AuxV::ENTRY, entry_point);
-                auxv.insert(AuxV::GID, 0);
-                auxv.insert(AuxV::EGID, 0);
-                auxv.insert(AuxV::UID, 0);
-                auxv.insert(AuxV::EUID, 0);
-                auxv.insert(AuxV::NULL, 0);
-
-                // push auxiliary vector
-                auxv.into_iter().for_each(|(key, v)| {
-                    push_num(v);
-                    push_num(key as usize);
-                });
-                // push environment
-                push_num(0);
-                // push args pointer
-                push_num(0);
-                args_ptr.iter().rev().for_each(|x| {
-                    push_num(*x);
-                });
-                // push argv
-                push_num(args_ptr.len());
-            }
             self.map_page(vaddr, page_cap);
         }
-        stack_ptr
     }
 
     pub fn load_elf(&mut self, elf_data: &[u8]) {
@@ -263,5 +207,15 @@ impl Sel4Task {
             self.map_page(vaddr, page_cap);
         }
         value
+    }
+
+    pub fn read_ins(&self, vaddr: usize) -> Option<u32> {
+        self.mapped_page
+            .get(&(vaddr / PAGE_SIZE * PAGE_SIZE))
+            .map(|page| {
+                let offset = vaddr % PAGE_SIZE;
+                let ins = page.lock()[offset..offset + 4].try_into().unwrap();
+                u32::from_le_bytes(ins)
+            })
     }
 }

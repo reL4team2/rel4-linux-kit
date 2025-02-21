@@ -6,18 +6,15 @@ extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
 
-use common::services::{block::BlockService, fs::FileEvent, root::RootService};
-use crate_consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP};
+use common::services::{block::BlockService, fs::FileEvent, root::find_service};
+use crate_consts::DEFAULT_SERVE_EP;
 use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry};
-use sel4::{cap::Endpoint, debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
+use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
 mod runtime;
 
-static ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
-
 const BLK_SERVICE: BlockService = BlockService::from_bits(0x21);
-const SERVE_EP: Endpoint = Endpoint::from_bits(DEFAULT_SERVE_EP);
 
 const BLOCK_SIZE: usize = 4096;
 const TRANS_LIMIT: usize = 0x200;
@@ -68,14 +65,12 @@ impl BlockDevice for Ext4Disk {
 }
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
+    common::init_log!(log::LevelFilter::Error);
     common::init_recv_slot();
 
     log::info!("Booting...");
 
-    ROOT_SERVICE
-        .find_service("block-thread", LeafSlot::new(0x21))
-        .unwrap();
+    find_service("block-thread", LeafSlot::new(0x21)).unwrap();
 
     BLK_SERVICE.ping().unwrap();
     log::info!("Found Block Thread, It reply ping message");
@@ -86,7 +81,7 @@ fn main() -> ! {
 
     let rev_msg = MessageInfoBuilder::default();
     loop {
-        let (message, _) = SERVE_EP.recv(());
+        let (message, _) = DEFAULT_SERVE_EP.recv(());
         let msg_label = FileEvent::from(message.label());
         log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
         match msg_label {

@@ -7,9 +7,11 @@ pub const DEFAULT_THREAD_NOTIFICATION: u64 = 17;
 /// The default endpoint for thread lock.
 pub const DEFAULT_PARENT_EP: u64 = 18;
 /// The default endpoint for thread lock.
-pub const DEFAULT_SERVE_EP: u64 = 19;
+pub const DEFAULT_SERVE_EP: Endpoint = Endpoint::from_bits(19);
 /// The default endpoint for thread IRQ.
 pub const DEFAULT_THREAD_IRQ_EP: u64 = 20;
+/// page_writer 用来占位的位置
+pub const DEFAULT_PAGE_PLACEHOLDER: u64 = 21;
 /// The default slot to store custom cap.
 pub const DEFAULT_CUSTOM_SLOT: u64 = 26;
 /// The Default Index of the empty slot.

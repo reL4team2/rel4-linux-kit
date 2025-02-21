@@ -148,6 +148,20 @@ impl LeafSlot {
     }
 }
 
+/// [Cap] 可以快速转换为 [LeafSlot]
+impl<T: CapType> From<Cap<T>> for LeafSlot {
+    fn from(value: Cap<T>) -> Self {
+        Self::from_cap(value)
+    }
+}
+
+/// [LeafSlot] 快速转换为 [Cap]
+impl<T: CapType> From<LeafSlot> for Cap<T> {
+    fn from(value: LeafSlot) -> Self {
+        value.cap()
+    }
+}
+
 /// Slot Manager
 ///
 /// Slot 管理器，可以管理和申请特定的 Slot

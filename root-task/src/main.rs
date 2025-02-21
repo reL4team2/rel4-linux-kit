@@ -19,8 +19,8 @@ use sel4::{
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer_mut, Cap, CapRights, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm,
-    UntypedDesc,
+    with_ipc_buffer, with_ipc_buffer_mut, Cap, CapRights, Fault, IpcBuffer, MessageInfoBuilder,
+    ObjectBlueprintArm, UntypedDesc,
 };
 use sel4_root_task::{root_task, Never};
 use services::root::RootEvent;
@@ -68,12 +68,12 @@ const TASK_FILES: &[KernelServices] = &[
     //     mem: &[],
     //     dma: &[],
     // },
-    KernelServices {
-        name: "simple-cli",
-        file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
-        mem: &[],
-        dma: &[],
-    },
+    // KernelServices {
+    //     name: "simple-cli",
+    //     file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+    //     mem: &[],
+    //     dma: &[],
+    // },
     KernelServices {
         name: "kernel-thread",
         file: include_bytes_aligned!(16, "../../target/kernel-thread.elf"),
@@ -206,11 +206,11 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
     let rev_msg = MessageInfoBuilder::default();
     let (message, badge) = fault_ep.recv(());
     let msg_label = RootEvent::from(message.label());
-    debug_println!(
-        "[RootTask] Recv <{:?}> len: {}",
-        msg_label,
-        message.length()
-    );
+    // debug_println!(
+    //     "[RootTask] Recv <{:?}> len: {}",
+    //     msg_label,
+    //     message.length()
+    // );
 
     match msg_label {
         RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
@@ -268,7 +268,14 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
             LeafSlot::new(0).delete().unwrap();
         }
         RootEvent::Unknown(label) => {
-            debug_println!("Unknown root messaage label: {label}")
+            if label >= 8 {
+                debug_println!("Unknown root messaage label: {label}")
+            }
+            let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+            debug_println!("[Kernel Thread] Received Fault: {:#x?}", fault);
+            match fault {
+                _ => {}
+            }
         }
     }
 }

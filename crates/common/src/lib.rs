@@ -3,6 +3,7 @@
 
 extern crate alloc;
 
+pub mod consts;
 pub mod log_impl;
 mod obj_allocator;
 pub mod page;

@@ -1,5 +1,6 @@
 use core::cmp;
 
+use alloc::string::String;
 use common::{
     footprint, map_image, page::PhysPage, CloneArgs, CloneFlags, USPACE_STACK_SIZE,
     USPACE_STACK_TOP,
@@ -11,7 +12,6 @@ use sel4::{
     cap_type::{self},
     init_thread, CNodeCapData, Cap, CapRights, VmAttributes,
 };
-use slot_manager::LeafSlot;
 use syscalls::Errno;
 use xmas_elf::ElfFile;
 
@@ -52,8 +52,6 @@ pub(crate) fn sys_set_tid_address(badge: u64, tidptr: *mut i32) -> SysResult {
     Ok(badge as usize)
 }
 
-const CHILD_ELF: &[u8] = include_bytes!("../../../../../target/shim.elf");
-
 pub(crate) fn sys_exec(
     badge: u64,
     fault_ep: Endpoint,
@@ -81,14 +79,10 @@ pub(crate) fn sys_exec(
     );
     drop(obj_allocator);
 
-    let sp_ptr = task.map_stack(
-        0,
-        USPACE_STACK_TOP - USPACE_STACK_SIZE,
-        USPACE_STACK_TOP,
-        args,
-    );
+    task.info.args = args.iter().map(|x| String::from(*x)).collect();
+    task.map_region(USPACE_STACK_TOP - USPACE_STACK_SIZE, USPACE_STACK_TOP);
+    let sp_ptr = task.init_stack();
 
-    let file = ElfFile::new(CHILD_ELF).expect("can't load elf file");
     let ipc_buffer_cap = PhysPage::new(alloc_page());
     let max = file
         .section_iter()
@@ -162,7 +156,7 @@ pub(crate) fn sys_clone(
         let new_vspace = new_slot.cap::<cap_type::VSpace>();
 
         new_slot
-            .copy_from(&LeafSlot::from_cap(task.vspace), CapRights::all())
+            .copy_from(&task.vspace.into(), CapRights::all())
             .unwrap();
 
         new_task.vspace = new_vspace;
