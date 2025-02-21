@@ -1,3 +1,4 @@
+//! 串口模块初始化，查找串口服务
 use common::services::{root::find_service, uart::UartService};
 use spin::Once;
 

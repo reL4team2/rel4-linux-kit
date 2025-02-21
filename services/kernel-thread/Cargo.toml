@@ -40,4 +40,5 @@ common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
+zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
 include_bytes_aligned = "0.1.3"

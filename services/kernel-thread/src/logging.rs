@@ -10,7 +10,7 @@ static mut LOGGER: Logger = sel4_logging::LoggerBuilder::const_default()
 
 // TODO: remove `allow（static_mut_regs)`
 #[allow(static_mut_refs)]
-pub fn init() {
+pub(super) fn init() {
     unsafe {
         LOGGER.level_filter = match option_env!("LOG") {
             Some("error") => LevelFilter::Error,
@@ -26,7 +26,7 @@ pub fn init() {
     }
 }
 
-pub fn fmt_with_module(record: &Record, f: &mut fmt::Formatter) -> fmt::Result {
+fn fmt_with_module(record: &Record, f: &mut fmt::Formatter) -> fmt::Result {
     let target = match record.target().is_empty() {
         true => record.module_path().unwrap_or_default(),
         false => record.target(),

@@ -7,6 +7,8 @@ use super::{auxv::AuxV, Sel4Task};
 
 impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
+    ///
+    /// 需要传递的栈，环境变量和辅助向量需要提前填充到 [Sel4Task::info] 下
     pub fn init_stack(&mut self) -> usize {
         // Other Strings 以 STACK_ALIGN_SIZE 对齐
         //

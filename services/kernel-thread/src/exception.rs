@@ -1,8 +1,14 @@
+//! 处理 sel4 任务运行过程中产生的异常
+//!
+//! 这个模块主要负责处理由当前任务运行的子任务产生的异常,且当前任务的子任务
+//! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
+//! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
+//! 为宏内核支持引入多余的部件。
 use common::page::PhysPage;
 use crate_consts::{DEFAULT_SERVE_EP, PAGE_SIZE};
 use sel4::{with_ipc_buffer, Fault, UserException, VmFault};
 
-use crate::{child_test::TASK_MAP, utils::obj::alloc_page};
+use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_page};
 
 /// 处理用户异常
 ///
@@ -24,16 +30,18 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb
             .tcb_read_all_registers(true)
             .expect("can't read task context");
-        let syscall_id = user_ctx.gpr_mut(8).clone();
-        log::debug!(
-            "received syscall id: {:#x} pc: {:#x}",
-            syscall_id,
-            user_ctx.pc()
-        );
-        log::debug!("Received user exception");
+        let result = handle_syscall(task, &mut user_ctx);
+        let ret_v = match result {
+            Ok(v) => v,
+            Err(e) => -(e.into_raw() as isize) as usize,
+        };
+        *user_ctx.gpr_mut(0) = ret_v as _;
+        log::debug!("pc: {:#x?}", user_ctx.pc());
+        *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
+        task.tcb
+            .tcb_write_all_registers(true, &mut user_ctx)
+            .unwrap();
     }
-
-    // handle_ipc_call(&task, &message, user_exception);
 }
 
 /// 处理内存异常问题
@@ -59,6 +67,7 @@ pub fn waiting_and_handle() -> ! {
         assert!(message.label() < 8, "Unexpected IPC Message");
 
         let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+        // log::debug!("Received fault: {:#x?}", fault);
         match fault {
             Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
             Fault::UserException(ue) => handle_user_exception(tid, ue),

@@ -1,22 +1,25 @@
+//! 宏内核线程服务，这个线程可以将传统宏内核程序作为子程序运行，可以为子程序提供文件系统、设备等服务。
+//! 目前还需要对需要运行的子程序进行预处理。
 #![no_std]
 #![no_main]
+#![deny(missing_docs)]
 #![feature(never_type)]
 #![feature(const_trait_impl)]
 
 extern crate alloc;
 extern crate sel4_panicking;
 
-mod arch;
 mod child_test;
-mod device;
-mod exception;
-mod fs;
 mod logging;
 mod runtime;
-// mod syscall;
-mod task;
-mod thread;
-mod utils;
+
+pub mod arch;
+pub mod device;
+pub mod exception;
+pub mod fs;
+pub mod syscall;
+pub mod task;
+pub mod utils;
 
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
 

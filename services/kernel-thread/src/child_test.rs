@@ -11,10 +11,13 @@ use spin::Mutex;
 // TODO: Make elf file path dynamically available.
 const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/busybox-ins.elf");
 
+/// 任务表，可以通过任务 ID 获取任务
 pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());
 
+/// 添加一个测试任务
 pub fn add_test_child() -> Result<()> {
-    let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
+    // let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
+    let args = &["busybox"];
     let mut task = Sel4Task::new()?;
 
     task.load_elf(CHILD_ELF);
