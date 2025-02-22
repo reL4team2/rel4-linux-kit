@@ -3,20 +3,19 @@
 resolver = "2"
 
 members = [
-    "root-task",
-    "crates/common",
-    "crates/common-macros",
-    "crates/crate-consts",
-    "crates/slot-manager",
-    "crates/task-helper",
-    "services/blk-thread",
-    "services/fat-thread",
-    "services/ext4-thread",
-    "services/uart-thread",
-    "services/kernel-thread",
-    "tasks/simple-cli", 
-    "tasks/test-thread",
-    "tasks/shim",
+  "root-task",
+  "crates/common",
+  "crates/common-macros",
+  "crates/crate-consts",
+  "crates/sel4-runtime",
+  "crates/slot-manager",
+  "crates/task-helper",
+  "services/blk-thread",
+  "services/fat-thread",
+  "services/ext4-thread",
+  "services/uart-thread",
+  "services/kernel-thread",
+  "tasks/simple-cli",
 ]
 
 # 对于一些公共性的依赖，统一在这里指定版本号
@@ -42,3 +41,5 @@ task-helper = { path = "crates/task-helper" }
 common = { path = "crates/common" }
 common-macros = { path = "crates/common-macros" }
 slot-manager = { path = "crates/slot-manager" }
+
+spin = "0.9.8"

@@ -14,6 +14,7 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
+use common::page::PhysPage;
 use core::marker::PhantomData;
 use crate_consts::{
     DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION, PAGE_SIZE, STACK_ALIGN_SIZE,
@@ -71,7 +72,7 @@ pub struct Sel4TaskHelper<H: TaskHelperTrait<Self>> {
     /// 已经映射的页表
     pub mapped_pt: Arc<NotiMutex<Vec<cap::PT>>>,
     /// 已经映射的页
-    pub mapped_page: BTreeMap<usize, cap::Granule>,
+    pub mapped_page: BTreeMap<usize, PhysPage>,
     /// 栈底
     pub stack_bottom: usize,
     /// 幽灵类型
@@ -86,7 +87,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         fault_ep: cap::Endpoint,
         srv_ep: cap::Endpoint,
         vspace: cap::VSpace,
-        mapped_page: BTreeMap<usize, cap::Granule>,
+        mapped_page: BTreeMap<usize, PhysPage>,
         badge: u64,
     ) -> Self {
         let task = Self {
@@ -107,7 +108,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
             .unwrap();
 
         // Move SRV EP to child process
-        task.abs_cptr(DEFAULT_SERVE_EP)
+        task.abs_cptr(DEFAULT_SERVE_EP.bits())
             .copy(&cnode_relative(srv_ep), CapRights::all())
             .unwrap();
 
@@ -125,10 +126,10 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
     }
 
     /// 映射一个页表 [sel4::cap::Granule] 到指定的虚拟地址
-    pub fn map_page(&mut self, vaddr: usize, page: sel4::cap::Granule) {
+    pub fn map_page(&mut self, vaddr: usize, page: PhysPage) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         for _ in 0..sel4::vspace_levels::NUM_LEVELS {
-            let res: core::result::Result<(), sel4::Error> = page.frame_map(
+            let res: core::result::Result<(), sel4::Error> = page.cap().frame_map(
                 self.vspace,
                 vaddr as _,
                 CapRights::all(),
@@ -225,7 +226,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
     pub fn map_stack(&mut self, page_count: usize) {
         self.stack_bottom -= page_count * PAGE_SIZE;
         for i in 0..page_count {
-            let page_cap = H::allocate_page(self);
+            let page_cap = PhysPage::new(H::allocate_page(self));
             self.map_page(self.stack_bottom + i * PAGE_SIZE, page_cap);
         }
     }

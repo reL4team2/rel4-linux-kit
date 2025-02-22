@@ -1,0 +1,9 @@
+[package]
+name = "sel4-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+spin = { workspace = true }
+common = { workspace = true }
+slot-manager = { workspace = true }

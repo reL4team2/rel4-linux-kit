@@ -18,11 +18,11 @@ sel4-logging = { workspace = true }
 sel4-dlmalloc = { workspace = true }
 sel4-sync = { workspace = true }
 sel4-runtime-common = { workspace = true, features = [
-    "start",
-    "tls",
-    "unwinding",
+  "start",
+  "tls",
+  "unwinding",
 ] }
-spin = { version = "0.9.8" }
+spin = { workspace = true }
 log = "0.4"
 xmas-elf = "0.9.1"
 syscalls = { version = "0.6", default-features = false }
@@ -39,3 +39,6 @@ object = { version = "0.36.1", default-features = false, features = ["read"] }
 common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
+
+zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
+include_bytes_aligned = "0.1.3"

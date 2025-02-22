@@ -3,19 +3,17 @@
 
 extern crate alloc;
 
+pub mod consts;
 pub mod log_impl;
 mod obj_allocator;
 pub mod page;
 pub mod services;
-mod uspace;
 mod utils;
 
 use core::cell::UnsafeCell;
 use crate_consts::PAGE_SIZE;
 pub use obj_allocator::*;
 use sel4::{with_ipc_buffer, with_ipc_buffer_mut, MessageInfo};
-use services::REG_LEN;
-pub use uspace::*;
 pub use utils::*;
 
 // FIXME: Make this variable more generic.
@@ -266,9 +264,4 @@ impl AlignedPage {
     pub const fn ptr(&self) -> *mut u8 {
         self.0.get() as _
     }
-}
-
-/// Calculate how many registers this data occupies
-fn reg_num(data_len: usize) -> usize {
-    (data_len + REG_LEN - 1) / REG_LEN
 }

@@ -18,7 +18,7 @@ slot-manager = { workspace = true }
 task-helper = { workspace = true }
 
 # 其他依赖
-spin = { version = "0.9.8" }
+spin = { workspace = true }
 xmas-elf = "0.9.1"
 include_bytes_aligned = "0.1.3"
 object = { version = "0.36.1", default-features = false, features = ["read"] }
@@ -26,3 +26,4 @@ object = { version = "0.36.1", default-features = false, features = ["read"] }
 [build-dependencies]
 serde = "1.0"
 toml = "0.8.19"
+liquid = "0.26.11"

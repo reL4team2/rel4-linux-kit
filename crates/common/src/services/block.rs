@@ -1,14 +1,14 @@
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use sel4::{
-    cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder, Word,
-};
+use num_enum::{FromPrimitive, IntoPrimitive};
+use sel4::{cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder};
 
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
-pub enum BlockServiceLabel {
+pub enum BlockEvent {
     Ping,
     ReadBlock,
     WriteBlock,
+    #[num_enum(catch_all)]
+    Unknown(u64),
 }
 
 // FIXME: 公共 patten 就是:
@@ -23,7 +23,7 @@ pub enum BlockServiceLabel {
 //
 // 其他：可以使用类似 Builder 的链式操作构建 MessageBuffer.
 //
-impl BlockServiceLabel {
+impl BlockEvent {
     fn msg(&self) -> MessageInfoBuilder {
         MessageInfoBuilder::default().label((*self).into())
     }
@@ -51,7 +51,7 @@ impl BlockService {
     }
 
     pub fn ping(&self) -> Result<MessageInfo, ()> {
-        let ping_msg = BlockServiceLabel::Ping.msg().build();
+        let ping_msg = BlockEvent::Ping.msg().build();
         self.call(ping_msg)
     }
 
@@ -59,7 +59,7 @@ impl BlockService {
         with_ipc_buffer_mut(|ipc_buf| {
             ipc_buf.msg_regs_mut()[0] = block_id as _;
         });
-        let msg = BlockServiceLabel::ReadBlock.msg().length(1).build();
+        let msg = BlockEvent::ReadBlock.msg().length(1).build();
         // Send and Wait a message
         self.call(msg)?;
         // Copy data from the buffer of the ipc message.
@@ -72,47 +72,5 @@ impl BlockService {
 
     pub fn write_block(&self, _block_id: usize, _buffer: &[u8]) -> Result<(), ()> {
         unimplemented!("write_blocks")
-    }
-}
-
-pub trait BlockServiceAdapter {
-    fn read_blocks(&mut self, block_id: usize, buffer: &mut [u8]) -> usize;
-    fn write_blocks(&mut self, block_id: usize, buffer: &[u8]) -> usize;
-
-    fn handle(&mut self, ep: Endpoint) {
-        let rev_msg = MessageInfoBuilder::default();
-        let mut buffer = [0u8; 0x200];
-        loop {
-            let (msg, _) = ep.recv(());
-            let label = match BlockServiceLabel::try_from(msg.label()) {
-                Ok(v) => v,
-                _ => continue,
-            };
-            match label {
-                BlockServiceLabel::Ping => {
-                    with_ipc_buffer_mut(|ipc_buffer| {
-                        sel4::reply(ipc_buffer, rev_msg.build());
-                    });
-                }
-                BlockServiceLabel::ReadBlock => {
-                    let block_id = with_ipc_buffer(|ib| ib.msg_regs()[0]) as _;
-                    let len = self.read_blocks(block_id, &mut buffer);
-                    with_ipc_buffer_mut(|ib| {
-                        ib.msg_bytes_mut()[..len].copy_from_slice(&buffer[..len]);
-                        sel4::reply(ib, rev_msg.length(len / size_of::<Word>()).build());
-                    });
-                }
-                BlockServiceLabel::WriteBlock => {
-                    let (block_id, wlen) = with_ipc_buffer_mut(|ib| {
-                        let regs = ib.msg_regs();
-                        (regs[0] as _, regs[1] as _)
-                    });
-                    self.write_blocks(block_id, &buffer[..wlen]);
-                    with_ipc_buffer_mut(|ib| {
-                        sel4::reply(ib, rev_msg.build());
-                    });
-                }
-            }
-        }
     }
 }

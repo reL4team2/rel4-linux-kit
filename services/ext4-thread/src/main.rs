@@ -6,18 +6,15 @@ extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
 
-use common::services::{block::BlockService, fs::FileServiceLabel, root::RootService};
-use crate_consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP};
+use common::services::{block::BlockService, fs::FileEvent, root::find_service};
+use crate_consts::DEFAULT_SERVE_EP;
 use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry};
-use sel4::{cap::Endpoint, debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
+use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
 mod runtime;
 
-static ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
-
 const BLK_SERVICE: BlockService = BlockService::from_bits(0x21);
-const SERVE_EP: Endpoint = Endpoint::from_bits(DEFAULT_SERVE_EP);
 
 const BLOCK_SIZE: usize = 4096;
 const TRANS_LIMIT: usize = 0x200;
@@ -68,14 +65,12 @@ impl BlockDevice for Ext4Disk {
 }
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
+    common::init_log!(log::LevelFilter::Error);
     common::init_recv_slot();
 
     log::info!("Booting...");
 
-    ROOT_SERVICE
-        .find_service("block-thread", LeafSlot::new(0x21))
-        .unwrap();
+    find_service("block-thread", LeafSlot::new(0x21)).unwrap();
 
     BLK_SERVICE.ping().unwrap();
     log::info!("Found Block Thread, It reply ping message");
@@ -86,21 +81,18 @@ fn main() -> ! {
 
     let rev_msg = MessageInfoBuilder::default();
     loop {
-        let (message, _) = SERVE_EP.recv(());
-        let msg_label = match FileServiceLabel::try_from(message.label()) {
-            Ok(label) => label,
-            Err(_) => continue,
-        };
+        let (message, _) = DEFAULT_SERVE_EP.recv(());
+        let msg_label = FileEvent::from(message.label());
         log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
         match msg_label {
-            FileServiceLabel::Ping => {
+            FileEvent::Ping => {
                 with_ipc_buffer_mut(|ib| {
                     sel4::reply(ib, rev_msg.build());
                 });
             }
             // FIXME: 应该返回一个结构，或者数组表示所有文件
             // 类似于 getdents
-            FileServiceLabel::ReadDir => {
+            FileEvent::ReadDir => {
                 log::debug!("Read Dir Message");
                 let dir_entry: Vec<Ext4DirEntry> = ext4.read_dir_entry(2);
                 for entry in dir_entry {
@@ -108,6 +100,9 @@ fn main() -> ! {
                 }
                 debug_println!();
                 with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()));
+            }
+            FileEvent::Unknown(label) => {
+                log::warn!("Unknown label: {}", label);
             }
         }
     }

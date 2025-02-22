@@ -1,7 +1,13 @@
+//! 宏内核线程服务，这个线程可以将传统宏内核程序作为子程序运行，可以为子程序提供文件系统、设备等服务。
+//! 目前还需要对需要运行的子程序进行预处理。
 #![no_std]
 #![no_main]
+#![deny(missing_docs)]
 #![feature(never_type)]
 #![feature(const_trait_impl)]
+
+#[macro_use]
+extern crate log;
 
 extern crate alloc;
 extern crate sel4_panicking;
@@ -9,68 +15,37 @@ extern crate sel4_panicking;
 mod child_test;
 mod logging;
 mod runtime;
-mod syscall;
-mod task;
-mod thread;
-mod utils;
 
-use common::{
-    services::{fs::FileSerivce, root::RootService, uart::UartService},
-    ObjectAllocator,
-};
-use crate_consts::{
-    DEFAULT_CUSTOM_SLOT, DEFAULT_EMPTY_SLOT_INDEX, DEFAULT_PARENT_EP, GRANULE_SIZE,
-    KERNEL_THREAD_SLOT_NUMS,
-};
-use sel4::{debug_println, init_thread::slot, Cap};
-use spin::Mutex;
-use utils::{init_free_page_addr, FreePagePlaceHolder};
+pub mod arch;
+pub mod consts;
+pub mod device;
+pub mod exception;
+pub mod fs;
+pub mod syscall;
+pub mod task;
+pub mod utils;
 
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
 
-/// Get the virtual address of the page seat.
-pub fn page_seat_vaddr() -> usize {
-    unsafe { init_free_page_addr() }
-}
-
-/// The object allocator for the kernel thread.
-pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAllocator::empty());
-
-/// free page placeholder
-pub(crate) static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder =
-    FreePagePlaceHolder([0; GRANULE_SIZE]);
-
-const ROOT_SERVICE: RootService = RootService::from_bits(DEFAULT_PARENT_EP);
-
 fn main() -> ! {
+    // 初始化接收 IPC 传递的 Capability 的 Slot
     common::init_recv_slot();
+
+    // 初始化 LOG
     logging::init();
 
-    debug_println!("[KernelThread] EntryPoint");
-    OBJ_ALLOCATOR.lock().init(
-        DEFAULT_EMPTY_SLOT_INDEX..KERNEL_THREAD_SLOT_NUMS,
-        Cap::from_bits(DEFAULT_CUSTOM_SLOT as _),
-    );
-    debug_println!("[KernelThread] Object Allocator initialized");
+    // 初始化 object allocator
+    utils::obj::init();
 
-    // 寻找 fs_service 并尝试 ping
-    let fs_service = FileSerivce::from_leaf_slot(OBJ_ALLOCATOR.lock().allocate_slot());
-    ROOT_SERVICE
-        .find_service("fs-thread", fs_service.leaf_slot())
-        .unwrap();
-    fs_service.ping().unwrap();
+    // 初始化文件系统
+    fs::init();
 
-    // 寻找 uart_service 并尝试 ping
-    let uart_service = UartService::from_leaf_slot(OBJ_ALLOCATOR.lock().allocate_slot());
-    ROOT_SERVICE
-        .find_service("uart-thread", uart_service.leaf_slot())
-        .unwrap();
-    uart_service.ping().unwrap();
+    // 初始化设备
+    device::init();
 
-    test_func!("[KernelThread] Test Thread", {
-        child_test::test_child().unwrap();
-    });
-    debug_println!("[KernelThread] Say Goodbye");
-    slot::TCB.cap().tcb_suspend().unwrap();
-    unreachable!()
+    // 添加测试子任务
+    child_test::add_test_child().unwrap();
+
+    // 循环处理异常(含伪 syscall)
+    exception::waiting_and_handle();
 }

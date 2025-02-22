@@ -11,13 +11,14 @@
 //! 总体采用多级设计，目前准备采用 2 级设计，一共可以容纳 2^24 个 Slot，可以满足大部分的需求。
 //! 如果只容纳物理页，那么最大可以使用 2^24 个物理页，也就是 64G 的物理内存
 //!
+//! ```plain
 //! +-----------+-----------+---------+
 //! |  63..24   |  23..12   |  11..0  |
 //! +-----------+-----------+---------+
 //! | Not Used  |  Level 1  | Level 0 |
 //! +-----------+-----------+---------+
-//!
-//! 为什么叫 [LeafSlot] 也就是 [LeafSlot] 永远指向最后一级页表中的 Slot，`Level 1` 中指向的 Slot
+//! ```
+//! 为什么叫 [LeafSlot] 是因为 [LeafSlot] 永远指向最后一级页表中的 Slot，`Level 1` 中指向的 Slot
 //! 也叫 `NonLeafSlot`，中永远只包含 `CNode`。
 //!
 //! > 注意：root-task 启动时默认仅一级，只能容纳 4096 个 slot, 且有一些 slot 已经安排了内容，
@@ -41,6 +42,7 @@ use sel4::{
 };
 
 /// 叶子 slot
+///
 /// CSpace 是一个层级结构，也可以理解为一棵树
 /// 叶子 slot 就是在最边缘的位置，深度永远为 64(最大)
 /// 这里设计每一级的深度为 12
@@ -118,7 +120,7 @@ impl LeafSlot {
     ///
     /// slot 的数量不应该大于 CSpace 构建的最大数量
     pub const fn next_nth_slot(&self, n: usize) -> LeafSlot {
-        assert!((self.idx + n) <= usize::MAX);
+        assert!(self.idx <= usize::MAX - n);
         LeafSlot::new(self.idx + n)
     }
 
@@ -133,7 +135,7 @@ impl LeafSlot {
     /// 删除当前 [LeafSlot] 中的 Capability
     ///
     /// 如果需要删除 [sel4::cap::CNode] 下面的所有 Capability，需要先使用 [Self::revoke] 删除
-    /// 派生出的 Capability，然后在调用 [delete] 删除 slot 中的 Capability
+    /// 派生出的 Capability，然后再调用 [AbsoluteCPtr::delete] 删除 slot 中的 Capability
     #[inline]
     pub fn delete(&self) -> Result<(), sel4::Error> {
         self.abs_cptr().delete()
@@ -148,7 +150,21 @@ impl LeafSlot {
     }
 }
 
-/// Slot Manager
+/// [Cap] 可以快速转换为 [LeafSlot]
+impl<T: CapType> From<Cap<T>> for LeafSlot {
+    fn from(value: Cap<T>) -> Self {
+        Self::from_cap(value)
+    }
+}
+
+/// [LeafSlot] 快速转换为 [Cap]
+impl<T: CapType> From<LeafSlot> for Cap<T> {
+    fn from(value: LeafSlot) -> Self {
+        value.cap()
+    }
+}
+
+/// Slot 管理器
 ///
 /// Slot 管理器，可以管理和申请特定的 Slot
 #[derive(Debug)]

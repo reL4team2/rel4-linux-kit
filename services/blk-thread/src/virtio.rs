@@ -1,14 +1,12 @@
 use alloc::collections::BTreeMap;
+use common::services::root::translate_addr;
 use core::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
 use crate_consts::DMA_ADDR_START;
-use sel4::{self, debug_println};
 use spin::Mutex;
 use virtio_drivers::{BufferDirection, Hal, PhysAddr, PAGE_SIZE};
-
-use crate::ROOT_SERVICE;
 
 static DMA_ADDR: AtomicUsize = AtomicUsize::new(DMA_ADDR_START);
 static ADDR_MAP: Mutex<BTreeMap<usize, usize>> = Mutex::new(BTreeMap::new());
@@ -21,9 +19,7 @@ pub fn translate_address(vaddr: usize) -> usize {
     let paddr = match map.get(&vp_index) {
         Some(v) => v * PAGE_SIZE + offset,
         None => {
-            let paddr = ROOT_SERVICE
-                .translate_addr(vaddr as *const u8 as _)
-                .expect("can't translate address");
+            let paddr = translate_addr(vaddr).expect("can't translate address");
 
             map.insert(vp_index, paddr / PAGE_SIZE);
             paddr
@@ -36,7 +32,6 @@ pub struct HalImpl;
 
 unsafe impl Hal for HalImpl {
     fn dma_alloc(pages: usize, _direction: BufferDirection) -> (PhysAddr, NonNull<u8>) {
-        debug_println!("[BlockThread] DMA Alloc Page: {}", pages);
         let vaddr = DMA_ADDR.load(Ordering::Acquire);
         DMA_ADDR.store(vaddr + pages * PAGE_SIZE, Ordering::Release);
 
@@ -55,9 +50,6 @@ unsafe impl Hal for HalImpl {
     }
 
     unsafe fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> PhysAddr {
-        // ROOT_SERVICE
-        //     .translate_addr(buffer.as_ptr() as *const u8 as _)
-        //     .expect("can't translate address")
         translate_address(buffer.as_ptr() as *const u8 as _)
     }
 

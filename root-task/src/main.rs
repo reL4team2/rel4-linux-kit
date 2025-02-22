@@ -13,15 +13,17 @@ use common::services::IpcBufferRW;
 use common::*;
 use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
+use page::PhysPage;
 use sel4::{
     cap::{LargePage, Untyped},
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer_mut, Cap, CapRights, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm,
-    UntypedDesc,
+    with_ipc_buffer, with_ipc_buffer_mut, Cap, CapRights, Fault, IpcBuffer, MessageInfoBuilder,
+    ObjectBlueprintArm, UntypedDesc,
 };
 use sel4_root_task::{root_task, Never};
+use services::root::RootEvent;
 use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
@@ -41,7 +43,7 @@ pub struct KernelServices {
     dma: &'static [(usize, usize)],
 }
 
-static TASK_FILES: &[KernelServices] = &[
+const TASK_FILES: &[KernelServices] = &[
     KernelServices {
         name: "block-thread",
         file: include_bytes_aligned!(16, "../../target/blk-thread.elf"),
@@ -66,12 +68,12 @@ static TASK_FILES: &[KernelServices] = &[
     //     mem: &[],
     //     dma: &[],
     // },
-    KernelServices {
-        name: "simple-cli",
-        file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
-        mem: &[],
-        dma: &[],
-    },
+    // KernelServices {
+    //     name: "simple-cli",
+    //     file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
+    //     mem: &[],
+    //     dma: &[],
+    // },
     KernelServices {
         name: "kernel-thread",
         file: include_bytes_aligned!(16, "../../target/kernel-thread.elf"),
@@ -140,7 +142,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         // 一般情况下映射的大小不会超过一个页
         // NOTICE: 目前不支持多个人物共享一个物理页表的情况
         // TODO: 实现申请指定物理内存到映射到特定物理地址的操作
-        for (vaddr, paddr, size) in t.mem {
+        for (vaddr, paddr, _size) in t.mem {
             let (blk_device_untyped_cap, _) = device_untypes
                 .iter()
                 .find(|(_, desc)| {
@@ -177,7 +179,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                     start + i * PAGE_SIZE,
                     page.frame_get_address().unwrap()
                 );
-                tasks[t_idx].map_page(start + i * PAGE_SIZE, page);
+                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
             });
         }
 
@@ -203,32 +205,29 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer) {
     let rev_msg = MessageInfoBuilder::default();
     let (message, badge) = fault_ep.recv(());
-    let msg_label = match services::root::RootMessageLabel::try_from(message.label()) {
-        Ok(label) => label,
-        Err(_) => return,
-    };
-    debug_println!(
-        "[RootTask] Recv <{:?}> len: {}",
-        msg_label,
-        message.length()
-    );
+    let msg_label = RootEvent::from(message.label());
+    // debug_println!(
+    //     "[RootTask] Recv <{:?}> len: {}",
+    //     msg_label,
+    //     message.length()
+    // );
 
     match msg_label {
-        services::root::RootMessageLabel::Ping => sel4::reply(ib, rev_msg.build()),
-        services::root::RootMessageLabel::TranslateAddr => {
+        RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
+        RootEvent::TranslateAddr => {
             let mut off = 0;
             let addr = usize::read_buffer(ib, &mut off);
 
             let phys_addr = tasks[badge as usize]
                 .mapped_page
                 .get(&(addr & !0xfff))
-                .map(|x| x.frame_get_address().unwrap())
+                .map(|x| x.addr())
                 .unwrap();
 
             ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
             sel4::reply(ib, rev_msg.length(off).build());
         }
-        services::root::RootMessageLabel::FindService => {
+        RootEvent::FindService => {
             let name = <&str>::read_buffer(ib, &mut 0);
             let task = tasks.iter().find(|task| task.name == name);
             let msg = match task {
@@ -243,7 +242,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
         }
         // Allocate a irq handler capability
         // Transfer it to the requested service
-        services::root::RootMessageLabel::RegisterIRQ => {
+        RootEvent::RegisterIRQ => {
             let irq = ib.msg_regs()[0];
             let dst_slot = LeafSlot::new(0);
             slot::IRQ_CONTROL
@@ -257,7 +256,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
             dst_slot.delete().unwrap();
         }
         // Allocate a notification capability
-        services::root::RootMessageLabel::AllocNotification => {
+        RootEvent::AllocNotification => {
             // 在 0 的 slot 出创建一个 Capability
             OBJ_ALLOCATOR
                 .lock()
@@ -267,6 +266,16 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
             sel4::reply(ib, rev_msg.extra_caps(1).build());
 
             LeafSlot::new(0).delete().unwrap();
+        }
+        RootEvent::Unknown(label) => {
+            if label >= 8 {
+                debug_println!("Unknown root messaage label: {label}")
+            }
+            let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+            debug_println!("[Kernel Thread] Received Fault: {:#x?}", fault);
+            match fault {
+                _ => {}
+            }
         }
     }
 }

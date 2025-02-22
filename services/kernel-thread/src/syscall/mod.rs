@@ -1,71 +1,48 @@
-use sel4::{cap::Endpoint, debug_println};
-use syscalls::{Errno, Sysno};
-mod fs;
-mod mm;
-mod net;
-mod thread;
+//! 系统调用处理模块
+//!
+//!
+pub mod fs;
+pub mod mm;
+pub mod thread;
+pub mod types;
 
+use fs::*;
+use mm::*;
+use sel4::UserContext;
+use syscalls::{Errno, Sysno};
+use thread::*;
+
+use crate::task::Sel4Task;
+
+/// SysCall Result
+///
+/// 使用 `Errno` 作为错误类型，`usize` 作为返回值类型
 pub type SysResult = Result<usize, Errno>;
 
-pub fn handle_ipc_call(
-    badge: u64,
-    sys_id: usize,
-    args: [usize; 6],
-    fault_ep: Endpoint,
-) -> Result<usize, Errno> {
-    let sys_no = Sysno::new(sys_id).ok_or(Errno::EINVAL)?;
-    debug_println!("[KernelThread] Syscall: {:?}", sys_no);
-    match sys_no {
-        Sysno::write => fs::sys_write(badge, args[0] as _, args[1] as _, args[2] as _),
-        Sysno::brk => mm::sys_brk(badge, args[0] as _),
-        Sysno::mmap => mm::sys_mmap(
-            badge,
-            args[0] as _,
-            args[1] as _,
-            args[2] as _,
-            args[3] as _,
-            args[4] as _,
-            args[5] as _,
-        ),
-        Sysno::munmap => mm::sys_unmap(badge, args[0] as _, args[1] as _),
-        Sysno::exit => thread::sys_exit(badge, args[0] as _),
-        Sysno::exit_group => thread::sys_exit_group(badge, args[0] as _),
-        Sysno::getpid => thread::sys_getpid(badge),
-        Sysno::execve => {
-            thread::sys_exec(badge, fault_ep, args[0] as _, args[1] as _, args[2] as _)
-        }
-        Sysno::clone => thread::sys_clone(badge, fault_ep, args[0] as _, args[1] as _),
-        Sysno::gettid => thread::sys_gettid(badge as _),
-        Sysno::sched_yield => thread::sys_sched_yield(),
-        Sysno::getppid => thread::sys_getppid(badge),
-        Sysno::set_tid_address => thread::sys_set_tid_address(badge, args[0] as _),
-        Sysno::getuid => thread::sys_getuid(badge),
-        Sysno::geteuid => thread::sys_geteuid(badge),
-
-        Sysno::socket => net::sys_socket(badge, args[0] as _, args[1] as _, args[2] as _),
-        Sysno::accept => net::sys_accept(badge, args[0] as _, args[1] as _, args[2] as _),
-        Sysno::bind => net::sys_bind(badge, args[0] as _, args[1] as _, args[2] as _),
-        Sysno::connect => net::sys_connect(badge, args[0] as _, args[1] as _, args[2] as _),
-        Sysno::listen => net::sys_listen(badge, args[0] as _),
-        Sysno::sendto => net::sys_sendto(
-            badge,
-            args[0] as _,
-            args[1] as _,
-            args[2] as _,
-            args[3] as _,
-            args[4] as _,
-            args[5] as _,
-        ),
-        Sysno::recvfrom => net::sys_recvfrom(
-            badge,
-            args[0] as _,
-            args[1] as _,
-            args[2] as _,
-            args[3] as _,
-            args[4] as _,
-            args[5] as _,
-        ),
-        Sysno::shutdown => net::sys_shutdown(badge, args[0] as _, args[1] as _),
-        _ => Err(Errno::ENOSYS),
+/// 处理系统调用
+/// - `task` [Sel4Task]   需要处理的任务
+/// - `ctx` [UserContext] 系统调用上下文，修改后需要恢复
+pub fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
+    let id = Sysno::new(ctx.gpr(8).clone() as _);
+    let a0 = ctx.gpr(0).clone() as usize;
+    let a1 = ctx.gpr(1).clone() as usize;
+    let a2 = ctx.gpr(2).clone() as usize;
+    let a3 = ctx.gpr(3).clone() as usize;
+    let a4 = ctx.gpr(4).clone() as usize;
+    let a5 = ctx.gpr(5).clone() as usize;
+    log::debug!("SysCall: {:#x?}", id.unwrap());
+    if id == None {
+        return Err(Errno::ENOSYS);
+    }
+    match id.unwrap() {
+        Sysno::brk => sys_brk(task, a0),
+        Sysno::mmap => sys_mmap(task, a0, a1, a2, a3, a4, a5),
+        Sysno::getpid => sys_getpid(&task),
+        Sysno::set_tid_address => sys_set_tid_addr(task, a0),
+        Sysno::write => sys_write(task, a0, a1 as _, a2),
+        Sysno::writev => sys_writev(task, a0, a1 as _, a2),
+        Sysno::exit => panic!("exit is not implemented"),
+        Sysno::rt_sigprocmask | Sysno::rt_sigaction | Sysno::getuid | Sysno::getgid => Ok(0),
+        _ => Err(Errno::EPERM),
     }
 }

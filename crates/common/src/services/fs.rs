@@ -1,13 +1,14 @@
-use common_macros::ipc_msg;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{cap::Endpoint, MessageInfo, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
-#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
-pub enum FileServiceLabel {
+pub enum FileEvent {
     Ping,
     ReadDir,
+    #[num_enum(catch_all)]
+    Unknown(u64),
 }
 
 pub struct FileSerivce {
@@ -41,7 +42,7 @@ impl FileSerivce {
 
     pub fn ping(&self) -> Result<MessageInfo, ()> {
         let ping_msg = MessageInfoBuilder::default()
-            .label(FileServiceLabel::Ping.into())
+            .label(FileEvent::Ping.into())
             .build();
         self.call(ping_msg)
     }
@@ -50,9 +51,15 @@ impl FileSerivce {
     // 功能类似于 getdents
     pub fn read_dir(&self, _dir: &str) -> Result<(), ()> {
         let msg = MessageInfoBuilder::default()
-            .label(FileServiceLabel::ReadDir.into())
+            .label(FileEvent::ReadDir.into())
             .build();
         let msg = self.call(msg)?;
         Ok(())
+    }
+}
+
+impl From<LeafSlot> for FileSerivce {
+    fn from(value: LeafSlot) -> Self {
+        Self::from_leaf_slot(value)
     }
 }
