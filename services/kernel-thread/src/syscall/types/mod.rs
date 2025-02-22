@@ -1,6 +1,7 @@
 //! SysCall 使用到的类型定义
 //!
 //!
+pub mod signal;
 use zerocopy::{FromBytes, Immutable};
 
 #[repr(C)]

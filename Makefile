@@ -11,8 +11,7 @@ loader_cli := $(loader_artifacts_dir)/sel4-kernel-loader-add-payload
 app_crate := root-task
 app := $(BUILD_DIR)/$(app_crate).elf
 
-qemu_args := 
-qemu_args += -drive file=mount.img,if=none,format=raw,id=x0
+qemu_args := -drive file=mount.img,if=none,format=raw,id=x0
 qemu_args += -device virtio-blk-device,drive=x0
 
 # qemu_args += -netdev user,id=net0,hostfwd=tcp::6379-:6379
@@ -24,26 +23,23 @@ ifeq ($(QEMU_LOG), y)
 endif
 
 CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
-			--target $(TARGET) \
-			--release
+	--target $(TARGET) \
+	--release
 
-# SEL4_TARGET_PREFIX is used by build.rs scripts of various rust-sel4 crates to locate seL4
-# configuration and libsel4 headers.
-.INTERMDIATE: all
-all:
+build: 
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 
 image := $(BUILD_DIR)/image.elf
 
 # Append the payload to the loader using the loader CLI
-$(image): $(app) $(loader) $(loader_cli)
+buld_img: build $(loader) $(loader_cli)
 	echo $(loader_cli) $(loader)
 	$(loader_cli) \
 		--loader $(loader) \
 		--sel4-prefix $(SEL4_PREFIX) \
 		--app $(app) \
-		-o $@
+		-o $(image)
 
 qemu_cmd := \
 	qemu-system-aarch64 \
@@ -53,7 +49,7 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
-run: $(image)
+run: buld_img
 	$(qemu_cmd)
 	rm $(image)
 
@@ -75,5 +71,17 @@ test-examples:
 		--app $(app) \
 		-o $(image)
 	$(qemu_cmd)
+	rm $(image)
+	make -C examples/linux-apps/sigtest
+	./tools/ins_modify.py examples/linux-apps/sigtest/main.elf .env/example
+	cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
+	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
+	$(loader_cli) \
+		--loader $(loader) \
+		--sel4-prefix $(SEL4_PREFIX) \
+		--app $(app) \
+		-o $(image)
+	$(qemu_cmd)
+	rm $(image)
 
 .PHONY: run clean

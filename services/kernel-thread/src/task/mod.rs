@@ -4,6 +4,7 @@
 mod auxv;
 mod info;
 mod init;
+mod signal;
 
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::page::PhysPage;
@@ -17,6 +18,7 @@ use sel4::{
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
 };
+use signal::TaskSignal;
 use slot_manager::LeafSlot;
 use xmas_elf::{program, ElfFile};
 
@@ -45,6 +47,8 @@ pub struct Sel4Task {
     pub heap: usize,
     /// 退出状态码
     pub exit: Option<i32>,
+    /// 信号信息
+    pub signal: TaskSignal,
     /// The clear thread tid field
     ///
     /// See <https://manpages.debian.org/unstable/manpages-dev/set_tid_address.2.en.html#clear_child_tid>
@@ -110,6 +114,7 @@ impl Sel4Task {
             mapped_pt: Vec::new(),
             mapped_page: BTreeMap::new(),
             heap: DEF_HEAP_ADDR,
+            signal: TaskSignal::default(),
             exit: None,
             clear_child_tid: None,
             info: TaskInfo::default(),

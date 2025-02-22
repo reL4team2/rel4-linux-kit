@@ -21,19 +21,11 @@ wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/rel
 
 # Optional
 wget https://github.com/rel4team/rust-root-task-demo-mi-dev/raw/refs/heads/new-root-task/busybox
-
-```
-
-> 请确保您的 .env 目录下有 seL4 文件夹
-
-#### 运行
-
-```shell
-make run
 ```
 
 ## 运行 example 体验在 rel4-linux-kit 上运行 linux 程序
 
+> 请确保您的 .env 目录下有 seL4 文件夹
 > 请确保您已安装 `aarch64-linux-musl-cross`,如果没有安装可以先执行
 
 ```shell

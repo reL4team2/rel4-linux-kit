@@ -3,12 +3,14 @@
 //!
 pub mod fs;
 pub mod mm;
+pub mod signal;
 pub mod thread;
 pub mod types;
 
 use fs::*;
 use mm::*;
 use sel4::UserContext;
+use signal::*;
 use syscalls::{Errno, Sysno};
 use thread::*;
 
@@ -38,11 +40,15 @@ pub fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
         Sysno::brk => sys_brk(task, a0),
         Sysno::mmap => sys_mmap(task, a0, a1, a2, a3, a4, a5),
         Sysno::getpid => sys_getpid(&task),
+        Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
+        Sysno::rt_sigprocmask => sys_sigprocmask(task, a0, a1 as _, a2 as _),
+        Sysno::rt_sigreturn => sys_sigreturn(task, ctx),
+        Sysno::kill => sys_kill(task, a0, a1),
         Sysno::set_tid_address => sys_set_tid_addr(task, a0),
         Sysno::write => sys_write(task, a0, a1 as _, a2),
         Sysno::writev => sys_writev(task, a0, a1 as _, a2),
         Sysno::exit => panic!("exit is not implemented"),
-        Sysno::rt_sigprocmask | Sysno::rt_sigaction | Sysno::getuid | Sysno::getgid => Ok(0),
+        Sysno::getuid | Sysno::getgid => Ok(0),
         _ => Err(Errno::EPERM),
     }
 }

@@ -38,9 +38,15 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
         };
         *user_ctx.gpr_mut(0) = ret_v as _;
         *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
+
+        // 写入返回值信息
         task.tcb
-            .tcb_write_all_registers(true, &mut user_ctx)
+            .tcb_write_all_registers(false, &mut user_ctx)
             .unwrap();
+        // 检查信号
+        task.check_signal(&mut user_ctx);
+        // 恢复任务运行状态
+        task.tcb.tcb_resume().unwrap();
     }
 }
 
@@ -67,6 +73,7 @@ pub fn waiting_and_handle() -> ! {
         assert!(message.label() < 8, "Unexpected IPC Message");
 
         let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+        log::debug!("trigger fault: {:#x?}", fault);
         match fault {
             Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
             Fault::UserException(ue) => handle_user_exception(tid, ue),
