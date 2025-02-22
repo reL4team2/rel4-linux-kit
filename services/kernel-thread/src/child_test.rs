@@ -9,7 +9,10 @@ use sel4::{init_thread::slot, CNodeCapData, CPtr, Result};
 use spin::Mutex;
 
 // TODO: Make elf file path dynamically available.
+#[cfg(not(feature = "example"))]
 const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/busybox-ins.elf");
+#[cfg(feature = "example")]
+const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/example");
 
 /// 任务表，可以通过任务 ID 获取任务
 pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());

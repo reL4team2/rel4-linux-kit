@@ -9,6 +9,10 @@ name = "kernel-thread"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+example = []
+default = []
+
 [dependencies]
 sel4 = { workspace = true }
 sel4-ctors-dtors = { workspace = true }

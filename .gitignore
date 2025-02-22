@@ -11,3 +11,6 @@ mount.img
 
 # 忽略测试文件
 /busybox
+
+# 忽略下载的工具链
+/aarch64-linux-musl-cross/

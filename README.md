@@ -31,3 +31,17 @@ wget https://github.com/rel4team/rust-root-task-demo-mi-dev/raw/refs/heads/new-r
 ```shell
 make run
 ```
+
+## 运行 example 体验在 rel4-linux-kit 上运行 linux 程序
+
+> 请确保您已安装 `aarch64-linux-musl-cross`,如果没有安装可以先执行
+
+```shell
+wget https://musl.cc/aarch64-linux-musl-cross.tgz
+tar zxf aarch64-linux-musl-cross.tgz
+export PATH=$PAHT:`pwd`/aarch64-linux-musl-cross/bin
+```
+
+```shell
+make test-exmaples
+```

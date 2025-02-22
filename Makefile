@@ -23,16 +23,14 @@ ifeq ($(QEMU_LOG), y)
 	qemu_args += -D qemu.log -d in_asm,int,pcall,cpu_reset,guest_errors
 endif
 
-$(app): $(app).intermediate
-
 CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 			--target $(TARGET) \
 			--release
 
 # SEL4_TARGET_PREFIX is used by build.rs scripts of various rust-sel4 crates to locate seL4
 # configuration and libsel4 headers.
-.INTERMDIATE: $(app).intermediate
-$(app).intermediate:
+.INTERMDIATE: all
+all:
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 
@@ -64,5 +62,18 @@ busybox:
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+test-examples: 
+	make -C examples/linux-apps/helloworld
+	./tools/ins_modify.py examples/linux-apps/helloworld/main.elf .env/example
+	cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
+	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate) --exclude kernel-thread
+	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
+	$(loader_cli) \
+		--loader $(loader) \
+		--sel4-prefix $(SEL4_PREFIX) \
+		--app $(app) \
+		-o $(image)
+	$(qemu_cmd)
 
 .PHONY: run clean
