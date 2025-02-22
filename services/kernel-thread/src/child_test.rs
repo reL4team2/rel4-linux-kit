@@ -1,6 +1,6 @@
-use crate::{task::Sel4Task, utils::obj::alloc_page};
+use crate::{consts::task::DEF_STACK_TOP, task::Sel4Task, utils::obj::alloc_page};
 use alloc::{collections::btree_map::BTreeMap, string::String};
-use common::{page::PhysPage, USPACE_STACK_TOP};
+use common::page::PhysPage;
 use core::cmp;
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE};
 use include_bytes_aligned::include_bytes_aligned;
@@ -16,8 +16,9 @@ pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new()
 
 /// 添加一个测试任务
 pub fn add_test_child() -> Result<()> {
-    // let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
-    let args = &["busybox"];
+    let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
+    // let args = &["busybox"];
+    // let args = &["busybox", "sh"];
     let mut task = Sel4Task::new()?;
 
     task.load_elf(CHILD_ELF);
@@ -30,7 +31,7 @@ pub fn add_test_child() -> Result<()> {
     task.info.args = args.iter().map(|x| String::from(*x)).collect();
 
     // 映射栈内存并填充初始化信息
-    task.map_region(USPACE_STACK_TOP - 16 * PAGE_SIZE, USPACE_STACK_TOP);
+    task.map_region(DEF_STACK_TOP - 16 * PAGE_SIZE, DEF_STACK_TOP);
     let sp_ptr = task.init_stack();
 
     let ipc_buf_page = PhysPage::new(alloc_page());
@@ -40,6 +41,9 @@ pub fn add_test_child() -> Result<()> {
         .div_ceil(PAGE_SIZE as _)
         * PAGE_SIZE as u64;
     task.map_page(ipc_buffer_addr as _, ipc_buf_page);
+
+    // 配置程序最大的位置
+    task.info.task_vm_end = ipc_buffer_addr as usize + PAGE_SIZE;
 
     // 配置子任务
     task.tcb.tcb_configure(
@@ -67,6 +71,5 @@ pub fn add_test_child() -> Result<()> {
 
     TASK_MAP.lock().insert(task.id as _, task);
 
-    // TODO: Free memory from slots.
     Ok(())
 }

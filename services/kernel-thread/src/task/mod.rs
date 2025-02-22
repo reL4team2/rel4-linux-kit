@@ -6,7 +6,7 @@ mod info;
 mod init;
 
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::{page::PhysPage, USPACE_BASE};
+use common::page::PhysPage;
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
@@ -20,7 +20,10 @@ use sel4::{
 use slot_manager::LeafSlot;
 use xmas_elf::{program, ElfFile};
 
-use crate::utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace};
+use crate::{
+    consts::task::DEF_HEAP_ADDR,
+    utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace},
+};
 
 /// Sel4Task 结构体
 pub struct Sel4Task {
@@ -106,26 +109,26 @@ impl Sel4Task {
             vspace,
             mapped_pt: Vec::new(),
             mapped_page: BTreeMap::new(),
-            heap: 0x2_0000_0000,
+            heap: DEF_HEAP_ADDR,
             exit: None,
             clear_child_tid: None,
             info: TaskInfo::default(),
         })
     }
 
-    /// To find a free area in the vspace.
+    /// 在当前任务的地址空间中找到最大可用的虚拟地址
     ///
-    /// The area starts from `start` and the size is `size`.
-    pub fn find_free_area(&self, start: usize, size: usize) -> Option<usize> {
-        let mut last_addr = USPACE_BASE.max(start);
+    /// - `start` 从哪块内存开始
+    /// - `size`  需要查找的内存块大小
+    pub fn find_free_area(&self, start: usize, size: usize) -> usize {
+        let mut last_addr = self.info.task_vm_end.max(start);
         for (vaddr, _page) in &self.mapped_page {
             if last_addr + size <= *vaddr {
-                return Some(last_addr);
+                return last_addr;
             }
             last_addr = *vaddr + PAGE_SIZE;
         }
-        // TODO: Set the limit of the top of the user space.
-        Some(last_addr)
+        last_addr
     }
 
     /// 映射一个物理页到虚拟地址空间
@@ -241,6 +244,7 @@ impl Sel4Task {
             let page_cap = PhysPage::new(alloc_page());
             self.map_page(vaddr, page_cap);
         }
+        self.heap = value;
         value
     }
 

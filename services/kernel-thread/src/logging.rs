@@ -39,14 +39,16 @@ fn fmt_with_module(record: &Record, f: &mut fmt::Formatter) -> fmt::Result {
         Level::Trace => 90,   // BrightBlack
     };
 
+    let line = record.line();
+
     write!(
         f,
         "\u{1B}[{}m\
-            [{}] [{}] {}\
+            [{}:{}] {}\
             \u{1B}[0m",
         color_code,
-        record.level(),
         target,
+        line.unwrap(),
         record.args()
     )
 }

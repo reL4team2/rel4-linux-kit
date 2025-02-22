@@ -1,7 +1,8 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::USPACE_STACK_TOP;
 use crate_consts::{PAGE_SIZE, STACK_ALIGN_SIZE};
 use memory_addr::MemoryAddr;
+
+use crate::consts::task::DEF_STACK_TOP;
 
 use super::{auxv::AuxV, Sel4Task};
 
@@ -35,11 +36,11 @@ impl Sel4Task {
         // +------------------+
         // │    ArgLen        │
         // +------------------+
-        let mut stack_ptr = USPACE_STACK_TOP;
+        let mut stack_ptr = DEF_STACK_TOP;
 
         let mut page_writer = self
             .mapped_page
-            .get(&(USPACE_STACK_TOP - PAGE_SIZE))
+            .get(&(DEF_STACK_TOP - PAGE_SIZE))
             .unwrap()
             .lock();
 

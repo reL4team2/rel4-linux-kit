@@ -8,14 +8,12 @@ pub mod log_impl;
 mod obj_allocator;
 pub mod page;
 pub mod services;
-mod uspace;
 mod utils;
 
 use core::cell::UnsafeCell;
 use crate_consts::PAGE_SIZE;
 pub use obj_allocator::*;
 use sel4::{with_ipc_buffer, with_ipc_buffer_mut, MessageInfo};
-pub use uspace::*;
 pub use utils::*;
 
 // FIXME: Make this variable more generic.

@@ -6,6 +6,9 @@
 #![feature(never_type)]
 #![feature(const_trait_impl)]
 
+#[macro_use]
+extern crate log;
+
 extern crate alloc;
 extern crate sel4_panicking;
 
@@ -14,6 +17,7 @@ mod logging;
 mod runtime;
 
 pub mod arch;
+pub mod consts;
 pub mod device;
 pub mod exception;
 pub mod fs;

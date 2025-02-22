@@ -4,11 +4,11 @@
 
 use sel4_root_task::debug_print;
 use syscalls::Errno;
-use zerocopy::{FromBytes, Immutable};
+use zerocopy::FromBytes;
 
 use crate::task::Sel4Task;
 
-use super::SysResult;
+use super::{types::IoVec, SysResult};
 
 pub(super) fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) -> SysResult {
     if fd != 1 && fd != 2 {
@@ -19,13 +19,6 @@ pub(super) fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) 
     let output = core::str::from_utf8(&buf).unwrap();
     debug_print!("{output}");
     Ok(len)
-}
-
-#[repr(C)]
-#[derive(Clone, FromBytes, Immutable)]
-pub(super) struct IoVec {
-    pub base: usize,
-    pub len: usize,
 }
 
 pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: usize) -> SysResult {

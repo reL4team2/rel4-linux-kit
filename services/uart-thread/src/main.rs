@@ -13,7 +13,7 @@ use common::{
 };
 use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_SERVE_EP, SERIAL_DEVICE_IRQ};
 use sel4::{
-    cap::{Endpoint, IrqHandler, Notification},
+    cap::{IrqHandler, Notification},
     with_ipc_buffer_mut, MessageInfoBuilder,
 };
 

@@ -7,4 +7,6 @@ pub struct TaskInfo {
     pub args: Vec<String>,
     /// 程序的入口地址
     pub entry: usize,
+    /// 程序的结尾位置
+    pub task_vm_end: usize,
 }

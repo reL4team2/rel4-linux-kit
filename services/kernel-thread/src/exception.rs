@@ -19,8 +19,8 @@ use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_pag
 /// - 异常指令为 0xdeadbeef 时，说明是系统调用
 /// - 异常指令为其他值时，说明是用户异常
 pub fn handle_user_exception(tid: u64, exception: UserException) {
-    let task_map = TASK_MAP.lock();
-    let task = task_map.get(&tid).unwrap();
+    let mut task_map = TASK_MAP.lock();
+    let task = task_map.get_mut(&tid).unwrap();
 
     let ins = task.read_ins(exception.inner().get_FaultIP() as _);
 
@@ -31,12 +31,12 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb_read_all_registers(true)
             .expect("can't read task context");
         let result = handle_syscall(task, &mut user_ctx);
+        debug!("\t SySCall Ret: {:x?}", result);
         let ret_v = match result {
             Ok(v) => v,
             Err(e) => -(e.into_raw() as isize) as usize,
         };
         *user_ctx.gpr_mut(0) = ret_v as _;
-        log::debug!("pc: {:#x?}", user_ctx.pc());
         *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
         task.tcb
             .tcb_write_all_registers(true, &mut user_ctx)
@@ -67,7 +67,6 @@ pub fn waiting_and_handle() -> ! {
         assert!(message.label() < 8, "Unexpected IPC Message");
 
         let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
-        // log::debug!("Received fault: {:#x?}", fault);
         match fault {
             Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
             Fault::UserException(ue) => handle_user_exception(tid, ue),
