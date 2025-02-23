@@ -31,7 +31,7 @@ wget https://github.com/rel4team/rust-root-task-demo-mi-dev/raw/refs/heads/new-r
 ```shell
 wget https://musl.cc/aarch64-linux-musl-cross.tgz
 tar zxf aarch64-linux-musl-cross.tgz
-export PATH=$PAHT:`pwd`/aarch64-linux-musl-cross/bin
+export PATH=$PATH:`pwd`/aarch64-linux-musl-cross/bin
 ```
 
 ```shell
