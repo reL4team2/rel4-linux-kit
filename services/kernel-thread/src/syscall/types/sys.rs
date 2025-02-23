@@ -1,0 +1,22 @@
+//! 系统调用的类型定义
+//!
+//!
+
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+
+/// 系统信息
+#[derive(Debug, FromBytes, Immutable, KnownLayout, IntoBytes)]
+pub struct UtsName {
+    /// 系统名称
+    pub sysname: [u8; 65],
+    /// 节点名称
+    pub nodename: [u8; 65],
+    /// 发布版本
+    pub release: [u8; 65],
+    /// 系统版本
+    pub version: [u8; 65],
+    /// 架构名称
+    pub machine: [u8; 65],
+    /// 域名
+    pub domainname: [u8; 65],
+}

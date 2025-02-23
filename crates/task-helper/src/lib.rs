@@ -21,7 +21,6 @@ use crate_consts::{
 };
 use sel4::{
     cap::{self, Granule, Notification, Null},
-    debug_println,
     init_thread::{self, slot},
     AbsoluteCPtr, CNodeCapData, CPtr, CPtrBits, CapRights, Error, HasCPtrWithDepth,
     VmAttributes as VMAttributes,
@@ -167,7 +166,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
             );
             match res {
                 Ok(_) => {
-                    debug_println!("[TaskHelper] map device memory success");
+                    log::debug!("[TaskHelper] map device memory success");
                     // FIXME: Record The Mapped Page.
                     return;
                 }

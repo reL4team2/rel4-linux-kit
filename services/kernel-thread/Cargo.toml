@@ -28,7 +28,6 @@ sel4-runtime-common = { workspace = true, features = [
 ] }
 spin = { workspace = true }
 log = "0.4"
-xmas-elf = "0.9.1"
 syscalls = { version = "0.6", default-features = false }
 sel4-elf-header = { workspace = true }
 sel4-initialize-tls = { workspace = true }

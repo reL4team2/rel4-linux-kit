@@ -4,7 +4,7 @@
 
 use sel4::UserContext;
 use syscalls::Errno;
-use zerocopy::FromBytes;
+use zerocopy::{FromBytes, IntoBytes};
 
 use crate::task::Sel4Task;
 
@@ -19,11 +19,15 @@ pub(super) fn sys_sigprocmask(
     set: *const SigProcMask,
     old: *mut SigProcMask,
 ) -> SysResult {
-    let sigproc_bytes = task.read_bytes(set as _, size_of::<SigProcMask>()).unwrap();
-    let maskset = &mut SigProcMask::ref_from_bytes(&sigproc_bytes).unwrap();
-    let sighow = SigMaskHow::try_from(how).or(Err(Errno::EINVAL))?;
-    task.signal.mask.handle(sighow, maskset);
-    warn!("write old sigmask is not implemented");
+    if !old.is_null() {
+        task.write_bytes(old as _, task.signal.mask.as_bytes());
+    }
+    if !set.is_null() {
+        let sigproc_bytes = task.read_bytes(set as _, size_of::<SigProcMask>()).unwrap();
+        let maskset = &mut SigProcMask::ref_from_bytes(&sigproc_bytes).unwrap();
+        let sighow = SigMaskHow::try_from(how).or(Err(Errno::EINVAL))?;
+        task.signal.mask.handle(sighow, maskset);
+    }
     Ok(0)
 }
 
@@ -33,10 +37,17 @@ pub(super) fn sys_sigaction(
     act: *const SigAction,
     oldact: *mut SigAction,
 ) -> SysResult {
-    let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
-    let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
-    task.signal.actions[sig] = Some(sigact.clone());
-    log::debug!("write old sigaction is not implemented");
+    if !oldact.is_null() {
+        if let Some(old) = task.signal.actions[sig] {
+            task.write_bytes(oldact as _, old.as_bytes());
+        }
+    }
+
+    if !act.is_null() {
+        let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
+        let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
+        task.signal.actions[sig] = Some(sigact.clone());
+    }
     Ok(0)
 }
 

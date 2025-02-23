@@ -1,6 +1,5 @@
 use alloc::fmt;
 use log::{Level, LevelFilter, Record};
-use sel4::debug_println;
 use sel4_logging::Logger;
 
 static mut LOGGER: Logger = sel4_logging::LoggerBuilder::const_default()
@@ -21,8 +20,6 @@ pub(super) fn init() {
             _ => LevelFilter::Debug,
         };
         LOGGER.set().unwrap();
-        debug_println!();
-        debug_println!("[Kernel Thread] Log Filter: {:?}", LOGGER.level_filter());
     }
 }
 

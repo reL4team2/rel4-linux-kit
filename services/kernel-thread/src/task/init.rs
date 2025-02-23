@@ -57,6 +57,22 @@ impl Sel4Task {
             })
             .collect();
 
+        let envs = vec![
+            "LD_LIBRARY_PATH=/",
+            "PS1=\x1b[1m\x1b[32mrelk\x1b[0m:\x1b[1m\x1b[34m\\w\x1b[0m\\$ \0",
+            "PATH=/:/bin:/usr/bin",
+            "UB_BINDIR=./",
+        ];
+        let envps: Vec<_> = envs
+            .iter()
+            .map(|env| {
+                stack_ptr = (stack_ptr - env.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                page_writer.write_bytes(stack_ptr, env.as_bytes());
+                page_writer.write_u8(stack_ptr + env.as_bytes().len(), 0);
+                stack_ptr
+            })
+            .collect();
+
         let mut push_num = |num: usize| {
             stack_ptr -= core::mem::size_of::<usize>();
             page_writer.write_usize(stack_ptr, num);
@@ -79,6 +95,7 @@ impl Sel4Task {
         }
         // push environment
         push_num(0);
+        envps.iter().rev().for_each(|x| push_num(*x));
         // push args pointer
         push_num(0);
         args_ptr.iter().rev().for_each(|x| push_num(*x));

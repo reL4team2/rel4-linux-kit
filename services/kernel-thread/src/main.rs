@@ -8,7 +8,7 @@
 
 #[macro_use]
 extern crate log;
-
+#[macro_use]
 extern crate alloc;
 extern crate sel4_panicking;
 

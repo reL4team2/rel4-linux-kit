@@ -2,6 +2,7 @@
 //!
 //!
 pub mod signal;
+pub mod sys;
 use zerocopy::{FromBytes, Immutable};
 
 #[repr(C)]

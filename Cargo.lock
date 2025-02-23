@@ -373,7 +373,6 @@ dependencies = [
  "slot-manager",
  "spin",
  "syscalls",
- "xmas-elf",
  "zerocopy 0.8.20",
 ]
 
@@ -670,6 +669,7 @@ dependencies = [
  "crate-consts",
  "include_bytes_aligned",
  "liquid",
+ "log",
  "object",
  "sel4",
  "sel4-elf-header",
@@ -1066,6 +1066,7 @@ version = "0.1.0"
 dependencies = [
  "common",
  "crate-consts",
+ "log",
  "sel4",
  "sel4-sync",
  "slot-manager",

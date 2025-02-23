@@ -19,9 +19,11 @@ pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new()
 
 /// 添加一个测试任务
 pub fn add_test_child() -> Result<()> {
-    let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
+    // let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
     // let args = &["busybox"];
-    // let args = &["busybox", "sh"];
+    let args = &["busybox", "sh"];
+    // let args = &["busybox", "printenv"];
+    // let args = &["busybox", "uname", "-a"];
     let mut task = Sel4Task::new()?;
 
     task.load_elf(CHILD_ELF);

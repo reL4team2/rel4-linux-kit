@@ -3,7 +3,7 @@
 //!
 
 use num_enum::TryFromPrimitive;
-use zerocopy::{FromBytes, Immutable, KnownLayout};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// 信号屏蔽位处理
 #[derive(Debug, Clone, Copy, TryFromPrimitive)]
@@ -19,7 +19,7 @@ pub enum SigMaskHow {
 
 /// 信号屏蔽位
 #[repr(C)]
-#[derive(Debug, Clone, Copy, FromBytes, Immutable, KnownLayout)]
+#[derive(Debug, Clone, Copy, FromBytes, Immutable, KnownLayout, IntoBytes)]
 pub struct SigProcMask(usize);
 
 impl SigProcMask {
@@ -53,7 +53,7 @@ impl SigProcMask {
 
 /// 信号处理
 #[repr(C)]
-#[derive(Debug, Clone, Copy, FromBytes, KnownLayout, Immutable)]
+#[derive(Debug, Clone, Copy, FromBytes, KnownLayout, Immutable, IntoBytes)]
 pub struct SigAction {
     /// 信号处理程序
     pub handler: usize, // void     (*sa_handler)(int);

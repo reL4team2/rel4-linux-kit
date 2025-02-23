@@ -175,7 +175,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             // 映射多个页表
             pages_cap.into_iter().enumerate().for_each(|(i, page)| {
                 debug_println!(
-                    "RootTask Mapping {:#x} -> {:#x}",
+                    "[RootTask] Mapping DMA {:#x} -> {:#x}",
                     start + i * PAGE_SIZE,
                     page.frame_get_address().unwrap()
                 );
@@ -269,10 +269,10 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
         }
         RootEvent::Unknown(label) => {
             if label >= 8 {
-                debug_println!("Unknown root messaage label: {label}")
+                log::error!("Unknown root messaage label: {label}")
             }
             let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
-            debug_println!("[Kernel Thread] Received Fault: {:#x?}", fault);
+            log::error!("[RootTask] Received Fault: {:?}", fault);
             match fault {
                 _ => {}
             }

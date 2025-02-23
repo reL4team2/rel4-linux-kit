@@ -2,7 +2,6 @@
 //!
 //!
 
-use sel4_root_task::debug_print;
 use syscalls::Errno;
 use zerocopy::FromBytes;
 
@@ -16,8 +15,9 @@ pub(super) fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) 
     }
     let buf = task.read_bytes(buf as _, len).unwrap();
 
-    let output = core::str::from_utf8(&buf).unwrap();
-    debug_print!("{output}");
+    for b in buf.iter() {
+        sel4::debug_put_char(*b);
+    }
     Ok(len)
 }
 
@@ -34,4 +34,11 @@ pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: u
     }
 
     Ok(wsize)
+}
+
+pub(super) fn sys_getcwd(task: &Sel4Task, buf: *mut u8, _size: usize) -> SysResult {
+    log::warn!("get cwd is a simple implement, always return /");
+    task.write_bytes(buf as _, b"/");
+
+    Ok(buf as _)
 }

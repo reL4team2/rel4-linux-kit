@@ -1,6 +1,5 @@
 use crate_consts::GRANULE_SIZE;
 use sel4::{cap::Untyped, init_thread, AbsoluteCPtr, HasCPtrWithDepth, UntypedDesc};
-use sel4_root_task::debug_println;
 
 use crate::FREE_PAGE_PLACEHOLDER;
 
@@ -52,27 +51,27 @@ pub fn display_bootinfo(
     mem_untypes: &[(Untyped, &UntypedDesc)],
     dev_untypes: &[(Untyped, &UntypedDesc)],
 ) {
-    debug_println!(
+    log::info!(
         "[RootTask] device untyped index range: {:?}",
         bootinfo.device_untyped_range()
     );
-    debug_println!(
+    log::info!(
         "[RootTask] mem untyped index range: {:?}",
         bootinfo.kernel_untyped_range()
     );
-    debug_println!(
+    log::info!(
         "[RootTask] untyped range: {:?}->{:?}",
         bootinfo.untyped().start(),
         bootinfo.untyped().end()
     );
-    debug_println!(
+    log::info!(
         "[RootTask] empty slot range: {:?}",
         bootinfo.empty().range()
     );
 
-    debug_println!("[RootTask] Untyped List: ");
+    log::info!("[RootTask] Untyped List: ");
     mem_untypes.iter().rev().for_each(|(cap, untyped)| {
-        debug_println!(
+        log::info!(
             "    Untyped({:03}) paddr: {:#x?} size: {:#x}",
             cap.bits(),
             untyped.paddr(),
@@ -80,7 +79,7 @@ pub fn display_bootinfo(
         );
     });
     dev_untypes.iter().rev().for_each(|(cap, untyped)| {
-        debug_println!(
+        log::info!(
             "    Untyped({:03}) paddr: {:#x?} size: {:#x}",
             cap.bits(),
             untyped.paddr(),

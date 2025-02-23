@@ -119,7 +119,7 @@ pub fn build_kernel_thread(
     task.with_context(&ElfFile::new(file_data).expect("parse elf error"));
 
     debug_println!(
-        "[RootTask] Task: {} created. cnode: {:?}, vspace: {:?}",
+        "[RootTask] Spawn {}. CNode: {:?}, VSpace: {:?}",
         thread_name,
         task.cnode,
         task.vspace

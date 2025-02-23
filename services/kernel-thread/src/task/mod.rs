@@ -14,13 +14,13 @@ use core::{
 };
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE};
 use info::TaskInfo;
+use object::{Object, ObjectSegment};
 use sel4::{
     init_thread::{self, slot},
     CapRights, Error, VmAttributes,
 };
 use signal::TaskSignal;
 use slot_manager::LeafSlot;
-use xmas_elf::{program, ElfFile};
 
 use crate::{
     consts::task::DEF_HEAP_ADDR,
@@ -196,43 +196,37 @@ impl Sel4Task {
     ///
     /// - `elf_data` 是 elf 文件的数据
     pub fn load_elf(&mut self, elf_data: &[u8]) {
-        let file = ElfFile::new(elf_data).expect("This is not a valid elf file");
+        let file = object::File::parse(elf_data).expect("can't load elf file");
+        file.segments().for_each(|seg| {
+            let mut data = seg.data().unwrap();
+            let mut vaddr = seg.address() as usize;
+            let vaddr_end = vaddr + seg.size() as usize;
 
-        // 从 elf 文件中读取数据
-        file.program_iter()
-            .filter(|ph| ph.get_type() == Ok(program::Type::Load))
-            .for_each(|ph| {
-                let mut offset = ph.offset() as usize;
-                let mut vaddr = ph.virtual_addr() as usize;
-                let end = offset + ph.file_size() as usize;
-                let vaddr_end = vaddr + ph.mem_size() as usize;
-
-                while vaddr < vaddr_end {
-                    let voffset = vaddr % PAGE_SIZE;
-                    let page_cap = match self.mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
-                        Some(page_cap) => {
-                            page_cap.cap().frame_unmap().unwrap();
-                            page_cap
-                        }
-                        None => PhysPage::new(alloc_page()),
-                    };
-
-                    // 将 elf 中特定段的内容写入对应的物理页中
-                    if offset < end {
-                        let rsize = cmp::min(PAGE_SIZE - vaddr % PAGE_SIZE, end - offset);
-                        page_cap.lock()[voffset..voffset + rsize]
-                            .copy_from_slice(&elf_data[offset..offset + rsize]);
-                        offset += rsize;
+            while vaddr < vaddr_end {
+                let voffset = vaddr % PAGE_SIZE;
+                let page_cap = match self.mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
+                    Some(page_cap) => {
+                        page_cap.cap().frame_unmap().unwrap();
+                        page_cap
                     }
+                    None => PhysPage::new(alloc_page()),
+                };
 
-                    self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
-                    self.mapped_page
-                        .insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
-
-                    // Calculate offset
-                    vaddr += PAGE_SIZE - vaddr % PAGE_SIZE;
+                // 将 elf 中特定段的内容写入对应的物理页中
+                if data.len() > 0 {
+                    let rsize = cmp::min(PAGE_SIZE - vaddr % PAGE_SIZE, data.len());
+                    page_cap.lock()[voffset..voffset + rsize].copy_from_slice(&data[..rsize]);
+                    data = &data[rsize..];
                 }
-            });
+
+                self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
+                self.mapped_page
+                    .insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
+
+                // Calculate offset
+                vaddr += PAGE_SIZE - vaddr % PAGE_SIZE;
+            }
+        });
     }
 
     /// 进行 brk 操作
@@ -272,17 +266,40 @@ impl Sel4Task {
     /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取特定地址的数据
     ///
     /// - `vaddr` 是需要读取数据的虚拟地址
+    /// - `len`   是需要读取的数据长度
     ///
     /// 说明：
     /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    /// TODO: 跨物理页处理
-    pub fn read_bytes(&self, vaddr: usize, len: usize) -> Option<Vec<u8>> {
-        self.mapped_page
-            .get(&(vaddr / PAGE_SIZE * PAGE_SIZE))
-            .map(|page| {
-                let offset = vaddr % PAGE_SIZE;
-                let len = cmp::min(len, PAGE_SIZE - offset);
-                page.lock()[offset..offset + len].to_vec()
-            })
+    pub fn read_bytes(&self, mut vaddr: usize, len: usize) -> Option<Vec<u8>> {
+        let mut data = Vec::new();
+        let vaddr_end = vaddr + len;
+        while vaddr < vaddr_end {
+            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
+            let offset = vaddr % PAGE_SIZE;
+            let rsize = cmp::min(PAGE_SIZE - offset, vaddr_end - vaddr);
+            data.extend_from_slice(&page.lock()[offset..offset + rsize]);
+            vaddr += rsize;
+        }
+        Some(data)
+    }
+
+    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下写入数据到特定地址
+    ///
+    /// - `vaddr` 是需要写入数据的虚拟地址
+    /// - `data`  是需要写入的数据
+    ///
+    /// 说明：
+    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
+    /// TODO: 在写入之前检测所有的地址是否可以写入
+    pub fn write_bytes(&self, mut vaddr: usize, data: &[u8]) -> Option<()> {
+        let vaddr_end = vaddr + data.len();
+        while vaddr < vaddr_end {
+            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
+            let offset = vaddr % PAGE_SIZE;
+            let rsize = cmp::min(PAGE_SIZE - offset, vaddr_end - vaddr);
+            page.lock()[offset..offset + rsize].copy_from_slice(&data[..rsize]);
+            vaddr += rsize;
+        }
+        Some(())
     }
 }
