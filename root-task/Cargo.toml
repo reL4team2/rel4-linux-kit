@@ -27,4 +27,3 @@ object = { version = "0.36.1", default-features = false, features = ["read"] }
 [build-dependencies]
 serde = "1.0"
 toml = "0.8.19"
-liquid = "0.26.11"

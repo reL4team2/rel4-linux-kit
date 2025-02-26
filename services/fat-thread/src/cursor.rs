@@ -65,37 +65,8 @@ impl fatfs::Read for DiskCursor {
 }
 
 impl fatfs::Write for DiskCursor {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+    fn write(&mut self, _buf: &[u8]) -> Result<usize, Self::Error> {
         unimplemented!("DiskCursor Write");
-        // 由于写入扇区还需要考虑申请 cluster，因此 write 函数只写入一个扇区
-        // 防止写入较多数据时超出限制
-        // 写入所有的数据的功能交给 write_all 来实现
-
-        // 获取硬盘设备写入器（驱动？）
-        // 如果 start 不是 0 或者 len 不是 512
-        let blk_ep = BlockService::new(BLK_THREAD_EP_SLOT);
-
-        let write_size = if self.offset != 0 || buf.len() < 512 {
-            let mut data = vec![0u8; 512];
-            blk_ep.read_block(self.sector as usize, &mut data).unwrap();
-
-            let start = self.offset;
-            let end = (self.offset + buf.len()).min(512);
-
-            data[start..end].clone_from_slice(&buf[..end - start]);
-            blk_ep.write_block(self.sector as usize, &mut data).unwrap();
-
-            end - start
-        } else {
-            // should copy data from buffer
-            let mut data = vec![0u8; 512];
-            data.copy_from_slice(&buf[..512]);
-            blk_ep.write_block(self.sector as usize, &data).unwrap();
-            512
-        };
-
-        self.move_cursor(write_size);
-        Ok(write_size)
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {

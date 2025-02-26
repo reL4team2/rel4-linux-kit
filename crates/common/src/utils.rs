@@ -1,14 +1,20 @@
 extern crate alloc;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use core::ops::Range;
+use core::{cmp, ops::Range};
 use crate_consts::GRANULE_SIZE;
 use object::{
     elf::{PF_R, PF_W, PF_X},
     Object, ObjectSegment, SegmentFlags,
 };
-use sel4::{init_thread::slot, with_ipc_buffer_mut};
+use sel4::{
+    cap::Endpoint, init_thread::slot, with_ipc_buffer, with_ipc_buffer_mut, MessageInfoBuilder,
+};
 
-use crate::{page::PhysPage, ObjectAllocator};
+use crate::{
+    consts::{IPC_DATA_LEN, REG_LEN},
+    page::PhysPage,
+    ObjectAllocator,
+};
 // 计算 elf image 的虚地址空间范围
 pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {
     let min: usize = image
@@ -159,4 +165,49 @@ pub fn init_recv_slot() {
     with_ipc_buffer_mut(|ipc_buffer| {
         ipc_buffer.set_recv_slot(&slot::CNODE.cap().absolute_cptr_from_bits_with_depth(0, 64));
     })
+}
+
+/// 发送大量数据
+///
+/// - `ep`   发送数据使用的 [Endpoint]
+/// - `msg`  发送数据使用的消息，使用 [MessageInfoBuilder], 发送长度由此函数填充
+/// - `data` 需要发送的数据
+pub fn send_bulk_data(ep: Endpoint, msg: MessageInfoBuilder, data: &[u8]) {
+    let mut start = 0;
+    while start < data.len() {
+        let send_size = cmp::min(IPC_DATA_LEN - 2 * REG_LEN, data.len() - start);
+        with_ipc_buffer_mut(|ib| {
+            // 剩下的数据量
+            ib.msg_regs_mut()[0] = (data.len() - start - send_size) as _;
+            // 本次发送的数据量
+            ib.msg_regs_mut()[1] = send_size as _;
+            // 发送的数据
+            ib.msg_bytes_mut()[2 * REG_LEN..2 * REG_LEN + send_size]
+                .copy_from_slice(&data[start..start + send_size]);
+        });
+        start += send_size;
+        let ret = ep.call(msg.length(send_size.div_ceil(REG_LEN) + 2).build());
+        assert!(ret.label() == 0);
+    }
+}
+
+/// 接收大量数据
+///
+/// - `ep`         接收数据使用的 [Endpoint]
+/// - `msg_label`  接收数据时的标签，用来判断是否是异常数据
+pub fn recv_bulk_data(ep: Endpoint, msg_label: usize) -> Vec<u8> {
+    let mut recv_data = Vec::new();
+    loop {
+        let (msg, _) = ep.recv(());
+        assert!(msg.label() as usize == msg_label);
+        let last = with_ipc_buffer(|ib| {
+            let len = ib.msg_regs()[1] as usize;
+            recv_data.extend_from_slice(&ib.msg_bytes()[2 * REG_LEN..2 * REG_LEN + len]);
+            ib.msg_regs()[0]
+        });
+        if last == 0 {
+            break;
+        }
+    }
+    recv_data
 }

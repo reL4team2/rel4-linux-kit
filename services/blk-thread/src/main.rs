@@ -6,10 +6,10 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
+    consts::REG_LEN,
     services::{
         block::BlockEvent,
         root::{register_irq, register_notify},
-        REG_LEN,
     },
     VIRTIO_MMIO_BLK_VIRT_ADDR,
 };
@@ -45,7 +45,7 @@ fn main() -> ! {
 
     // 向 root-task 申请一个通知
     let ntfn = Notification::from_bits(DEFAULT_CUSTOM_SLOT);
-    register_notify(ntfn.into()).expect("Can't register notification");
+    register_notify(ntfn.into(), 1).expect("Can't register notification");
 
     // 设置中断信息
     irq_handler.irq_handler_set_notification(ntfn).unwrap();

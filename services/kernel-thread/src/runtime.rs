@@ -3,11 +3,11 @@ use core::ptr;
 use sel4::CapTypeForFrameObjectOfFixedSize;
 use sel4_dlmalloc::{StaticDlmallocGlobalAlloc, StaticHeap};
 use sel4_panicking::catch_unwind;
-use sel4_panicking_env::abort;
 use sel4_sync::PanickingRawMutex;
 
 const STACK_SIZE: usize = 1024 * 64;
 sel4_runtime_common::declare_stack!(STACK_SIZE);
+sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
 
 const HEAP_SIZE: usize = 1024 * 64;
 static STATIC_HEAP: StaticHeap<HEAP_SIZE> = StaticHeap::new();
@@ -41,7 +41,12 @@ fn inner_entry() -> ! {
     match catch_unwind(main) {
         #[allow(unreachable_patterns)]
         Ok(never) => never,
-        Err(_) => abort!("[KernelThread] main() panicked"),
+        Err(_) => {
+            // sel4_panicking_env::abort!("[KernelThread] main() panicked")
+            log::error!("main() panicked");
+            common::services::root::shutdown().unwrap();
+            unreachable!()
+        }
     }
 }
 

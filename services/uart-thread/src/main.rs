@@ -3,7 +3,11 @@
 
 extern crate alloc;
 
-use arm_pl011::pl011;
+mod runtime;
+mod uart;
+
+use core::{future::Future, pin::pin};
+
 use common::{
     services::{
         root::{register_irq, register_notify},
@@ -17,17 +21,15 @@ use sel4::{
     with_ipc_buffer_mut, MessageInfoBuilder,
 };
 
-mod runtime;
-
 fn main() -> ! {
     common::init_log!(log::LevelFilter::Error);
     common::init_recv_slot();
 
     log::info!("Booting...");
 
-    let mut pl011 = pl011::Pl011Uart::new(VIRTIO_MMIO_VIRT_ADDR as _);
-    pl011.ack_interrupts();
-    pl011.init();
+    // let mut pl011 = pl011::Pl011Uart::new(VIRTIO_MMIO_VIRT_ADDR as _);
+    // pl011.ack_interrupts();
+    // pl011.init();
 
     // 向 root-task 申请一个中断
     let irq_handler = IrqHandler::from_bits(DEFAULT_CUSTOM_SLOT + 1);
@@ -35,7 +37,9 @@ fn main() -> ! {
 
     // 向 root-task 申请一个通知
     let ntfn = Notification::from_bits(DEFAULT_CUSTOM_SLOT);
-    register_notify(ntfn.into()).expect("Can't register interrupt handler");
+    register_notify(ntfn.into(), 2).expect("Can't register interrupt handler");
+
+    let pl011 = pin!(uart::Pl011Poller::new(VIRTIO_MMIO_VIRT_ADDR, ntfn, irq_handler));
 
     irq_handler.irq_handler_set_notification(ntfn).unwrap();
     irq_handler.irq_handler_ack().unwrap();
@@ -54,14 +58,15 @@ fn main() -> ! {
                 });
             }
             UartEvent::GetChar => {
-                ntfn.wait();
-                let char = pl011.getchar().unwrap();
-                pl011.ack_interrupts();
-                irq_handler.irq_handler_ack().unwrap();
-                with_ipc_buffer_mut(|ib| {
-                    ib.msg_bytes_mut()[0] = char as u8;
-                    sel4::reply(ib, rev_msg.length(1).build());
-                });
+                // let char = pl011.poll();
+                // ntfn.wait();
+                // let char = pl011.getchar().unwrap();
+                // pl011.ack_interrupts();
+                // irq_handler.irq_handler_ack().unwrap();
+                // with_ipc_buffer_mut(|ib| {
+                //     ib.msg_bytes_mut()[0] = char as u8;
+                //     sel4::reply(ib, rev_msg.length(1).build());
+                // });
             }
         }
     }

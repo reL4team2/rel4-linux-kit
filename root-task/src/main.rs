@@ -4,13 +4,14 @@
 
 extern crate alloc;
 
+mod config;
 mod task;
-mod thread;
 mod utils;
 
 use alloc::vec::Vec;
 use common::services::IpcBufferRW;
 use common::*;
+use config::TASK_FILES;
 use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
 use page::PhysPage;
@@ -28,59 +29,6 @@ use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
 use utils::*;
-
-/// Equivalent structure
-pub struct KernelServices {
-    name: &'static str,
-    file: &'static [u8],
-    // (Virtual address, physical address, mapping size).
-    // If the physical address is equal to 0, a random regular memory will
-    // be allocated. If an address is specified, the corresponding one will
-    // be found from both regular memory and device memory. If it is
-    // not found, panic !!
-    mem: &'static [(usize, usize, usize)],
-    /// 格式： (开始地址, 内存大小)
-    dma: &'static [(usize, usize)],
-}
-
-const TASK_FILES: &[KernelServices] = &[
-    KernelServices {
-        name: "block-thread",
-        file: include_bytes_aligned!(16, "../../target/blk-thread.elf"),
-        mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
-        dma: &[(DMA_ADDR_START, 0x2000)],
-    },
-    KernelServices {
-        name: "uart-thread",
-        file: include_bytes_aligned!(16, "../../target/uart-thread.elf"),
-        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
-        dma: &[],
-    },
-    KernelServices {
-        name: "fs-thread",
-        file: include_bytes_aligned!(16, "../../target/ext4-thread.elf"),
-        mem: &[],
-        dma: &[],
-    },
-    // KernelServices {
-    //     name: "fs-thread",
-    //     file: include_bytes_aligned!(16, "../../target/fat-thread.elf"),
-    //     mem: &[],
-    //     dma: &[],
-    // },
-    // KernelServices {
-    //     name: "simple-cli",
-    //     file: include_bytes_aligned!(16, "../../target/simple-cli.elf"),
-    //     mem: &[],
-    //     dma: &[],
-    // },
-    KernelServices {
-        name: "kernel-thread",
-        file: include_bytes_aligned!(16, "../../target/kernel-thread.elf"),
-        mem: &[],
-        dma: &[],
-    },
-];
 
 /// The object allocator for the root task.
 pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAllocator::empty());
@@ -206,11 +154,6 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
     let rev_msg = MessageInfoBuilder::default();
     let (message, badge) = fault_ep.recv(());
     let msg_label = RootEvent::from(message.label());
-    // debug_println!(
-    //     "[RootTask] Recv <{:?}> len: {}",
-    //     msg_label,
-    //     message.length()
-    // );
 
     match msg_label {
         RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
@@ -267,6 +210,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
 
             LeafSlot::new(0).delete().unwrap();
         }
+        RootEvent::Shutdown => utils::shutdown(),
         RootEvent::Unknown(label) => {
             if label >= 8 {
                 log::error!("Unknown root messaage label: {label}")

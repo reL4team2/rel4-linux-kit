@@ -1,4 +1,4 @@
-use crate::{abs_cptr, GRANULE_SIZE, OBJ_ALLOCATOR};
+use crate::{GRANULE_SIZE, OBJ_ALLOCATOR};
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::{footprint, map_image, map_intermediate_translation_tables, page::PhysPage};
 use core::ops::DerefMut;
@@ -159,7 +159,7 @@ pub(crate) fn make_child_vspace<'a>(
     cnode
         .absolute_cptr_from_bits_with_depth(0, CNODE_RADIX_BITS)
         .mutate(
-            &abs_cptr(inner_cnode),
+            &LeafSlot::from_cap(inner_cnode).abs_cptr(),
             CNodeCapData::skip(0).into_word() as _,
         )
         .unwrap();

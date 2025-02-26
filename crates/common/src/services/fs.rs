@@ -2,6 +2,8 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{cap::Endpoint, MessageInfo, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
+use crate::{consts::SEND_BULK_LABEL, recv_bulk_data};
+
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum FileEvent {
@@ -53,7 +55,10 @@ impl FileSerivce {
         let msg = MessageInfoBuilder::default()
             .label(FileEvent::ReadDir.into())
             .build();
-        let msg = self.call(msg)?;
+        let ret = self.call(msg)?;
+        assert!(ret.label() == 0);
+        let datas = recv_bulk_data(self.ep_cap, SEND_BULK_LABEL);
+
         Ok(())
     }
 }

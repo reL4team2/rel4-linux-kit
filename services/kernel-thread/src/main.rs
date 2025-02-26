@@ -25,8 +25,6 @@ pub mod syscall;
 pub mod task;
 pub mod utils;
 
-sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
-
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot
     common::init_recv_slot();

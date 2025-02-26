@@ -3,7 +3,7 @@ use crate_consts::DEFAULT_PARENT_EP;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{
     cap::{Endpoint, Null},
-    init_thread, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder,
+    init_thread, with_ipc_buffer, with_ipc_buffer_mut, CapRights, MessageInfo, MessageInfoBuilder,
 };
 use slot_manager::LeafSlot;
 
@@ -15,6 +15,7 @@ use crate::services::IpcBufferRW;
 pub enum RootEvent {
     Ping = 0x200,
     RegisterIRQ,
+    Shutdown,
     TranslateAddr,
     FindService,
     AllocNotification,
@@ -44,10 +45,6 @@ pub fn find_service(name: &str, target_slot: LeafSlot) -> Result<(), ()> {
     let origin_slot = with_ipc_buffer_mut(|ipc_buf| {
         ipc_buf.set_recv_slot(&target_slot.abs_cptr());
         name.write_buffer(ipc_buf, &mut off);
-        // len.write_buffer(ipc_buf, &mut buf_idx);
-        // name.write_buffer(ipc_buf, &mut buf_idx);
-        // ipc_buf.msg_regs_mut()[0] = len as _;
-        // ipc_buf.msg_bytes_mut()[REG_LEN..REG_LEN + len].copy_from_slice(name.as_bytes());
 
         // FIXME: using recv_slot()
         init_thread::slot::CNODE
@@ -106,16 +103,9 @@ pub fn register_irq(irq: usize, target_slot: LeafSlot) -> Result<(), sel4::Error
     Ok(())
 }
 
-pub fn register_notify(target_slot: LeafSlot) -> Result<(), sel4::Error> {
+pub fn register_notify(target_slot: LeafSlot, badge: usize) -> Result<(), sel4::Error> {
     // construct the IPC message
-    let origin_slot = with_ipc_buffer_mut(|ib| {
-        ib.set_recv_slot(&target_slot.abs_cptr());
-
-        // FIXME: using recv_slot()
-        init_thread::slot::CNODE
-            .cap()
-            .absolute_cptr(Null::from_bits(0))
-    });
+    let recv_slot = LeafSlot::new(with_ipc_buffer(|ib| ib.recv_slot()).path().bits() as _);
 
     let msg = MessageInfoBuilder::default()
         .label(RootEvent::AllocNotification.into())
@@ -123,8 +113,19 @@ pub fn register_notify(target_slot: LeafSlot) -> Result<(), sel4::Error> {
 
     let recv_msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
     assert!(recv_msg.extra_caps() == 1);
+    target_slot.mint(recv_slot, CapRights::all(), badge)?;
+    recv_slot.delete()?;
 
-    with_ipc_buffer_mut(|ib| ib.set_recv_slot(&origin_slot));
+    Ok(())
+}
 
+/// 向 ROOT_EP 发送关机
+pub fn shutdown() -> Result<(), sel4::Error> {
+    call(
+        MessageInfoBuilder::default()
+            .label(RootEvent::Shutdown.into())
+            .build(),
+    )
+    .map_err(|_| sel4::Error::IllegalOperation)?;
     Ok(())
 }

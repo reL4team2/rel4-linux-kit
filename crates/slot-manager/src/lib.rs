@@ -148,6 +148,16 @@ impl LeafSlot {
     pub fn revoke(&self) -> Result<(), sel4::Error> {
         self.abs_cptr().revoke()
     }
+
+    /// 复制 badge 并设置权限
+    ///
+    /// - `dst`   复制后的 Cap 放在哪个 [LeafSlot]
+    /// - `cr`    复制后的 Cap 的权限
+    /// - `badge` 需要设置的 badge
+    #[inline]
+    pub fn mint(&self, dst: LeafSlot, cr: CapRights, badge: usize) -> Result<(), sel4::Error> {
+        self.abs_cptr().mint(&dst.abs_cptr(), cr, badge as _)
+    }
 }
 
 /// [Cap] 可以快速转换为 [LeafSlot]
