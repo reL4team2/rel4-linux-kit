@@ -57,7 +57,7 @@ impl FileSerivce {
             .build();
         let ret = self.call(msg)?;
         assert!(ret.label() == 0);
-        let datas = recv_bulk_data(self.ep_cap, SEND_BULK_LABEL);
+        let _datas = recv_bulk_data(self.ep_cap, SEND_BULK_LABEL);
 
         Ok(())
     }

@@ -1,28 +1,24 @@
 use alloc::vec::Vec;
-use core::ops::Range;
 use sel4::{
     cap::{CNode, Endpoint, Granule, Notification, Tcb, Untyped, VSpace, PT},
     cap_type,
     init_thread::slot,
     CapTypeForObjectOfFixedSize,
 };
-use slot_manager::{LeafSlot, SlotManager};
+use slot_manager::LeafSlot;
 
 pub struct ObjectAllocator {
-    slot_manager: SlotManager,
     ut: Untyped,
 }
 
 impl ObjectAllocator {
     pub const fn empty() -> Self {
         Self {
-            slot_manager: SlotManager::empty(),
             ut: sel4::cap::Untyped::from_bits(0),
         }
     }
 
-    pub fn init(&mut self, empty_range: Range<usize>, untyped: Untyped) {
-        self.slot_manager.init_empty_slots(empty_range);
+    pub fn init(&mut self, untyped: Untyped) {
         self.ut = untyped;
     }
 
@@ -31,7 +27,7 @@ impl ObjectAllocator {
         &mut self,
         size_bits: usize,
     ) -> sel4::Cap<T> {
-        let leaf_slot = self.slot_manager.alloc_slot();
+        let leaf_slot = super::slot::alloc_slot();
         self.ut
             .untyped_retype(
                 &T::object_blueprint(size_bits),
@@ -47,7 +43,7 @@ impl ObjectAllocator {
 impl ObjectAllocator {
     /// TODO: 申请多个位置，且判断位置是否超出
     pub fn allocate_slot(&mut self) -> LeafSlot {
-        let leaf_slot = self.slot_manager.alloc_slot();
+        let leaf_slot = super::slot::alloc_slot();
 
         if leaf_slot.offset_of_cnode() == 0 {
             self.ut
@@ -157,7 +153,7 @@ impl ObjectAllocator {
     /// 申请多个页
     #[inline]
     pub fn alloc_pages(&mut self, pages: usize) -> Vec<Granule> {
-        let leaf_slot = self.slot_manager.alloc_slots(pages);
+        let leaf_slot = super::slot::alloc_slots(pages);
 
         self.ut
             .untyped_retype(

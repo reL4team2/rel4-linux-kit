@@ -155,8 +155,13 @@ impl LeafSlot {
     /// - `cr`    复制后的 Cap 的权限
     /// - `badge` 需要设置的 badge
     #[inline]
-    pub fn mint(&self, dst: LeafSlot, cr: CapRights, badge: usize) -> Result<(), sel4::Error> {
-        self.abs_cptr().mint(&dst.abs_cptr(), cr, badge as _)
+    pub fn mint_to(&self, dst: LeafSlot, cr: CapRights, badge: usize) -> Result<(), sel4::Error> {
+        dst.abs_cptr().mint(&self.abs_cptr(), cr, badge as _)
+    }
+
+    /// 保存回复 Capability
+    pub fn save_caller(&self) -> Result<(), sel4::Error> {
+        self.abs_cptr().save_caller()
     }
 }
 

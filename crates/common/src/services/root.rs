@@ -23,7 +23,7 @@ pub enum RootEvent {
     Unknown(u64),
 }
 
-const ROOT_EP: Endpoint = Endpoint::from_bits(DEFAULT_PARENT_EP);
+const ROOT_EP: Endpoint = DEFAULT_PARENT_EP;
 
 fn call(msg: MessageInfo) -> Result<MessageInfo, ()> {
     let msg = ROOT_EP.call(msg);
@@ -113,7 +113,7 @@ pub fn register_notify(target_slot: LeafSlot, badge: usize) -> Result<(), sel4::
 
     let recv_msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
     assert!(recv_msg.extra_caps() == 1);
-    target_slot.mint(recv_slot, CapRights::all(), badge)?;
+    recv_slot.mint_to(target_slot, CapRights::all(), badge)?;
     recv_slot.delete()?;
 
     Ok(())

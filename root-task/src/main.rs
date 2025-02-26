@@ -62,9 +62,8 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
     // 用最大块的内存初始化 Capability 分配器
     // 从 untyped object Retype 为特定的 object
-    OBJ_ALLOCATOR
-        .lock()
-        .init(bootinfo.empty().range(), mem_untypes.pop().unwrap().0);
+    common::slot::init(bootinfo.empty().range());
+    OBJ_ALLOCATOR.lock().init(mem_untypes.pop().unwrap().0);
 
     // 重建 Capability 空间，构建为多级 CSpace
     rebuild_cspace();
@@ -74,7 +73,6 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
     // 开始创建任务
     let mut tasks: Vec<Sel4Task> = Vec::new();
-
     for task in TASK_FILES.iter() {
         tasks.push(build_kernel_thread(
             (fault_ep, tasks.len() as _),
@@ -143,82 +141,87 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     });
 
     run_tasks(&tasks);
-
-    loop {
-        with_ipc_buffer_mut(|ib| handle_ep(tasks.as_mut_slice(), fault_ep, ib))
-    }
+    with_ipc_buffer_mut(|ib| handle_ep(tasks.as_mut_slice(), fault_ep, ib))
 }
 
 /// Handle the end point.
-fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer) {
+fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer) -> ! {
     let rev_msg = MessageInfoBuilder::default();
-    let (message, badge) = fault_ep.recv(());
-    let msg_label = RootEvent::from(message.label());
+    let swap_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+    loop {
+        let (message, badge) = fault_ep.recv(());
+        let msg_label = RootEvent::from(message.label());
 
-    match msg_label {
-        RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
-        RootEvent::TranslateAddr => {
-            let mut off = 0;
-            let addr = usize::read_buffer(ib, &mut off);
+        match msg_label {
+            RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
+            RootEvent::TranslateAddr => {
+                let mut off = 0;
+                let addr = usize::read_buffer(ib, &mut off);
 
-            let phys_addr = tasks[badge as usize]
-                .mapped_page
-                .get(&(addr & !0xfff))
-                .map(|x| x.addr())
-                .unwrap();
+                let phys_addr = tasks[badge as usize]
+                    .mapped_page
+                    .get(&(addr & !0xfff))
+                    .map(|x| x.addr())
+                    .unwrap();
 
-            ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-            sel4::reply(ib, rev_msg.length(off).build());
-        }
-        RootEvent::FindService => {
-            let name = <&str>::read_buffer(ib, &mut 0);
-            let task = tasks.iter().find(|task| task.name == name);
-            let msg = match task {
-                Some(task) => {
-                    ib.caps_or_badges_mut()[0] = task.srv_ep.bits();
-                    rev_msg.extra_caps(1).build()
-                }
-                // 发生错误时返回值 不为 -1
-                None => rev_msg.label(1).build(),
-            };
-            sel4::reply(ib, msg);
-        }
-        // Allocate a irq handler capability
-        // Transfer it to the requested service
-        RootEvent::RegisterIRQ => {
-            let irq = ib.msg_regs()[0];
-            let dst_slot = LeafSlot::new(0);
-            slot::IRQ_CONTROL
-                .cap()
-                .irq_control_get(irq, &dst_slot.abs_cptr())
-                .unwrap();
-
-            ib.caps_or_badges_mut()[0] = 0;
-            sel4::reply(ib, rev_msg.extra_caps(1).build());
-
-            dst_slot.delete().unwrap();
-        }
-        // Allocate a notification capability
-        RootEvent::AllocNotification => {
-            // 在 0 的 slot 出创建一个 Capability
-            OBJ_ALLOCATOR
-                .lock()
-                .retype_to_first(sel4::ObjectBlueprint::Notification);
-
-            ib.caps_or_badges_mut()[0] = 0;
-            sel4::reply(ib, rev_msg.extra_caps(1).build());
-
-            LeafSlot::new(0).delete().unwrap();
-        }
-        RootEvent::Shutdown => utils::shutdown(),
-        RootEvent::Unknown(label) => {
-            if label >= 8 {
-                log::error!("Unknown root messaage label: {label}")
+                ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
+                sel4::reply(ib, rev_msg.length(off).build());
             }
-            let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
-            log::error!("[RootTask] Received Fault: {:?}", fault);
-            match fault {
-                _ => {}
+            RootEvent::FindService => {
+                let name = <&str>::read_buffer(ib, &mut 0);
+                let task = tasks.iter().find(|task| task.name == name);
+                let msg = match task {
+                    Some(task) => {
+                        LeafSlot::from(task.srv_ep)
+                            .mint_to(swap_slot, CapRights::all(), badge as _)
+                            .unwrap();
+                        ib.caps_or_badges_mut()[0] = swap_slot.raw() as _;
+                        let msg = rev_msg.extra_caps(1).build();
+                        msg
+                    }
+                    // 发生错误时返回值 不为 -1
+                    None => rev_msg.label(1).build(),
+                };
+                sel4::reply(ib, msg);
+                let _ = swap_slot.delete();
+            }
+            // Allocate a irq handler capability
+            // Transfer it to the requested service
+            RootEvent::RegisterIRQ => {
+                let irq = ib.msg_regs()[0];
+                let dst_slot = LeafSlot::new(0);
+                slot::IRQ_CONTROL
+                    .cap()
+                    .irq_control_get(irq, &dst_slot.abs_cptr())
+                    .unwrap();
+
+                ib.caps_or_badges_mut()[0] = 0;
+                sel4::reply(ib, rev_msg.extra_caps(1).build());
+
+                dst_slot.delete().unwrap();
+            }
+            // 申请一个 Notification Capability
+            RootEvent::AllocNotification => {
+                // 在 0 的 slot 处创建一个 Capability
+                OBJ_ALLOCATOR
+                    .lock()
+                    .retype_to_first(sel4::ObjectBlueprint::Notification);
+
+                ib.caps_or_badges_mut()[0] = 0;
+                sel4::reply(ib, rev_msg.extra_caps(1).build());
+
+                LeafSlot::new(0).delete().unwrap();
+            }
+            RootEvent::Shutdown => sel4_kit::arch::shutdown(),
+            RootEvent::Unknown(label) => {
+                if label >= 8 {
+                    log::error!("Unknown root messaage label: {label}")
+                }
+                let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+                log::error!("[RootTask] Received Fault: {:?}", fault);
+                match fault {
+                    _ => {}
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder};
+use slot_manager::LeafSlot;
 
 #[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
@@ -29,6 +30,7 @@ impl BlockEvent {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct BlockService {
     ep_cap: Endpoint,
 }
@@ -72,5 +74,17 @@ impl BlockService {
 
     pub fn write_block(&self, _block_id: usize, _buffer: &[u8]) -> Result<(), ()> {
         unimplemented!("write_blocks")
+    }
+}
+
+impl From<LeafSlot> for BlockService {
+    fn from(value: LeafSlot) -> Self {
+        Self::from_bits(value.raw() as _)
+    }
+}
+
+impl From<BlockService> for LeafSlot {
+    fn from(value: BlockService) -> Self {
+        LeafSlot::from_cap(value.ep_cap)
     }
 }

@@ -55,16 +55,16 @@ pub const TASK_FILES: &[KernelServices] = &[
         name: "fs-thread",
         file: "ext4-thread.elf",
     },
-    service! {
-        name: "kernel-thread",
-        file: "kernel-thread.elf"
-    },
+    // service! {
+    //     name: "kernel-thread",
+    //     file: "kernel-thread.elf"
+    // },
     // service! {
     //     name: "fs-thread",
     //     file: include_service!("fat-thread.elf"),
     // },
-    // service! {
-    //     name: "simple-cli",
-    //     file: "simple-cli.elf",
-    // },
+    service! {
+        name: "simple-cli",
+        file: "simple-cli.elf",
+    },
 ];

@@ -10,11 +10,9 @@
 extern crate log;
 #[macro_use]
 extern crate alloc;
-extern crate sel4_panicking;
 
 mod child_test;
 mod logging;
-mod runtime;
 
 pub mod arch;
 pub mod consts;
@@ -24,6 +22,8 @@ pub mod fs;
 pub mod syscall;
 pub mod task;
 pub mod utils;
+
+sel4_runtime::entry_point!(main);
 
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot

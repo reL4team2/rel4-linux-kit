@@ -4,16 +4,17 @@
 #[macro_use]
 extern crate alloc;
 
-use common::services::{block::BlockService, fs::FileEvent, root::find_service};
+use common::{
+    services::{block::BlockService, fs::FileEvent, root::find_service},
+    slot::alloc_slot,
+};
 use crate_consts::DEFAULT_SERVE_EP;
 use cursor::DiskCursor;
-use sel4::{cap::Endpoint, debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
-use slot_manager::LeafSlot;
+use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 
 mod cursor;
-mod runtime;
 
-const BLK_THREAD_EP_SLOT: Endpoint = Endpoint::from_bits(0x21);
+sel4_runtime::entry_point!(main);
 
 fn main() -> ! {
     common::init_log!(log::LevelFilter::Trace);
@@ -22,14 +23,13 @@ fn main() -> ! {
     log::info!("Booting...");
 
     // FIXME: Using Common Consts instead of fixed constants
-    let blk_ep = BlockService::new(BLK_THREAD_EP_SLOT);
-    let blk_ep_slot = LeafSlot::new(0x21);
+    let blk_ep = BlockService::from(alloc_slot());
 
-    find_service("block-thread", blk_ep_slot).expect("Can't find blk-thread service");
+    find_service("block-thread", blk_ep.into()).expect("Can't find blk-thread service");
 
     blk_ep.ping().expect("Can't ping blk-thread service");
 
-    let cursor: DiskCursor = DiskCursor::default();
+    let cursor: DiskCursor = DiskCursor::new(blk_ep);
     let fs = fatfs::FileSystem::new(cursor, fatfs::FsOptions::new()).expect("open fs wrong");
 
     let rev_msg = MessageInfoBuilder::default();

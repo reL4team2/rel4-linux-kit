@@ -1,17 +1,24 @@
 use common::services::block::BlockService;
 
-use crate::BLK_THREAD_EP_SLOT;
-
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DiskCursor {
-    sector: u64,
+    blk_ep: BlockService,
     offset: usize,
+    sector: u64,
 }
 
 unsafe impl Sync for DiskCursor {}
 unsafe impl Send for DiskCursor {}
 
 impl DiskCursor {
+    pub const fn new(blk_ep: BlockService) -> Self {
+        Self {
+            blk_ep,
+            offset: 0,
+            sector: 0,
+        }
+    }
+
     const fn get_position(&self) -> usize {
         (self.sector * 0x200) as usize + self.offset
     }
@@ -38,7 +45,7 @@ impl fatfs::Read for DiskCursor {
 
         // 如果 start 不是 0 或者 len 不是 512
 
-        let blk_ep = BlockService::new(BLK_THREAD_EP_SLOT);
+        let blk_ep = &self.blk_ep;
 
         let read_size = if self.offset != 0 || buf.len() < 512 {
             let mut data = vec![0u8; 512];

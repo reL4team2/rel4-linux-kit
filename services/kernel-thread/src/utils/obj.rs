@@ -1,6 +1,6 @@
 //! obj 管理模块，提供了对象的管理功能
 use common::ObjectAllocator;
-use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_EMPTY_SLOT_INDEX, KERNEL_THREAD_SLOT_NUMS};
+use crate_consts::DEFAULT_CUSTOM_SLOT;
 use sel4::{
     cap::{CNode, Granule, Notification, Tcb, VSpace, PT},
     Cap,
@@ -55,8 +55,7 @@ pub fn alloc_cnode(size_bits: usize) -> CNode {
 
 /// 初始化 [OBJ_ALLOCATOR]
 pub fn init() {
-    OBJ_ALLOCATOR.lock().init(
-        DEFAULT_EMPTY_SLOT_INDEX..KERNEL_THREAD_SLOT_NUMS,
-        Cap::from_bits(DEFAULT_CUSTOM_SLOT as _),
-    );
+    OBJ_ALLOCATOR
+        .lock()
+        .init(Cap::from_bits(DEFAULT_CUSTOM_SLOT as _));
 }

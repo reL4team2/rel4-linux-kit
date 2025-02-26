@@ -35,6 +35,9 @@ sel4-runtime-common = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebf
 sel4-stack = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-sync = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 
+sel4-runtime = { path = "crates/sel4-runtime" }
+sel4-kit = { path = "crates/sel4-kit" }
+
 # 一些公共包
 crate-consts = { path = "crates/crate-consts" }
 task-helper = { path = "crates/task-helper" }
@@ -45,4 +48,5 @@ slot-manager = { path = "crates/slot-manager" }
 spin = "0.9.8"
 
 [patch."https://github.com/seL4/rust-sel4"]
-sel4 = { git = "https://github.com/yfblock/rust-sel4", rev = "1280281"}
+sel4 = { git = "https://github.com/yfblock/rust-sel4", rev = "1280281" }
+

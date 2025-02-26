@@ -12,6 +12,7 @@ pub(super) fn init() {
         find_service("uart-thread", slot).expect("can't find service");
         slot.into()
     });
+    UART_SERVICE.get().unwrap().ping().unwrap();
 }
 
 /// 从 [UartService] 中读取一个字符 (u8)

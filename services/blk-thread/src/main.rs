@@ -24,11 +24,12 @@ use virtio_drivers::{
     transport::mmio::{MmioTransport, VirtIOHeader},
 };
 
-mod runtime;
 mod virtio;
 
+sel4_runtime::entry_point!(main);
+
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Error);
+    common::init_log!(log::LevelFilter::Debug);
     common::init_recv_slot();
 
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {

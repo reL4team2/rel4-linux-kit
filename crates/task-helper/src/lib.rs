@@ -20,9 +20,9 @@ use crate_consts::{
     DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION, PAGE_SIZE, STACK_ALIGN_SIZE,
 };
 use sel4::{
-    cap::{self, Granule, Notification, Null},
+    cap::{self, Granule, Notification},
     init_thread::{self, slot},
-    AbsoluteCPtr, CNodeCapData, CPtr, CPtrBits, CapRights, Error, HasCPtrWithDepth,
+    AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth,
     VmAttributes as VMAttributes,
 };
 use sel4_sync::{lock_api::Mutex, MutexSyncOpsWithNotification};
@@ -102,22 +102,22 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         };
 
         // Move Fault EP to child process
-        task.abs_cptr(DEFAULT_PARENT_EP)
+        task.abs_cptr(DEFAULT_PARENT_EP.cptr())
             .mint(&cnode_relative(fault_ep), CapRights::all(), badge)
             .unwrap();
 
         // Move SRV EP to child process
-        task.abs_cptr(DEFAULT_SERVE_EP.bits())
+        task.abs_cptr(DEFAULT_SERVE_EP.cptr())
             .copy(&cnode_relative(srv_ep), CapRights::all())
             .unwrap();
 
         // Copy ASIDPool to the task, children can assign another children.
-        task.abs_cptr(init_thread::slot::ASID_POOL.cptr_bits())
+        task.abs_cptr(init_thread::slot::ASID_POOL.cptr())
             .copy(&cnode_relative(slot::ASID_POOL.cap()), CapRights::all())
             .unwrap();
 
         // Copy ASIDControl to the task, children can assign another children.
-        task.abs_cptr(init_thread::slot::ASID_CONTROL.cptr_bits())
+        task.abs_cptr(init_thread::slot::ASID_CONTROL.cptr())
             .copy(&cnode_relative(slot::ASID_CONTROL.cap()), CapRights::all())
             .unwrap();
 
@@ -193,7 +193,7 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
         ipc_buffer_cap: Granule,
     ) -> Result<(), Error> {
         // Move cap rights to task
-        self.abs_cptr(init_thread::slot::CNODE.cptr_bits())
+        self.abs_cptr(init_thread::slot::CNODE.cptr())
             .mint(
                 &cnode_relative(self.cnode),
                 CapRights::all(),
@@ -202,17 +202,17 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
             .unwrap();
 
         // Copy tcb to task
-        self.abs_cptr(init_thread::slot::TCB.cptr_bits())
+        self.abs_cptr(init_thread::slot::TCB.cptr())
             .copy(&cnode_relative(self.tcb), CapRights::all())
             .unwrap();
 
         // Copy vspace to task
-        self.abs_cptr(init_thread::slot::VSPACE.cptr_bits())
+        self.abs_cptr(init_thread::slot::VSPACE.cptr())
             .copy(&cnode_relative(self.vspace), CapRights::all())
             .unwrap();
 
         self.tcb.tcb_configure(
-            CPtr::from_bits(DEFAULT_PARENT_EP),
+            DEFAULT_PARENT_EP.cptr(),
             self.cnode,
             CNodeCapData::skip_high_bits(radix_bits),
             self.vspace,
@@ -231,9 +231,8 @@ impl<H: TaskHelperTrait<Self>> Sel4TaskHelper<H> {
     }
 
     /// Get the the absolute cptr related to task's cnode through cptr_bits.
-    pub fn abs_cptr(&self, cptr_bits: CPtrBits) -> AbsoluteCPtr {
-        self.cnode
-            .absolute_cptr(Null::from_cptr(CPtr::from_bits(cptr_bits)))
+    pub fn abs_cptr(&self, cptr: CPtr) -> AbsoluteCPtr {
+        self.cnode.absolute_cptr(cptr)
     }
     /// Clone a new thread from the current thread.
     pub fn clone_thread(&self, tcb: sel4::cap::Tcb, srv_ep: cap::Endpoint) -> Self {

@@ -4,6 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-spin = { workspace = true }
+sel4 = { workspace = true }
+sel4-ctors-dtors = { workspace = true }
+sel4-panicking = { workspace = true, features = ["alloc"] }
+sel4-panicking-env = { workspace = true }
+sel4-logging = { workspace = true }
+sel4-dlmalloc = { workspace = true }
+sel4-sync = { workspace = true }
+sel4-runtime-common = { workspace = true, features = [
+  "start",
+  "tls",
+  "unwinding",
+] }
+
+crate-consts = { workspace = true }
 common = { workspace = true }
 slot-manager = { workspace = true }
+sel4-kit = { workspace = true }

@@ -68,13 +68,8 @@ dependencies = [
  "crate-consts",
  "log",
  "sel4",
- "sel4-ctors-dtors",
- "sel4-dlmalloc",
  "sel4-logging",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
+ "sel4-runtime",
  "slot-manager",
  "spin",
  "virtio-drivers",
@@ -133,6 +128,7 @@ dependencies = [
  "object",
  "sel4",
  "slot-manager",
+ "spin",
 ]
 
 [[package]]
@@ -207,13 +203,8 @@ dependencies = [
  "ext4_rs",
  "log",
  "sel4",
- "sel4-ctors-dtors",
- "sel4-dlmalloc",
  "sel4-logging",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
+ "sel4-runtime",
  "slot-manager",
  "spin",
 ]
@@ -242,13 +233,8 @@ dependencies = [
  "fatfs",
  "log",
  "sel4",
- "sel4-ctors-dtors",
- "sel4-dlmalloc",
  "sel4-logging",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
+ "sel4-runtime",
  "slot-manager",
  "spin",
 ]
@@ -335,17 +321,12 @@ dependencies = [
  "num_enum",
  "object",
  "sel4",
- "sel4-ctors-dtors",
- "sel4-dlmalloc",
  "sel4-elf-header",
  "sel4-initialize-tls",
  "sel4-logging",
- "sel4-panicking",
- "sel4-panicking-env",
  "sel4-root-task",
- "sel4-runtime-common",
+ "sel4-runtime",
  "sel4-stack",
- "sel4-sync",
  "slot-manager",
  "spin",
  "syscalls",
@@ -567,6 +548,7 @@ dependencies = [
  "sel4",
  "sel4-elf-header",
  "sel4-initialize-tls",
+ "sel4-kit",
  "sel4-root-task",
  "sel4-stack",
  "serde",
@@ -719,6 +701,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sel4-kit"
+version = "0.1.0"
+dependencies = [
+ "sel4",
+]
+
+[[package]]
 name = "sel4-logging"
 version = "0.1.0"
 source = "git+https://github.com/seL4/rust-sel4?rev=5b9ebfd#5b9ebfd0a3a9805f28cc9222cd558e8d56a3919d"
@@ -775,8 +764,17 @@ name = "sel4-runtime"
 version = "0.1.0"
 dependencies = [
  "common",
+ "crate-consts",
+ "sel4",
+ "sel4-ctors-dtors",
+ "sel4-dlmalloc",
+ "sel4-kit",
+ "sel4-logging",
+ "sel4-panicking",
+ "sel4-panicking-env",
+ "sel4-runtime-common",
+ "sel4-sync",
  "slot-manager",
- "spin",
 ]
 
 [[package]]
@@ -1036,13 +1034,9 @@ dependencies = [
  "crate-consts",
  "log",
  "sel4",
- "sel4-ctors-dtors",
- "sel4-dlmalloc",
+ "sel4-kit",
  "sel4-logging",
- "sel4-panicking",
- "sel4-panicking-env",
- "sel4-runtime-common",
- "sel4-sync",
+ "sel4-runtime",
  "slot-manager",
  "spin",
 ]

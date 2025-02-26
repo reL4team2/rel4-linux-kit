@@ -5,7 +5,7 @@ use core::cmp;
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE};
 use include_bytes_aligned::include_bytes_aligned;
 use object::{BinaryFormat, File, Object, ObjectSection};
-use sel4::{init_thread::slot, CNodeCapData, CPtr, Result};
+use sel4::{init_thread::slot, CNodeCapData, Result};
 use spin::Mutex;
 
 // TODO: Make elf file path dynamically available.
@@ -52,7 +52,7 @@ pub fn add_test_child() -> Result<()> {
 
     // 配置子任务
     task.tcb.tcb_configure(
-        CPtr::from_bits(DEFAULT_PARENT_EP),
+        DEFAULT_PARENT_EP.cptr(),
         task.cnode,
         CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
         task.vspace,

@@ -14,3 +14,4 @@ object = { version = "0.36.1", default-features = false, features = ["read"] }
 bitflags = "2.6"
 num_enum = { version = "0.7.3", default-features = false }
 log = "0.4"
+spin = { workspace = true }

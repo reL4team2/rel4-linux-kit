@@ -15,17 +15,8 @@ default = []
 
 [dependencies]
 sel4 = { workspace = true }
-sel4-ctors-dtors = { workspace = true }
-sel4-panicking = { workspace = true, features = ["alloc"] }
-sel4-panicking-env = { workspace = true }
 sel4-logging = { workspace = true }
-sel4-dlmalloc = { workspace = true }
-sel4-sync = { workspace = true }
-sel4-runtime-common = { workspace = true, features = [
-  "start",
-  "tls",
-  "unwinding",
-] }
+sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 syscalls = { version = "0.6", default-features = false }

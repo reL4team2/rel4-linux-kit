@@ -12,7 +12,7 @@ use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry};
 use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
-mod runtime;
+sel4_runtime::entry_point!(main);
 
 const BLK_SERVICE: BlockService = BlockService::from_bits(0x21);
 

@@ -98,7 +98,7 @@ impl Sel4Task {
 
         // Copy EndPoint to child
         cnode
-            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP, CNODE_RADIX_BITS)
+            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP.bits(), CNODE_RADIX_BITS)
             .mint(
                 &LeafSlot::from(DEFAULT_SERVE_EP).abs_cptr(),
                 CapRights::all(),

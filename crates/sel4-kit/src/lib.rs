@@ -7,4 +7,6 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+pub mod arch;
+pub mod ipc;
 pub mod ipc_buffer;
