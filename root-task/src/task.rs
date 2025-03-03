@@ -77,7 +77,6 @@ pub fn build_kernel_thread(
     fault_ep: (Endpoint, u64),
     thread_name: &str,
     file_data: &[u8],
-    free_page_addr: usize,
 ) -> sel4::Result<Sel4Task> {
     // make 新线程的虚拟地址空间
     let cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
@@ -86,8 +85,6 @@ pub fn build_kernel_thread(
         cnode,
         &mut mapped_page,
         &File::parse(file_data).unwrap(),
-        slot::VSPACE.cap(),
-        free_page_addr,
         slot::ASID_POOL.cap(),
     );
 
@@ -146,8 +143,6 @@ pub(crate) fn make_child_vspace<'a>(
     cnode: sel4::cap::CNode,
     mapped_page: &mut BTreeMap<usize, PhysPage>,
     image: &'a impl Object<'a>,
-    caller_vspace: sel4::cap::VSpace,
-    free_page_addr: usize,
     asid_pool: sel4::cap::AsidPool,
 ) -> (sel4::cap::VSpace, usize, PhysPage) {
     let inner_cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
@@ -195,8 +190,6 @@ pub(crate) fn make_child_vspace<'a>(
         child_vspace,
         image_footprint.clone(),
         image,
-        caller_vspace,
-        free_page_addr,
     );
 
     // make ipc buffer

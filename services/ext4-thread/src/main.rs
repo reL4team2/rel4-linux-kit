@@ -4,11 +4,11 @@
 #[macro_use]
 extern crate alloc;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 use common::services::{block::BlockService, fs::FileEvent, root::find_service};
 use crate_consts::DEFAULT_SERVE_EP;
-use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry};
+use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry, Ext4File};
 use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
@@ -65,7 +65,7 @@ impl BlockDevice for Ext4Disk {
 }
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Error);
+    common::init_log!(log::LevelFilter::Debug);
     common::init_recv_slot();
 
     log::info!("Booting...");
@@ -78,6 +78,21 @@ fn main() -> ! {
     // 创建 Ext4 文件系统
     let disk = Arc::new(Ext4Disk);
     let ext4 = Ext4::open(disk);
+
+    // log::debug!("step 1");
+
+    // let mut file = Ext4File::new();
+    // let ret = ext4.ext4_open_new(&mut file, "123.txt", "r+", true);
+
+    // let mut rlen = file.fsize as usize;
+    // let mut file_content = vec![0u8; file.fsize as _];
+    // ext4.ext4_file_read(&mut file, &mut file_content, rlen as _, &mut rlen);
+    // log::debug!("content: {:?}", String::from_utf8(file_content));
+
+    // log::debug!("ret: {:?}", ret);
+    // log::error!("hello world!");
+
+    // loop {}
 
     let rev_msg = MessageInfoBuilder::default();
     loop {

@@ -8,6 +8,7 @@ edition = "2021"
 sel4 = { workspace = true }
 sel4-root-task = { workspace = true }
 sel4-elf-header = { workspace = true }
+sel4-logging = { workspace = true }
 sel4-initialize-tls = { workspace = true }
 sel4-stack = { workspace = true }
 

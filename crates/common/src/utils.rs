@@ -67,18 +67,11 @@ pub fn map_image<'a>(
     vspace: sel4::cap::VSpace,
     footprint: Range<usize>,
     image: &'a impl Object<'a>,
-    caller_vspace: sel4::cap::VSpace,
-    free_page_addr: usize,
 ) {
     // 计算需要的物理页数
     let num_pages = footprint.len() / GRANULE_SIZE;
     let mut pages = (0..num_pages)
-        .map(|_| {
-            (
-                allocator.allocate_and_retyped_fixed_sized::<sel4::cap_type::Granule>(),
-                sel4::CapRightsBuilder::all(),
-            )
-        })
+        .map(|_| (allocator.alloc_page(), sel4::CapRightsBuilder::all()))
         .collect::<Vec<(sel4::cap::Granule, sel4::CapRightsBuilder)>>();
 
     for seg in image.segments() {
@@ -107,18 +100,10 @@ pub fn map_image<'a>(
             let data_len = (GRANULE_SIZE - offset_into_page).min(data.len());
 
             // 映射物理页到 root-task 的虚拟地址空间，并且将数据拷贝到物理页中
-            page_cap
-                .frame_map(
-                    caller_vspace,
-                    free_page_addr,
-                    sel4::CapRights::all(),
-                    sel4::VmAttributes::default(),
-                )
-                .unwrap();
-            unsafe {
-                ((free_page_addr + offset_into_page) as *mut u8).copy_from(data.as_ptr(), data_len);
-            }
-            page_cap.frame_unmap().unwrap();
+            let phys_page = PhysPage::new(*page_cap);
+
+            phys_page.lock()[offset_into_page..offset_into_page + data_len]
+                .copy_from_slice(&data[..data_len]);
 
             data = &data[data_len..];
             offset_into_page = 0;

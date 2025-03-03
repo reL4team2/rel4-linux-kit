@@ -15,4 +15,5 @@ pub(super) fn init() {
         find_service("fs-thread", slot).expect("can't find service");
         slot.into()
     });
+    FS_SERVICE.get().unwrap().ping().unwrap();
 }

@@ -101,6 +101,11 @@ fn main() -> ! {
                 //     sel4::reply(ib, rev_msg.build());
                 // });
             }
+            // 理论上 AllocPage 需要将任务负责接收内存的一块 IPC 地址 Capability
+            // 发送到这个任务中。然后在处理之后填充地址，或者直接写入内存
+            BlockEvent::AllocPage | BlockEvent::ReadBlocks | BlockEvent::WriteBlocks => {
+                log::error!("unsupperted Operation")
+            }
             BlockEvent::Unknown(label) => {
                 log::error!("Unknown label: {}", label);
             }

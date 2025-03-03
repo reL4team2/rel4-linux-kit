@@ -3,7 +3,8 @@
 //! 提供异步的 [Notification] `poll`
 
 use sel4::{
-    cap::{Endpoint, Notification}, with_ipc_buffer_mut, MessageInfo
+    cap::{Endpoint, Notification},
+    with_ipc_buffer_mut, MessageInfo,
 };
 
 /// poll 一个 [Notification]
@@ -15,8 +16,8 @@ use sel4::{
 pub fn poll_notification(noti: Notification) -> Option<u64> {
     let (_, badge) = with_ipc_buffer_mut(|ib| ib.inner_mut().seL4_Poll(noti.bits()));
     match badge {
-        0 => None,
-        _ => Some(badge),
+        0 => Option::None,
+        _ => Option::Some(badge),
     }
 }
 
@@ -29,7 +30,7 @@ pub fn poll_notification(noti: Notification) -> Option<u64> {
 pub fn poll_endpoint(ep: Endpoint) -> Option<(MessageInfo, u64)> {
     let (msg, badge) = with_ipc_buffer_mut(|ib| ib.inner_mut().seL4_Poll(ep.bits()));
     match badge {
-        0 => None,
-        _ => Some((MessageInfo::from_inner(msg), badge)),
+        0 => Option::None,
+        _ => Option::Some((MessageInfo::from_inner(msg), badge)),
     }
 }

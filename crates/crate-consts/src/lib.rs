@@ -9,7 +9,8 @@ pub const DEFAULT_PARENT_EP: Endpoint = Endpoint::from_bits(18);
 /// The default endpoint for thread lock.
 pub const DEFAULT_SERVE_EP: Endpoint = Endpoint::from_bits(19);
 /// page_writer 用来占位的位置
-pub const DEFAULT_PAGE_PLACEHOLDER: u64 = 21;
+/// TODO: 找一个更加合适的位置来放置，防止产生冲突
+pub const DEFAULT_PAGE_PLACEHOLDER: u64 = 0;
 /// The default slot to store custom cap.
 pub const DEFAULT_CUSTOM_SLOT: u64 = 26;
 /// The Default Index of the empty slot.

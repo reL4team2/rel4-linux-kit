@@ -549,6 +549,7 @@ dependencies = [
  "sel4-elf-header",
  "sel4-initialize-tls",
  "sel4-kit",
+ "sel4-logging",
  "sel4-root-task",
  "sel4-stack",
  "serde",

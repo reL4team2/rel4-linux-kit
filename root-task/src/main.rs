@@ -28,19 +28,15 @@ use services::root::RootEvent;
 use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
-use utils::*;
 
-/// The object allocator for the root task.
+/// Object 分配器，可以用来申请 Capability
 pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAllocator::empty());
-
-/// free page placeholder
-pub(crate) static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder =
-    FreePagePlaceHolder([0; GRANULE_SIZE]);
 
 #[root_task(heap_size = 0x12_0000)]
 fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // 设置调试信息
     slot::TCB.cap().debug_name(b"root");
+    init_log!(log::LevelFilter::Debug);
 
     // 初始化 untyped object
     let dev_untyped_start = bootinfo.untyped().start();
@@ -78,7 +74,6 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             (fault_ep, tasks.len() as _),
             task.name,
             task.file,
-            unsafe { init_free_page_addr(bootinfo) },
         )?);
     }
 
@@ -219,9 +214,10 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
                 }
                 let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
                 log::error!("[RootTask] Received Fault: {:?}", fault);
-                match fault {
-                    _ => {}
-                }
+                sel4_kit::arch::shutdown();
+                // match fault {
+                //     _ => {}
+                // }
             }
         }
     }

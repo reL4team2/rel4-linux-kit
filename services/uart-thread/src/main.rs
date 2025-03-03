@@ -60,16 +60,6 @@ fn main() -> ! {
             } else {
                 buffer.push_back(char);
             }
-            // if let Some(cap_slot) = queue.pop_front() {
-            //     let ep: Endpoint = cap_slot.into();
-            //     with_ipc_buffer_mut(|ib| {
-            //         ib.msg_bytes_mut()[0] = char as u8;
-            //         ep.send(rev_msg.length(1).build());
-            //     });
-            //     cap_slot.delete().unwrap();
-            // } else {
-            //     buffer.push_back(char);
-            // }
         }
 
         if let Some((msg, _badge)) = poll_endpoint(DEFAULT_SERVE_EP) {

@@ -5,9 +5,12 @@ use slot_manager::LeafSlot;
 #[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum BlockEvent {
+    AllocPage,
     Ping,
     ReadBlock,
     WriteBlock,
+    ReadBlocks,
+    WriteBlocks,
     #[num_enum(catch_all)]
     Unknown(u64),
 }
