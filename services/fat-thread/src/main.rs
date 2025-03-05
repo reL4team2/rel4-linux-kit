@@ -4,10 +4,7 @@
 #[macro_use]
 extern crate alloc;
 
-use common::{
-    services::{block::BlockService, fs::FileEvent, root::find_service},
-    slot::alloc_slot,
-};
+use common::services::{block::BlockService, fs::FileEvent, root::find_service};
 use crate_consts::DEFAULT_SERVE_EP;
 use cursor::DiskCursor;
 use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
@@ -23,9 +20,9 @@ fn main() -> ! {
     log::info!("Booting...");
 
     // FIXME: Using Common Consts instead of fixed constants
-    let blk_ep = BlockService::from(alloc_slot());
 
-    find_service("block-thread", blk_ep.into()).expect("Can't find blk-thread service");
+    let recv_slot = find_service("block-thread").expect("Can't find blk-thread service");
+    let blk_ep = BlockService::from(recv_slot);
 
     blk_ep.ping().expect("Can't ping blk-thread service");
 
@@ -61,6 +58,7 @@ fn main() -> ! {
             FileEvent::Unknown(label) => {
                 log::warn!("Unknown label: {}", label);
             }
+            others => log::warn!("not inplemented {:?}", others),
         }
     }
 }

@@ -159,6 +159,14 @@ impl LeafSlot {
         dst.abs_cptr().mint(&self.abs_cptr(), cr, badge as _)
     }
 
+    /// 将 Capability 移动到指定的 [LeafSlot]
+    ///
+    /// - `dst`  需要移动到的 [LeafSlot]
+    #[inline]
+    pub fn move_to(&self, dst: Self) -> Result<(), sel4::Error> {
+        dst.abs_cptr().move_(&self.abs_cptr())
+    }
+
     /// 保存回复 Capability
     pub fn save_caller(&self) -> Result<(), sel4::Error> {
         self.abs_cptr().save_caller()

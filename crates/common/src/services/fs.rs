@@ -1,18 +1,25 @@
+use super::IpcBufferRW;
 use num_enum::{FromPrimitive, IntoPrimitive};
-use sel4::{cap::Endpoint, MessageInfo, MessageInfoBuilder};
+use sel4::{cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder};
 use slot_manager::LeafSlot;
 
-use crate::{consts::SEND_BULK_LABEL, recv_bulk_data};
+use crate::{
+    consts::{REG_LEN, SEND_BULK_LABEL},
+    recv_bulk_data,
+};
 
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum FileEvent {
     Ping,
     ReadDir,
+    Open,
+    ReadAt,
     #[num_enum(catch_all)]
     Unknown(u64),
 }
 
+#[derive(Clone, Debug)]
 pub struct FileSerivce {
     ep_cap: Endpoint,
 }
@@ -60,6 +67,41 @@ impl FileSerivce {
         let _datas = recv_bulk_data(self.ep_cap, SEND_BULK_LABEL);
 
         Ok(())
+    }
+
+    #[inline]
+    pub fn read_at(&self, inode: u64, offset: usize, buf: &mut [u8]) -> Result<usize, ()> {
+        with_ipc_buffer_mut(|ib| {
+            let regs = ib.msg_regs_mut();
+            regs[0] = inode;
+            regs[1] = offset as _;
+            regs[2] = buf.len() as _;
+        });
+        let msg = MessageInfoBuilder::default()
+            .label(FileEvent::ReadAt.into())
+            .length(3)
+            .build();
+        let ret = self.call(msg)?;
+        assert_eq!(ret.label(), 0);
+        with_ipc_buffer(|ib| {
+            let rlen = ib.msg_regs()[0] as usize;
+            buf[..rlen].copy_from_slice(&ib.msg_bytes()[REG_LEN..REG_LEN + rlen]);
+            Ok(rlen)
+        })
+    }
+
+    pub fn open(&self, path: &str) -> Result<(usize, usize), ()> {
+        let mut len = 0;
+        with_ipc_buffer_mut(|ib| {
+            path.write_buffer(ib, &mut len);
+        });
+        let msg = MessageInfoBuilder::default()
+            .label(FileEvent::Open.into())
+            .length(len)
+            .build();
+        let ret = self.call(msg)?;
+        assert_eq!(ret.label(), 0);
+        with_ipc_buffer(|ib| Ok((ib.msg_regs()[0] as _, ib.msg_regs()[1] as _)))
     }
 }
 

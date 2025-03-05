@@ -87,3 +87,14 @@ pub fn waiting_and_handle() -> ! {
         sel4::r#yield();
     }
 }
+
+/// 等待其他程序发来的启动消息
+pub fn waiting_for_start() {
+    loop {
+        let (message, _) = DEFAULT_SERVE_EP.recv(());
+
+        if message.label() == 0x1234 {
+            break;
+        }
+    }
+}

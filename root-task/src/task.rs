@@ -29,6 +29,7 @@ impl TaskHelperTrait<Sel4TaskHelper<Self>> for TaskImpl {
     }
 }
 
+/// 重建 CSpace 空间
 pub fn rebuild_cspace() {
     let cnode = OBJ_ALLOCATOR
         .lock()

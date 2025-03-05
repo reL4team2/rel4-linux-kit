@@ -3,14 +3,16 @@
 
 use alloc::{string::String, vec::Vec};
 use common::services::{fs::FileSerivce, root::find_service, uart::UartService};
-use sel4::{debug_print, debug_println};
+use sel4::{cap::Endpoint, debug_print, debug_println, MessageInfoBuilder};
+use spin::Lazy;
 
 extern crate alloc;
 
-mod runtime;
+static FS_SERVICE: Lazy<FileSerivce> = Lazy::new(|| find_service("fs-thread").unwrap().into());
+static UART_SERVICE: Lazy<UartService> = Lazy::new(|| find_service("uart-thread").unwrap().into());
+static KERNEL_SERVICE: Lazy<Endpoint> = Lazy::new(|| find_service("kernel-thread").unwrap().into());
 
-const FS_SERVICE: FileSerivce = FileSerivce::from_bits(0x21);
-const UART_SERVICE: UartService = UartService::from_bits(0x22);
+sel4_runtime::entry_point!(main);
 
 fn command(cmd: &str) {
     match cmd {
@@ -18,9 +20,14 @@ fn command(cmd: &str) {
             debug_println!("Available commands:");
             debug_println!("- help: Display this help message");
             debug_println!("- ls: List files in the specified mountpoint");
+            debug_println!("- start-kernel: Start User Kernel To Execute Linux App");
         }
         "ls" => {
             FS_SERVICE.read_dir("_").unwrap();
+        }
+        "start-kernel" => {
+            // 和 kernel-thread 的 exception::waiting_for_start 结合
+            KERNEL_SERVICE.send(MessageInfoBuilder::default().label(0x1234).build());
         }
         "" => {}
         cmd => {
@@ -35,9 +42,6 @@ fn main() -> ! {
 
     log::debug!("Starting...");
 
-    // 探索服务，并尝试 ping
-    find_service("fs-thread", FS_SERVICE.leaf_slot()).unwrap();
-    find_service("uart-thread", UART_SERVICE.leaf_slot()).unwrap();
     FS_SERVICE.ping().unwrap();
     UART_SERVICE.ping().unwrap();
 

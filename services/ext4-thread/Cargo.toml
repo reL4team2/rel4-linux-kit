@@ -13,5 +13,7 @@ common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
+hashbrown = { workspace = true }
+
 # ext4 依赖
 ext4_rs = { git = "https://github.com/yuoo655/ext4_rs.git", rev = "04286c7" }

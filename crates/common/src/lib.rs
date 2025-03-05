@@ -6,6 +6,7 @@ extern crate alloc;
 mod obj_allocator;
 mod utils;
 
+pub mod arch;
 pub mod consts;
 pub mod ipc;
 pub mod log_impl;

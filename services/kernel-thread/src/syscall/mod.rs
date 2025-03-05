@@ -42,6 +42,8 @@ pub fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
         Sysno::brk => sys_brk(task, a0),
         Sysno::mmap => sys_mmap(task, a0, a1, a2, a3, a4, a5),
         Sysno::getpid => sys_getpid(&task),
+        Sysno::getppid => sys_getppid(&task),
+        Sysno::gettimeofday => sys_gettimeofday(task, a0 as _, a1),
         Sysno::getcwd => sys_getcwd(task, a0 as _, a1),
         Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0, a1 as _, a2 as _),

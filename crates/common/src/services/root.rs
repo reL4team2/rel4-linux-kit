@@ -7,7 +7,7 @@ use sel4::{
 };
 use slot_manager::LeafSlot;
 
-use crate::services::IpcBufferRW;
+use crate::{services::IpcBufferRW, slot::alloc_slot};
 
 #[ipc_msg]
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
@@ -38,28 +38,21 @@ pub fn ping() -> Result<(), ()> {
     Ok(())
 }
 
-/// FIXME: This is not implemented
-pub fn find_service(name: &str, target_slot: LeafSlot) -> Result<(), ()> {
-    // let len = name.as_bytes().len();
+pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
     let mut off = 0;
-    let origin_slot = with_ipc_buffer_mut(|ipc_buf| {
-        ipc_buf.set_recv_slot(&target_slot.abs_cptr());
-        name.write_buffer(ipc_buf, &mut off);
-
-        // FIXME: using recv_slot()
-        init_thread::slot::CNODE
-            .cap()
-            .absolute_cptr(Null::from_bits(0))
-    });
+    with_ipc_buffer_mut(|ipc_buf| name.write_buffer(ipc_buf, &mut off));
     let msg = MessageInfoBuilder::default()
         .label(RootEvent::FindService.into())
         .length(off)
         .build();
 
-    let msg = call(msg)?;
-    assert_eq!(msg.extra_caps(), 1);
-    with_ipc_buffer_mut(|ipc_buf| ipc_buf.set_recv_slot(&origin_slot));
-    Ok(())
+    let msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
+    if msg.extra_caps() == 0 {
+        return Err(sel4::Error::FailedLookup);
+    }
+    let dst_slot = alloc_slot();
+    LeafSlot::new(0).move_to(dst_slot)?;
+    Ok(dst_slot)
 }
 
 pub fn translate_addr(vaddr: usize) -> Result<usize, ()> {

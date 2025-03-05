@@ -58,29 +58,4 @@ busybox:
 clean:
 	rm -rf $(BUILD_DIR)
 
-test-examples: 
-	@make -C examples/linux-apps/helloworld
-	@./tools/ins_modify.py examples/linux-apps/helloworld/main.elf .env/example
-	@cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
-	@cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate) --exclude kernel-thread
-	@cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
-	@$(loader_cli) \
-		--loader $(loader) \
-		--sel4-prefix $(SEL4_PREFIX) \
-		--app $(app) \
-		-o $(image)
-	$(qemu_cmd)
-	@rm $(image)
-	@make -C examples/linux-apps/sigtest
-	@./tools/ins_modify.py examples/linux-apps/sigtest/main.elf .env/example
-	@cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
-	@cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
-	@$(loader_cli) \
-		--loader $(loader) \
-		--sel4-prefix $(SEL4_PREFIX) \
-		--app $(app) \
-		-o $(image)
-	$(qemu_cmd)
-	@rm $(image)
-
 .PHONY: run clean

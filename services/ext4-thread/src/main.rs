@@ -4,65 +4,22 @@
 #[macro_use]
 extern crate alloc;
 
-use alloc::{string::String, sync::Arc, vec::Vec};
+mod imp;
 
-use common::services::{block::BlockService, fs::FileEvent, root::find_service};
+use alloc::{sync::Arc, vec::Vec};
+use common::{
+    consts::{IPC_DATA_LEN, REG_LEN},
+    services::{block::BlockService, fs::FileEvent, root::find_service, IpcBufferRW},
+};
 use crate_consts::DEFAULT_SERVE_EP;
-use ext4_rs::{BlockDevice, Ext4, Ext4DirEntry, Ext4File};
-use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
-use slot_manager::LeafSlot;
+use ext4_rs::{Ext4, Ext4DirEntry, Ext4File};
+use hashbrown::HashMap;
+use imp::Ext4Disk;
+use sel4::{debug_print, debug_println, with_ipc_buffer, with_ipc_buffer_mut, MessageInfoBuilder};
 
 sel4_runtime::entry_point!(main);
 
 const BLK_SERVICE: BlockService = BlockService::from_bits(0x21);
-
-const BLOCK_SIZE: usize = 4096;
-const TRANS_LIMIT: usize = 0x200;
-pub struct Ext4Disk;
-
-impl BlockDevice for Ext4Disk {
-    fn read_offset(&self, offset: usize) -> Vec<u8> {
-        let mut buf = vec![0; BLOCK_SIZE];
-
-        let start_block_id = offset / TRANS_LIMIT;
-        let mut offset_in_block = offset % TRANS_LIMIT;
-
-        let mut total_bytes_read = 0;
-        let mut data = vec![0u8; TRANS_LIMIT];
-
-        for i in 0..(BLOCK_SIZE / TRANS_LIMIT) {
-            let current_block_id = start_block_id + i;
-
-            let bytes_to_copy = match total_bytes_read {
-                0 => TRANS_LIMIT - offset_in_block,
-                _ => TRANS_LIMIT,
-            };
-
-            let buf_start = total_bytes_read;
-            let buf_end = buf_start + bytes_to_copy;
-
-            match offset_in_block {
-                0 => BLK_SERVICE
-                    .read_block(current_block_id, &mut buf[buf_start..buf_end])
-                    .unwrap(),
-                _ => {
-                    BLK_SERVICE.read_block(current_block_id, &mut data).unwrap();
-                    buf[buf_start..buf_end]
-                        .copy_from_slice(&data[offset_in_block..(offset_in_block + bytes_to_copy)]);
-                    offset_in_block = 0; // only the first block has an offset within the block
-                }
-            }
-
-            total_bytes_read += bytes_to_copy;
-        }
-
-        buf
-    }
-
-    fn write_offset(&self, _offset: usize, _data: &[u8]) {
-        todo!()
-    }
-}
 
 fn main() -> ! {
     common::init_log!(log::LevelFilter::Debug);
@@ -70,7 +27,8 @@ fn main() -> ! {
 
     log::info!("Booting...");
 
-    find_service("block-thread", LeafSlot::new(0x21)).unwrap();
+    let recv_slot = find_service("block-thread").unwrap();
+    recv_slot.move_to(BLK_SERVICE.into()).unwrap();
 
     BLK_SERVICE.ping().unwrap();
     log::info!("Found Block Thread, It reply ping message");
@@ -79,20 +37,7 @@ fn main() -> ! {
     let disk = Arc::new(Ext4Disk);
     let ext4 = Ext4::open(disk);
 
-    // log::debug!("step 1");
-
-    // let mut file = Ext4File::new();
-    // let ret = ext4.ext4_open_new(&mut file, "123.txt", "r+", true);
-
-    // let mut rlen = file.fsize as usize;
-    // let mut file_content = vec![0u8; file.fsize as _];
-    // ext4.ext4_file_read(&mut file, &mut file_content, rlen as _, &mut rlen);
-    // log::debug!("content: {:?}", String::from_utf8(file_content));
-
-    // log::debug!("ret: {:?}", ret);
-    // log::error!("hello world!");
-
-    // loop {}
+    let mut open_files: HashMap<u32, Ext4File> = HashMap::new();
 
     let rev_msg = MessageInfoBuilder::default();
     loop {
@@ -115,6 +60,39 @@ fn main() -> ! {
                 }
                 debug_println!();
                 with_ipc_buffer_mut(|ipc_buffer| sel4::reply(ipc_buffer, rev_msg.build()));
+            }
+            FileEvent::Open => {
+                with_ipc_buffer_mut(|ib| {
+                    let mut offset = 0;
+                    let path = <&str>::read_buffer(ib, &mut offset);
+                    let mut ext_file = Ext4File::new();
+                    ext4.ext4_open(&mut ext_file, &path, "w+", true).unwrap();
+                    with_ipc_buffer_mut(|ib| {
+                        ib.msg_regs_mut()[0] = ext_file.inode as _;
+                        ib.msg_regs_mut()[1] = ext_file.fsize;
+
+                        sel4::reply(ib, rev_msg.length(2).build());
+                    });
+                    open_files.insert(ext_file.inode, ext_file);
+                });
+            }
+            FileEvent::ReadAt => {
+                let (inode, offset) =
+                    with_ipc_buffer(|ib| (ib.msg_regs()[0] as u32, ib.msg_regs()[1] as _));
+                if let Some(ext4_file) = open_files.get_mut(&inode) {
+                    ext4_file.fpos = offset;
+                    let mut buffer = vec![0u8; IPC_DATA_LEN - REG_LEN];
+                    let mut rlen = 0;
+                    let size = buffer.len();
+                    ext4.ext4_file_read(ext4_file, &mut buffer, size, &mut rlen)
+                        .unwrap();
+                    with_ipc_buffer_mut(|ib| {
+                        ib.msg_regs_mut()[0] = rlen as _;
+                        ib.msg_bytes_mut()[REG_LEN..REG_LEN + rlen]
+                            .copy_from_slice(&buffer[..rlen]);
+                        sel4::reply(ib, rev_msg.length(1 + rlen.div_ceil(REG_LEN)).build());
+                    })
+                }
             }
             FileEvent::Unknown(label) => {
                 log::warn!("Unknown label: {}", label);

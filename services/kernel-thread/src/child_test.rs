@@ -1,24 +1,21 @@
-use crate::{consts::task::DEF_STACK_TOP, task::Sel4Task, utils::obj::alloc_page};
+use crate::{consts::task::DEF_STACK_TOP, fs::file::File, task::Sel4Task};
 use alloc::{collections::btree_map::BTreeMap, string::String};
-use common::page::PhysPage;
 use core::cmp;
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE};
-use include_bytes_aligned::include_bytes_aligned;
-use object::{BinaryFormat, File, Object, ObjectSection};
+use object::{BinaryFormat, Object, ObjectSection};
 use sel4::{init_thread::slot, CNodeCapData, Result};
+use slot_manager::LeafSlot;
 use spin::Mutex;
 
 // TODO: Make elf file path dynamically available.
-#[cfg(not(feature = "example"))]
-const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/busybox-ins.elf");
-#[cfg(feature = "example")]
-const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/example");
+// const CHILD_ELF: &[u8] = include_bytes_aligned!(16, "../../../.env/testcases/chdir");
 
 /// 任务表，可以通过任务 ID 获取任务
 pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());
 
 /// 添加一个测试任务
 pub fn add_test_child() -> Result<()> {
+    let elf_file = File::open("/chdir", 0).unwrap().read_all().unwrap();
     // let args = &["busybox", "echo", "Kernel Thread's Child Says Hello!"];
     // let args = &["busybox"];
     let args = &["busybox", "sh"];
@@ -26,9 +23,9 @@ pub fn add_test_child() -> Result<()> {
     // let args = &["busybox", "uname", "-a"];
     let mut task = Sel4Task::new()?;
 
-    task.load_elf(CHILD_ELF);
+    task.load_elf(&elf_file);
 
-    let file = File::parse(CHILD_ELF).expect("can't load elf file");
+    let file = object::File::parse(elf_file.as_slice()).expect("can't load elf file");
     assert!(file.format() == BinaryFormat::Elf);
 
     // 填充初始化信息
@@ -39,16 +36,12 @@ pub fn add_test_child() -> Result<()> {
     task.map_region(DEF_STACK_TOP - 16 * PAGE_SIZE, DEF_STACK_TOP);
     let sp_ptr = task.init_stack();
 
-    let ipc_buf_page = PhysPage::new(alloc_page());
-    let ipc_buffer_addr = file
+    // 配置程序最大的位置
+    task.info.task_vm_end = file
         .sections()
         .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
-        .div_ceil(PAGE_SIZE as _)
-        * PAGE_SIZE as u64;
-    task.map_page(ipc_buffer_addr as _, ipc_buf_page);
-
-    // 配置程序最大的位置
-    task.info.task_vm_end = ipc_buffer_addr as usize + PAGE_SIZE;
+        .div_ceil(PAGE_SIZE as _) as usize
+        * PAGE_SIZE;
 
     // 配置子任务
     task.tcb.tcb_configure(
@@ -56,8 +49,8 @@ pub fn add_test_child() -> Result<()> {
         task.cnode,
         CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
         task.vspace,
-        ipc_buffer_addr,
-        ipc_buf_page.cap(),
+        0,
+        LeafSlot::new(0).cap(),
     )?;
     task.tcb.tcb_set_sched_params(slot::TCB.cap(), 0, 255)?;
 

@@ -2,6 +2,7 @@
 //!
 //! 本接口中包含 Task 结构体的定义和实现    
 mod auxv;
+mod file;
 mod info;
 mod init;
 mod signal;
@@ -12,7 +13,8 @@ use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE};
+use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_MASK, PAGE_SIZE};
+use file::TaskFileInfo;
 use info::TaskInfo;
 use object::{Object, ObjectSegment};
 use sel4::{
@@ -31,6 +33,8 @@ use crate::{
 pub struct Sel4Task {
     /// 进程 ID
     pub pid: usize,
+    /// 父进程 ID
+    pub ppid: usize,
     /// 任务 ID (线程 ID)
     pub id: usize,
     /// 进程控制块（Capability)
@@ -55,6 +59,8 @@ pub struct Sel4Task {
     ///
     /// When the thread exits, the kernel clears the word at this address if it is not NULL.
     pub clear_child_tid: Option<usize>,
+    /// 任务相关文件信息。
+    pub file: TaskFileInfo,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
     pub info: TaskInfo,
 }
@@ -107,7 +113,8 @@ impl Sel4Task {
 
         Ok(Sel4Task {
             id: tid,
-            pid: 0,
+            pid: tid,
+            ppid: 1,
             tcb,
             cnode,
             vspace,
@@ -117,6 +124,7 @@ impl Sel4Task {
             signal: TaskSignal::default(),
             exit: None,
             clear_child_tid: None,
+            file: TaskFileInfo::default(),
             info: TaskInfo::default(),
         })
     }
@@ -241,7 +249,7 @@ impl Sel4Task {
         }
         for vaddr in (self.heap..value).step_by(PAGE_SIZE) {
             let page_cap = PhysPage::new(alloc_page());
-            self.map_page(vaddr, page_cap);
+            self.map_page(vaddr & PAGE_MASK, page_cap);
         }
         self.heap = value;
         value

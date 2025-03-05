@@ -3,6 +3,7 @@
 /build/
 /patch/
 /.env/
+/testcases/
 
 # 忽略 log 文件和临时文件
 *.log
