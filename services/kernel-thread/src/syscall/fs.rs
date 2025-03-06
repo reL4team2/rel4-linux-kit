@@ -56,6 +56,21 @@ pub(super) fn sys_fstat(task: &Sel4Task, fd: usize, stat_ptr: *mut Stat) -> SysR
     Ok(0)
 }
 
+pub(super) fn sys_getdents64(
+    task: &Sel4Task,
+    fd: usize,
+    buf_ptr: *const u8,
+    len: usize,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_getdents64 @ fd: {}, buf_ptr: {:p}, len: {}",
+        task.id, fd, buf_ptr, len
+    );
+    let file_table = task.file.file_ds.lock();
+    let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
+    todo!("sys_getdents64")
+}
+
 pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize) -> SysResult {
     if count == 0 {
         return Err(Errno::EINVAL);

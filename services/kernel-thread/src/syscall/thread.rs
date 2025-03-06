@@ -30,3 +30,24 @@ pub(super) fn sys_exit(task: &mut Sel4Task, exit_code: i32) -> SysResult {
     task.exit = Some(exit_code);
     Ok(0)
 }
+
+#[inline]
+pub(super) fn sys_clone(
+    task: &Sel4Task,
+    flags: usize,     // 复制 标志位
+    stack: usize,     // 指定新的栈，可以为 0, 0 不处理
+    ptid: *const u32, // 父线程 id
+    tls: usize,       // TLS线程本地存储描述符
+    ctid: *const u32, // 子线程 id
+) -> SysResult {
+    log::debug!(
+        "flags: {:#x} stack: {:#x}, ptid: {:p}  tls: {:#x}, ctid: {:#p}",
+        flags,
+        stack,
+        ptid,
+        tls,
+        ctid
+    );
+
+    todo!()
+}

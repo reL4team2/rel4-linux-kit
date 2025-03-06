@@ -35,6 +35,13 @@ macro_rules! test_task {
     }};
 }
 
+// macro_rules! test_task {
+//     ($file:expr) => {{
+//         let mut file = fs::file::File::open(concat!("/", $file), 2).unwrap();
+//         child_test::add_test_child(&file.read_all().unwrap(), &[$file]).unwrap();
+//     }};
+// }
+
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot
     common::init_recv_slot();
@@ -61,24 +68,26 @@ fn main() -> ! {
     // child_test::add_test_child(CHILD_ELF, &["busybox", "sh"]).unwrap();
     // child_test::add_test_child(CHILD_ELF1, &["busybox", "sh"]).unwrap();
 
-    test_task!("brk");
-    test_task!("chdir");
-    test_task!("close");
-    test_task!("dup");
-    test_task!("dup2");
-    test_task!("fstat");
-    test_task!("getcwd");
-    test_task!("getpid");
-    test_task!("getppid");
-    test_task!("gettimeofday");
-    test_task!("mkdir_");
-    test_task!("open");
-    test_task!("openat");
-    test_task!("read");
-    test_task!("test_echo");
-    test_task!("uname");
-    test_task!("unlink");
-    test_task!("write");
+    test_task!("clone");
+    // test_task!("getdents");
+    // test_task!("brk");
+    // test_task!("chdir");
+    // test_task!("close");
+    // test_task!("dup");
+    // test_task!("dup2");
+    // test_task!("fstat");
+    // test_task!("getcwd");
+    // test_task!("getpid");
+    // test_task!("getppid");
+    // test_task!("gettimeofday");
+    // test_task!("mkdir_");
+    // test_task!("open");
+    // test_task!("openat");
+    // test_task!("read");
+    // test_task!("test_echo");
+    // test_task!("uname");
+    // test_task!("unlink");
+    // test_task!("write");
 
     // 循环处理异常(含伪 syscall)
     exception::waiting_and_handle();

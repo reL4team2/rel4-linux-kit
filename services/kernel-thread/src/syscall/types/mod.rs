@@ -3,6 +3,7 @@
 //!
 pub mod signal;
 pub mod sys;
+pub mod thread;
 use zerocopy::{FromBytes, Immutable};
 
 #[repr(C)]
