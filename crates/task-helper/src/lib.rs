@@ -20,13 +20,13 @@ use crate_consts::{
     DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION, PAGE_SIZE, STACK_ALIGN_SIZE,
 };
 use sel4::{
-    cap::{self, Granule, Notification},
-    init_thread::{self, slot},
     AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth,
     VmAttributes as VMAttributes,
+    cap::{self, Granule, Notification},
+    init_thread::{self, slot},
 };
-use sel4_sync::{lock_api::Mutex, MutexSyncOpsWithNotification};
-use xmas_elf::{program, ElfFile};
+use sel4_sync::{MutexSyncOpsWithNotification, lock_api::Mutex};
+use xmas_elf::{ElfFile, program};
 
 /// Thread Notifications implementation
 pub struct ThreadNotification;

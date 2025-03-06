@@ -3,7 +3,7 @@
 
 use alloc::{string::String, vec::Vec};
 use common::services::{fs::FileSerivce, root::find_service, uart::UartService};
-use sel4::{cap::Endpoint, debug_print, debug_println, MessageInfoBuilder};
+use sel4::{MessageInfoBuilder, cap::Endpoint, debug_print, debug_println};
 use spin::Lazy;
 
 extern crate alloc;

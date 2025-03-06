@@ -36,7 +36,7 @@ static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder = FreePagePlaceHolder([0; 
 static PAGE_MAP_LOCK: AtomicBool = AtomicBool::new(false);
 
 /// 物理页表的抽象，提供一系列方法，用于操作物理页。
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct PhysPage {
     cap: Granule,
 }

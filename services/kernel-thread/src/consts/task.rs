@@ -16,3 +16,6 @@ pub const USPACE_BASE: usize = 0x1000;
 
 /// 默认工作目录
 pub const DEF_WORK_DIR: &str = "/";
+
+/// 复制物理页的时候使用的地址
+pub const PAGE_COPY_TEMP: usize = 0x8_0000_0000;

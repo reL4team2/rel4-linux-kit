@@ -6,7 +6,7 @@ use core::{
 };
 use crate_consts::DMA_ADDR_START;
 use spin::Mutex;
-use virtio_drivers::{BufferDirection, Hal, PhysAddr, PAGE_SIZE};
+use virtio_drivers::{BufferDirection, Hal, PAGE_SIZE, PhysAddr};
 
 static DMA_ADDR: AtomicUsize = AtomicUsize::new(DMA_ADDR_START);
 static ADDR_MAP: Mutex<BTreeMap<usize, usize>> = Mutex::new(BTreeMap::new());

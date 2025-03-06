@@ -3,17 +3,17 @@ use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use core::{cmp, ops::Range};
 use crate_consts::GRANULE_SIZE;
 use object::{
-    elf::{PF_R, PF_W, PF_X},
     Object, ObjectSegment, SegmentFlags,
+    elf::{PF_R, PF_W, PF_X},
 };
 use sel4::{
-    cap::Endpoint, init_thread::slot, with_ipc_buffer, with_ipc_buffer_mut, MessageInfoBuilder,
+    MessageInfoBuilder, cap::Endpoint, init_thread::slot, with_ipc_buffer, with_ipc_buffer_mut,
 };
 
 use crate::{
+    ObjectAllocator,
     consts::{IPC_DATA_LEN, REG_LEN},
     page::PhysPage,
-    ObjectAllocator,
 };
 // 计算 elf image 的虚地址空间范围
 pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {

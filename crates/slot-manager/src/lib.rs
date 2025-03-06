@@ -37,8 +37,8 @@
 use core::ops::Range;
 
 use sel4::{
-    init_thread::{slot, Slot},
     AbsoluteCPtr, Cap, CapRights, CapType,
+    init_thread::{Slot, slot},
 };
 
 /// 叶子 slot

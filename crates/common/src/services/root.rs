@@ -2,8 +2,9 @@ use common_macros::ipc_msg;
 use crate_consts::DEFAULT_PARENT_EP;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{
+    CapRights, MessageInfo, MessageInfoBuilder,
     cap::{Endpoint, Null},
-    init_thread, with_ipc_buffer, with_ipc_buffer_mut, CapRights, MessageInfo, MessageInfoBuilder,
+    init_thread, with_ipc_buffer, with_ipc_buffer_mut,
 };
 use slot_manager::LeafSlot;
 

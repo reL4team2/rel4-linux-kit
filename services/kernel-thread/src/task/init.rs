@@ -40,7 +40,8 @@ impl Sel4Task {
         // +------------------+
         let mut stack_ptr = DEF_STACK_TOP;
 
-        let mut page_writer = self
+        let mem = self.mem.lock();
+        let mut page_writer = mem
             .mapped_page
             .get(&(DEF_STACK_TOP - PAGE_SIZE))
             .unwrap()

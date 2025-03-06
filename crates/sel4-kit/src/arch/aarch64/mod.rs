@@ -22,3 +22,14 @@ pub fn shutdown() -> ! {
         .unwrap();
     unreachable!()
 }
+
+/// 执行无参数的系统调用
+///
+/// - `sys` 需要执行的系统调用 id
+pub fn sys_null(sys: isize) {
+    unsafe {
+        core::arch::asm!("svc 0",
+            in("x7") sys,
+        );
+    }
+}

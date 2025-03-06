@@ -2,13 +2,16 @@
 //!
 //!
 
-use alloc::{string::String, sync::Arc};
+use alloc::{boxed::Box, string::String, sync::Arc};
 use common::services::fs::Stat;
 use spin::mutex::Mutex;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{fs::file::File, task::Sel4Task};
+use crate::{
+    fs::{file::File, pipe::create_pipe2},
+    task::Sel4Task,
+};
 
 use super::{SysResult, types::IoVec};
 
@@ -67,8 +70,28 @@ pub(super) fn sys_getdents64(
         task.id, fd, buf_ptr, len
     );
     let file_table = task.file.file_ds.lock();
-    let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
+    let _file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
     todo!("sys_getdents64")
+}
+
+pub(super) fn sys_pipe2(task: &Sel4Task, fdsp: *const u32, flags: u64) -> SysResult {
+    if flags != 0 {
+        panic!("flags != 0 is not supported");
+    }
+    log::debug!("pipe2 {:#p} {:#x}", fdsp, flags);
+    let (rxp, txp) = create_pipe2();
+    let mut file_table = task.file.file_ds.lock();
+
+    let rx = file_table
+        .add(Arc::new(Mutex::new(File::from_raw(Box::new(rxp)))))
+        .map_err(|_| Errno::EMFILE)? as u32;
+    let tx = file_table
+        .add(Arc::new(Mutex::new(File::from_raw(Box::new(txp)))))
+        .map_err(|_| Errno::EMFILE)? as u32;
+
+    task.write_bytes(fdsp as _, [rx, tx].as_bytes());
+
+    Ok(0)
 }
 
 pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize) -> SysResult {

@@ -2,7 +2,7 @@
 //!
 //!
 
-use common::arch::{get_curr_us, US_PER_SEC};
+use common::arch::{US_PER_SEC, get_curr_us};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// 系统信息

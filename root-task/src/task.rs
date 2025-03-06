@@ -6,7 +6,7 @@ use crate_consts::CNODE_RADIX_BITS;
 use object::{File, Object};
 use sel4::{
     CNodeCapData, CapRights,
-    cap::{Endpoint, Granule, Null, PT},
+    cap::{Endpoint, Granule, Null, PT, SmallPage},
     cap_type, debug_println,
     init_thread::slot,
 };
@@ -104,7 +104,7 @@ pub fn build_kernel_thread(
     );
 
     // Configure TCB
-    task.configure(2 * CNODE_RADIX_BITS, ipc_buffer_addr, ipc_buffer_cap.cap())?;
+    task.configure(2 * CNODE_RADIX_BITS, ipc_buffer_addr, ipc_buffer_cap)?;
 
     // Map stack for the task.
     task.map_stack(10);
@@ -147,7 +147,7 @@ pub(crate) fn make_child_vspace<'a>(
     mapped_page: &mut BTreeMap<usize, PhysPage>,
     image: &'a impl Object<'a>,
     asid_pool: sel4::cap::AsidPool,
-) -> (sel4::cap::VSpace, usize, PhysPage) {
+) -> (sel4::cap::VSpace, usize, SmallPage) {
     let inner_cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
     let mut allocator = OBJ_ALLOCATOR.lock();
     let allocator = allocator.deref_mut();
@@ -197,9 +197,8 @@ pub(crate) fn make_child_vspace<'a>(
 
     // make ipc buffer
     let ipc_buffer_addr = image_footprint.end;
-    let ipc_buffer_cap = PhysPage::new(allocator.alloc_page());
+    let ipc_buffer_cap = allocator.alloc_page();
     ipc_buffer_cap
-        .cap()
         .frame_map(
             child_vspace,
             ipc_buffer_addr,
@@ -207,7 +206,7 @@ pub(crate) fn make_child_vspace<'a>(
             sel4::VmAttributes::default(),
         )
         .unwrap();
-    mapped_page.insert(ipc_buffer_addr, ipc_buffer_cap);
+    mapped_page.insert(ipc_buffer_addr, PhysPage::new(ipc_buffer_cap));
 
     (child_vspace, ipc_buffer_addr, ipc_buffer_cap)
 }

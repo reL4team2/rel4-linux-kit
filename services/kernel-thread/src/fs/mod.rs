@@ -4,6 +4,7 @@
 
 pub mod file;
 pub mod ipc_fs;
+pub mod pipe;
 pub mod stdio;
 pub mod vfs;
 

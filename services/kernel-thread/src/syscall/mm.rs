@@ -29,7 +29,7 @@ pub(super) fn sys_mmap(
     assert_eq!(start % PAGE_SIZE, 0);
     debug!("MMAP @ {start:#x} {size:#x} {prot:#x} {flags:#x} {fd:#x} {off:#x}");
     warn!("mmap is just map a regular page RWX");
-    if task.heap >= start + size && start >= DEF_HEAP_ADDR {
+    if task.mem.lock().heap >= start + size && start >= DEF_HEAP_ADDR {
         warn!("Only supported the case that calling brk before");
         return Ok(start);
     }

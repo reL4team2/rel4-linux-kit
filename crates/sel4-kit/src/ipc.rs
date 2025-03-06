@@ -3,8 +3,9 @@
 //! 提供异步的 [Notification] `poll`
 
 use sel4::{
+    MessageInfo,
     cap::{Endpoint, Notification},
-    with_ipc_buffer_mut, MessageInfo,
+    with_ipc_buffer_mut,
 };
 
 /// poll 一个 [Notification]

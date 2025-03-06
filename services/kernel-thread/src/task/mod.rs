@@ -5,17 +5,19 @@ mod auxv;
 mod file;
 mod info;
 mod init;
+mod mem;
 mod signal;
 
-use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+use alloc::sync::Arc;
 use common::page::PhysPage;
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_MASK, PAGE_SIZE};
+use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE};
 use file::TaskFileInfo;
 use info::TaskInfo;
+use mem::TaskMemInfo;
 use object::{File, Object, ObjectSection, ObjectSegment};
 use sel4::{
     CapRights, Error, VmAttributes,
@@ -23,11 +25,9 @@ use sel4::{
 };
 use signal::TaskSignal;
 use slot_manager::LeafSlot;
+use spin::Mutex;
 
-use crate::{
-    consts::task::DEF_HEAP_ADDR,
-    utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace},
-};
+use crate::utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace};
 
 /// Sel4Task 结构体
 pub struct Sel4Task {
@@ -43,12 +43,8 @@ pub struct Sel4Task {
     pub cnode: sel4::cap::CNode,
     /// 地址空间 (Capability)
     pub vspace: sel4::cap::VSpace,
-    /// 已经映射的页表
-    pub mapped_pt: Vec<sel4::cap::PT>,
-    /// 已经映射的页
-    pub mapped_page: BTreeMap<usize, PhysPage>,
-    /// 堆地址，方便进行堆增长
-    pub heap: usize,
+    /// 任务内存映射信息
+    pub mem: Arc<Mutex<TaskMemInfo>>,
     /// 退出状态码
     pub exit: Option<i32>,
     /// 信号信息
@@ -75,14 +71,16 @@ impl Drop for Sel4Task {
         root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
         root_cnode.absolute_cptr(self.vspace).delete().unwrap();
 
-        self.mapped_pt.iter().for_each(|cap| {
-            root_cnode.absolute_cptr(*cap).revoke().unwrap();
-            root_cnode.absolute_cptr(*cap).delete().unwrap();
-        });
-        self.mapped_page.values().for_each(|phys_page| {
-            root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
-            root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
-        });
+        if Arc::strong_count(&self.mem) == 1 {
+            self.mem.lock().mapped_pt.iter().for_each(|cap| {
+                root_cnode.absolute_cptr(*cap).revoke().unwrap();
+                root_cnode.absolute_cptr(*cap).delete().unwrap();
+            });
+            self.mem.lock().mapped_page.values().for_each(|phys_page| {
+                root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
+                root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
+            });
+        }
     }
 }
 
@@ -118,14 +116,32 @@ impl Sel4Task {
             tcb,
             cnode,
             vspace,
-            mapped_pt: Vec::new(),
-            mapped_page: BTreeMap::new(),
-            heap: DEF_HEAP_ADDR,
+            mem: Arc::new(Mutex::new(TaskMemInfo::default())),
             signal: TaskSignal::default(),
             exit: None,
             clear_child_tid: None,
             file: TaskFileInfo::default(),
             info: TaskInfo::default(),
+        })
+    }
+
+    /// 创建一个新的线程
+    pub fn create_thread(&self) -> Result<Self, sel4::Error> {
+        static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+        let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
+        Ok(Sel4Task {
+            pid: self.pid,
+            ppid: self.ppid,
+            id: tid,
+            tcb: self.tcb,
+            cnode: self.cnode,
+            vspace: self.vspace,
+            mem: self.mem.clone(),
+            exit: None,
+            signal: TaskSignal::default(),
+            clear_child_tid: None,
+            file: self.file.clone(),
+            info: self.info.clone(),
         })
     }
 
@@ -135,7 +151,7 @@ impl Sel4Task {
     /// - `size`  需要查找的内存块大小
     pub fn find_free_area(&self, start: usize, size: usize) -> usize {
         let mut last_addr = self.info.task_vm_end.max(start);
-        for vaddr in self.mapped_page.keys() {
+        for vaddr in self.mem.lock().mapped_page.keys() {
             if last_addr + size <= *vaddr {
                 return last_addr;
             }
@@ -159,7 +175,7 @@ impl Sel4Task {
             );
             match res {
                 Ok(_) => {
-                    self.mapped_page.insert(vaddr, page);
+                    self.mem.lock().mapped_page.insert(vaddr, page);
                     return;
                 }
                 Err(Error::FailedLookup) => {
@@ -167,7 +183,7 @@ impl Sel4Task {
                     pt_cap
                         .pt_map(self.vspace, vaddr, VmAttributes::DEFAULT)
                         .unwrap();
-                    self.mapped_pt.push(pt_cap);
+                    self.mem.lock().mapped_pt.push(pt_cap);
                 }
                 _ => res.unwrap(),
             }
@@ -179,7 +195,7 @@ impl Sel4Task {
     /// - `vaddr` 需要取消映射的虚拟地址，需要对齐到 4k 页
     pub fn unmap_page(&mut self, vaddr: usize) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
-        if let Some(page) = self.mapped_page.remove(&vaddr) {
+        if let Some(page) = self.mem.lock().mapped_page.remove(&vaddr) {
             page.cap().frame_unmap().unwrap();
         }
     }
@@ -212,7 +228,12 @@ impl Sel4Task {
 
             while vaddr < vaddr_end {
                 let voffset = vaddr % PAGE_SIZE;
-                let page_cap = match self.mapped_page.remove(&(vaddr / PAGE_SIZE * PAGE_SIZE)) {
+                let page_cap = match self
+                    .mem
+                    .lock()
+                    .mapped_page
+                    .remove(&(vaddr / PAGE_SIZE * PAGE_SIZE))
+                {
                     Some(page_cap) => {
                         page_cap.cap().frame_unmap().unwrap();
                         page_cap
@@ -228,8 +249,6 @@ impl Sel4Task {
                 }
 
                 self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
-                self.mapped_page
-                    .insert(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
 
                 // Calculate offset
                 vaddr += PAGE_SIZE - vaddr % PAGE_SIZE;
@@ -242,102 +261,5 @@ impl Sel4Task {
             .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
             .div_ceil(PAGE_SIZE as _) as usize
             * PAGE_SIZE;
-    }
-
-    /// 进行 brk 操作
-    ///
-    /// - `value` 是需要调整的堆地址
-    ///
-    /// ### 说明
-    /// 如果 `value` 的值为 0，则返回当前的堆地址，否则就将堆扩展到指定的地址
-    pub fn brk(&mut self, value: usize) -> usize {
-        if value == 0 {
-            return self.heap;
-        }
-        for vaddr in (self.heap..value).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(alloc_page());
-            self.map_page(vaddr & PAGE_MASK, page_cap);
-        }
-        self.heap = value;
-        value
-    }
-
-    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取特定地址的指令
-    ///
-    /// - `vaddr` 是需要读取指令的虚拟地址
-    ///
-    /// 说明：
-    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    pub fn read_ins(&self, vaddr: usize) -> Option<u32> {
-        self.mapped_page
-            .get(&(vaddr / PAGE_SIZE * PAGE_SIZE))
-            .map(|page| {
-                let offset = vaddr % PAGE_SIZE;
-                let ins = page.lock()[offset..offset + 4].try_into().unwrap();
-                u32::from_le_bytes(ins)
-            })
-    }
-
-    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取特定地址的数据
-    ///
-    /// - `vaddr` 是需要读取数据的虚拟地址
-    /// - `len`   是需要读取的数据长度
-    ///
-    /// 说明：
-    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    pub fn read_bytes(&self, mut vaddr: usize, len: usize) -> Option<Vec<u8>> {
-        let mut data = Vec::new();
-        let vaddr_end = vaddr + len;
-        while vaddr < vaddr_end {
-            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
-            let offset = vaddr % PAGE_SIZE;
-            let rsize = cmp::min(PAGE_SIZE - offset, vaddr_end - vaddr);
-            data.extend_from_slice(&page.lock()[offset..offset + rsize]);
-            vaddr += rsize;
-        }
-        Some(data)
-    }
-
-    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取 C 语言的字符串信息，直到遇到 \0
-    ///
-    /// - `vaddr` 是需要读取数据的虚拟地址
-    ///
-    /// 说明：
-    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    pub fn read_cstr(&self, mut vaddr: usize) -> Option<Vec<u8>> {
-        let mut data = Vec::new();
-        loop {
-            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
-            let offset = vaddr % PAGE_SIZE;
-            let position = page.lock()[offset..].iter().position(|x| *x == 0);
-
-            if let Some(position) = position {
-                data.extend_from_slice(&page.lock()[offset..offset + position]);
-                break;
-            }
-            data.extend_from_slice(&page.lock()[offset..]);
-            vaddr += PAGE_SIZE - offset;
-        }
-        Some(data)
-    }
-
-    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下写入数据到特定地址
-    ///
-    /// - `vaddr` 是需要写入数据的虚拟地址
-    /// - `data`  是需要写入的数据
-    ///
-    /// 说明：
-    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    ///   TODO: 在写入之前检测所有的地址是否可以写入
-    pub fn write_bytes(&self, mut vaddr: usize, data: &[u8]) -> Option<()> {
-        let vaddr_end = vaddr + data.len();
-        while vaddr < vaddr_end {
-            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
-            let offset = vaddr % PAGE_SIZE;
-            let rsize = cmp::min(PAGE_SIZE - offset, vaddr_end - vaddr);
-            page.lock()[offset..offset + rsize].copy_from_slice(&data[..rsize]);
-            vaddr += rsize;
-        }
-        Some(())
     }
 }

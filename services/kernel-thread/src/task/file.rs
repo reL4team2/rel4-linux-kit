@@ -4,6 +4,7 @@ use spin::Mutex;
 
 use crate::fs::file::File;
 
+#[derive(Clone)]
 pub struct TaskFileInfo {
     /// 工作目录
     pub work_dir: String,

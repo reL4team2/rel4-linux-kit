@@ -1,7 +1,7 @@
 use alloc::{string::String, vec::Vec};
 
 /// 任务的信息
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct TaskInfo {
     /// 参数列表
     pub args: Vec<String>,

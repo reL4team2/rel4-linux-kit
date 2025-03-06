@@ -7,6 +7,7 @@
 use common::page::PhysPage;
 use crate_consts::{DEFAULT_SERVE_EP, PAGE_SIZE};
 use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
+use syscalls::Errno;
 
 use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_page};
 
@@ -19,8 +20,7 @@ use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_pag
 /// - 异常指令为 0xdeadbeef 时，说明是系统调用
 /// - 异常指令为其他值时，说明是用户异常
 pub fn handle_user_exception(tid: u64, exception: UserException) {
-    let mut task_map = TASK_MAP.lock();
-    let task = task_map.get_mut(&tid).unwrap();
+    let mut task = TASK_MAP.lock().remove(&tid).unwrap();
 
     let ins = task.read_ins(exception.inner().get_FaultIP() as _);
 
@@ -30,16 +30,23 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb
             .tcb_read_all_registers(true)
             .expect("can't read task context");
-        let result = handle_syscall(task, &mut user_ctx);
+        let result = handle_syscall(&mut task, &mut user_ctx);
         debug!("\t SySCall Ret: {:x?}", result);
         let ret_v = match result {
             Ok(v) => v,
             Err(e) => -(e.into_raw() as isize) as usize,
         };
-        *user_ctx.gpr_mut(0) = ret_v as _;
-        *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
+        if result != Err(Errno::EAGAIN) {
+            *user_ctx.gpr_mut(0) = ret_v as _;
+            *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
+        }
 
         if task.exit.is_some() {
+            if task.ppid != 0 {
+                TASK_MAP.lock().insert(task.id as _, task);
+            } else {
+                log::warn!("the orphan task will be destory");
+            }
             return;
         }
 
@@ -51,6 +58,7 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
         task.check_signal(&mut user_ctx);
         // 恢复任务运行状态
         task.tcb.tcb_resume().unwrap();
+        TASK_MAP.lock().insert(task.id as _, task);
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
     }
