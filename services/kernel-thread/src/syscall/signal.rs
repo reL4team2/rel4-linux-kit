@@ -9,8 +9,8 @@ use zerocopy::{FromBytes, IntoBytes};
 use crate::task::Sel4Task;
 
 use super::{
-    types::signal::{SigAction, SigMaskHow, SigProcMask},
     SysResult,
+    types::signal::{SigAction, SigMaskHow, SigProcMask},
 };
 
 pub(super) fn sys_sigprocmask(
@@ -46,7 +46,7 @@ pub(super) fn sys_sigaction(
     if !act.is_null() {
         let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
         let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
-        task.signal.actions[sig] = Some(sigact.clone());
+        task.signal.actions[sig] = Some(*sigact);
     }
     Ok(0)
 }
@@ -60,5 +60,5 @@ pub(super) fn sys_kill(task: &mut Sel4Task, pid: usize, sig: usize) -> SysResult
 pub(super) fn sys_sigreturn(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
     let saved_ctx = task.signal.save_context.pop().unwrap();
     *ctx = saved_ctx;
-    Ok(ctx.c_param(0).clone() as _)
+    Ok(*ctx.c_param(0) as _)
 }

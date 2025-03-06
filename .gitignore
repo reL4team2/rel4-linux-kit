@@ -4,6 +4,7 @@
 /patch/
 /.env/
 /testcases/
+/mount/
 
 # 忽略 log 文件和临时文件
 *.log

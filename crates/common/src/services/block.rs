@@ -1,12 +1,15 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
-use sel4::{cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut, MessageInfo, MessageInfoBuilder};
+use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
 use slot_manager::LeafSlot;
+
+use crate::consts::REG_LEN;
 
 #[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum BlockEvent {
     AllocPage,
     Ping,
+    Capacity,
     ReadBlock,
     WriteBlock,
     ReadBlocks,
@@ -75,8 +78,28 @@ impl BlockService {
         Ok(())
     }
 
-    pub fn write_block(&self, _block_id: usize, _buffer: &[u8]) -> Result<(), ()> {
-        unimplemented!("write_blocks")
+    pub fn write_block(&self, block_id: usize, buffer: &[u8]) -> Result<(), ()> {
+        assert_eq!(buffer.len(), 0x200);
+        with_ipc_buffer_mut(|ipc_buf| {
+            ipc_buf.msg_regs_mut()[0] = block_id as _;
+            ipc_buf.msg_bytes_mut()[REG_LEN..REG_LEN + buffer.len()].copy_from_slice(buffer);
+        });
+        let msg = BlockEvent::WriteBlock
+            .msg()
+            .length(1 + buffer.len() / REG_LEN)
+            .build();
+        // Send and Wait a message
+        let ret = self.call(msg)?;
+        assert_eq!(ret.label(), 0);
+        Ok(())
+    }
+
+    pub fn capacity(&self) -> Result<u64, ()> {
+        let msg = BlockEvent::Capacity.msg().length(1).build();
+        let ret = self.call(msg)?;
+        assert_eq!(ret.label(), 0);
+
+        Ok(with_ipc_buffer(|ib| ib.msg_regs()[0]))
     }
 }
 

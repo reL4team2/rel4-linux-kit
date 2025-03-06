@@ -7,8 +7,8 @@ use zerocopy::{FromBytes, IntoBytes};
 use crate::task::Sel4Task;
 
 use super::{
-    types::sys::{TimeVal, UtsName},
     SysResult,
+    types::sys::{TimeVal, UtsName},
 };
 
 pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UtsName) -> SysResult {
@@ -24,7 +24,7 @@ pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UtsName) -> SysResult {
     utsname.release[..release.len()].copy_from_slice(release);
     utsname.version[..version.len()].copy_from_slice(version);
     utsname.machine[..machine.len()].copy_from_slice(machine);
-    task.write_bytes(buf as _, &utsname.as_bytes()).unwrap();
+    task.write_bytes(buf as _, utsname.as_bytes()).unwrap();
     Ok(0)
 }
 

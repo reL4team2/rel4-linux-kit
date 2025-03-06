@@ -4,6 +4,7 @@
 
 pub mod file;
 pub mod ipc_fs;
+pub mod stdio;
 pub mod vfs;
 
 use alloc::{string::String, sync::Arc, vec::Vec};
@@ -33,6 +34,6 @@ pub(super) fn init() {
 /// 最大匹配原则，优先匹配最深的路径
 /// FIXME: 使用 path 匹配不同的路径
 #[inline]
-pub(self) fn get_mounted(_path: &str) -> (String, Arc<dyn FileSystem>) {
+fn get_mounted(_path: &str) -> (String, Arc<dyn FileSystem>) {
     MOUNTED_FS.lock()[0].clone()
 }

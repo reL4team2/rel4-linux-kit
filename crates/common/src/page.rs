@@ -15,7 +15,7 @@ use core::{
 
 use alloc::slice;
 use crate_consts::{DEFAULT_PAGE_PLACEHOLDER, GRANULE_SIZE, PAGE_SIZE};
-use sel4::{cap::Granule, init_thread::slot, CapRights, VmAttributes};
+use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use slot_manager::LeafSlot;
 
 /// 空白页占位结构，保证数据 4k 对齐
@@ -90,7 +90,7 @@ pub struct PhysPageLocker<'a> {
     data: &'a mut [u8],
 }
 
-impl<'a> PhysPageLocker<'a> {
+impl PhysPageLocker<'_> {
     /// 在 `offset` 处写入一个 usize 数据
     ///
     /// - `offset` 需要写入的位置，如果大于页大小，就会取余数
@@ -127,7 +127,7 @@ impl<'a> PhysPageLocker<'a> {
     }
 }
 
-impl<'a> Deref for PhysPageLocker<'a> {
+impl Deref for PhysPageLocker<'_> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -135,13 +135,13 @@ impl<'a> Deref for PhysPageLocker<'a> {
     }
 }
 
-impl<'a> DerefMut for PhysPageLocker<'a> {
+impl DerefMut for PhysPageLocker<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.data
     }
 }
 
-impl<'a> Drop for PhysPageLocker<'a> {
+impl Drop for PhysPageLocker<'_> {
     fn drop(&mut self) {
         self.cap.frame_unmap().unwrap();
         LeafSlot::from(self.cap).delete().unwrap();

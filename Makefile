@@ -48,7 +48,19 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
-run: buld_img
+disk_img:
+	dd if=/dev/zero of=mount.img bs=4M count=64
+	sync
+	# mkfs.ext4 -b 4096 mount.img
+	# mkfs.vfat -F 32 mount.img
+	mkfs.ext4 -F -O ^metadata_csum_seed mount.img
+	sudo mount mount.img mount
+	sudo cp -r testcases/* mount/
+	sync
+	sudo umount mount
+	sync
+
+run: buld_img disk_img
 	$(qemu_cmd)
 	@rm $(image)
 
@@ -57,5 +69,8 @@ busybox:
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+cloc:
+	cloc . --not-match-d=.env --not-match-d=target/
 
 .PHONY: run clean

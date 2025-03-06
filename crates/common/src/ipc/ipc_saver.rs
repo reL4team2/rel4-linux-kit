@@ -4,7 +4,7 @@
 //! 需要处理的 IPC
 
 use alloc::{collections::vec_deque::VecDeque, vec::Vec};
-use sel4::{cap::Endpoint, MessageInfo};
+use sel4::{MessageInfo, cap::Endpoint};
 use slot_manager::LeafSlot;
 
 use crate::slot::alloc_slot;
@@ -54,5 +54,11 @@ impl IpcSaver {
     /// 获取当前等待队列的长度
     pub fn queue_len(&self) -> usize {
         self.queue.len()
+    }
+}
+
+impl Default for IpcSaver {
+    fn default() -> Self {
+        Self::new()
     }
 }

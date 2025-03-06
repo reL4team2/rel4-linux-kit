@@ -7,7 +7,7 @@ extern crate alloc;
 use common::services::{block::BlockService, fs::FileEvent, root::find_service};
 use crate_consts::DEFAULT_SERVE_EP;
 use cursor::DiskCursor;
-use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
+use sel4::{MessageInfoBuilder, debug_print, debug_println, with_ipc_buffer_mut};
 
 mod cursor;
 
@@ -19,10 +19,8 @@ fn main() -> ! {
 
     log::info!("Booting...");
 
-    // FIXME: Using Common Consts instead of fixed constants
-
-    let recv_slot = find_service("block-thread").expect("Can't find blk-thread service");
-    let blk_ep = BlockService::from(recv_slot);
+    let blk_ep =
+        BlockService::from(find_service("block-thread").expect("Can't find blk-thread service"));
 
     blk_ep.ping().expect("Can't ping blk-thread service");
 
@@ -32,11 +30,7 @@ fn main() -> ! {
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = DEFAULT_SERVE_EP.recv(());
-        let msg_label = match FileEvent::try_from(message.label()) {
-            Ok(label) => label,
-
-            Err(_) => continue,
-        };
+        let msg_label = FileEvent::from(message.label());
         log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
         match msg_label {
             FileEvent::Ping => {

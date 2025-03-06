@@ -6,7 +6,7 @@
 //! 为宏内核支持引入多余的部件。
 use common::page::PhysPage;
 use crate_consts::{DEFAULT_SERVE_EP, PAGE_SIZE};
-use sel4::{with_ipc_buffer, Fault, UserException, VmFault};
+use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
 
 use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_page};
 
@@ -38,6 +38,10 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
         };
         *user_ctx.gpr_mut(0) = ret_v as _;
         *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
+
+        if task.exit.is_some() {
+            return;
+        }
 
         // 写入返回值信息
         task.tcb
@@ -71,11 +75,20 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
 /// 循环等待并处理异常
 pub fn waiting_and_handle() -> ! {
     loop {
+        {
+            let mut task_map = TASK_MAP.lock();
+            let next_task = task_map.values_mut().find(|x| x.exit.is_none());
+            if let Some(next_task) = next_task {
+                next_task.tcb.tcb_resume().unwrap();
+            } else {
+                panic!("system run done");
+            }
+        }
         let (message, tid) = DEFAULT_SERVE_EP.recv(());
 
         assert!(message.label() < 8, "Unexpected IPC Message");
 
-        let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
+        let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
         match fault {
             Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
             Fault::UserException(ue) => handle_user_exception(tid, ue),

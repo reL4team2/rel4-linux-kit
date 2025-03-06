@@ -2,17 +2,24 @@
 //!
 //! 可以直接使用，或者作为 FileDescriptor 使用
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
+use common::services::fs::Stat;
 use syscalls::Errno;
 
 use crate::syscall::SysResult;
 
-use super::vfs::FileInterface;
+use super::vfs::{FileInterface, FileResult};
 
 /// 文件结构
 pub struct File {
     /// 文件内部结构
     inner: Box<dyn FileInterface>,
+    /// 文件路径
+    path: String,
     /// 文件读取或写入的偏移
     off: usize,
 }
@@ -27,6 +34,7 @@ impl File {
         let (_, ori_file) = super::get_mounted(path);
         Ok(Self {
             inner: ori_file.open(path, flags)?,
+            path: path.to_string(),
             off: 0,
         })
     }
@@ -74,7 +82,40 @@ impl File {
     ///
     /// - `name` 创建文件夹使用的名称
     #[inline]
-    pub fn mkdir(&mut self, name: &str) -> SysResult {
-        self.inner.mkdir(name).map(|_| 0)
+    pub fn mkdir(path: &str) -> SysResult {
+        let (_, fs) = super::get_mounted(path);
+        fs.mkdir(path).map(|_| 0)
+    }
+
+    /// 获取文件路径
+    #[inline]
+    pub fn path(&self) -> String {
+        self.path.clone()
+    }
+
+    /// 从 [FileInterface] 创建 [File]
+    pub const fn from_raw(inner: Box<dyn FileInterface>) -> Self {
+        Self {
+            inner,
+            off: 0,
+            path: String::new(),
+        }
+    }
+
+    /// 获取当前文件的状态信息
+    #[inline]
+    pub fn stat(&self) -> FileResult<Stat> {
+        self.inner.stat()
+    }
+
+    /// 删除一个文件
+    ///
+    /// - `path` 需要删除的文件的路径
+    #[inline]
+    pub fn unlink(path: &str) -> FileResult<()> {
+        let (_, ori_file) = super::get_mounted(path);
+        ori_file.unlink(path)
     }
 }
+
+unsafe impl Send for File {}

@@ -6,16 +6,16 @@ extern crate alloc;
 use alloc::collections::vec_deque::VecDeque;
 use arm_pl011::pl011::Pl011Uart;
 use common::{
+    VIRTIO_MMIO_VIRT_ADDR,
     ipc::ipc_saver::IpcSaver,
     services::{
         root::{register_irq, register_notify},
         uart::UartEvent,
     },
     slot::alloc_slot,
-    VIRTIO_MMIO_VIRT_ADDR,
 };
 use crate_consts::{DEFAULT_SERVE_EP, SERIAL_DEVICE_IRQ};
-use sel4::{with_ipc_buffer_mut, MessageInfoBuilder};
+use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_kit::ipc::{poll_endpoint, poll_notification};
 
 sel4_runtime::entry_point!(main);
@@ -47,14 +47,14 @@ fn main() -> ! {
     let mut ipc_saver = IpcSaver::new();
 
     loop {
-        if let Some(_) = poll_notification(ntfn) {
+        if poll_notification(ntfn).is_some() {
             let char = pl011.getchar().unwrap();
             pl011.ack_interrupts();
             irq_handler.irq_handler_ack().unwrap();
 
             if ipc_saver.queue_len() > 0 {
                 with_ipc_buffer_mut(|ib| {
-                    ib.msg_bytes_mut()[0] = char as u8;
+                    ib.msg_bytes_mut()[0] = char;
                     ipc_saver.reply_one(rev_msg.length(1).build()).unwrap();
                 });
             } else {
@@ -75,7 +75,7 @@ fn main() -> ! {
                 }
                 UartEvent::GetChar => match buffer.pop_front() {
                     Some(c) => with_ipc_buffer_mut(|ib| {
-                        ib.msg_bytes_mut()[0] = c as u8;
+                        ib.msg_bytes_mut()[0] = c;
                         sel4::reply(ib, rev_msg.length(1).build());
                     }),
                     None => ipc_saver.save_caller().unwrap(),

@@ -11,7 +11,7 @@ pub fn get_curr_ns() -> usize {
     cnt * 1_000_000_000 / freq
 }
 
-pub const US_PER_SEC: usize = 1000_000;
+pub const US_PER_SEC: usize = 1_000_000;
 
 /// 获取当前的时间(us)
 #[inline]
@@ -22,11 +22,11 @@ pub fn get_curr_us() -> usize {
 /// 获取当前的时间(ms)
 #[inline]
 pub fn get_curr_ms() -> usize {
-    get_curr_ns() / 1000_000
+    get_curr_ns() / 1_000_000
 }
 
 /// 获取当前的时间 (sec)
 #[inline]
 pub fn get_curr_sec() -> usize {
-    get_curr_ns() / 1000_000_000
+    get_curr_ns() / 1_000_000_000
 }

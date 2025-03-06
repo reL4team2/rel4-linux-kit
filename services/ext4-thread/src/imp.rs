@@ -1,3 +1,5 @@
+use core::cmp;
+
 use alloc::vec::Vec;
 use ext4_rs::BlockDevice;
 
@@ -47,7 +49,32 @@ impl BlockDevice for Ext4Disk {
         buf
     }
 
-    fn write_offset(&self, _offset: usize, _data: &[u8]) {
-        todo!()
+    fn write_offset(&self, offset: usize, data: &[u8]) {
+        let mut buf = [0; TRANS_LIMIT];
+
+        let mut wlen = 0;
+
+        loop {
+            let block_id = offset / TRANS_LIMIT;
+            let offset_in_block = offset % TRANS_LIMIT;
+            log::warn!("wlen: {}  all data: {}", wlen, data.len());
+
+            if offset_in_block == 0 && data.len() - wlen > TRANS_LIMIT {
+                BLK_SERVICE
+                    .write_block(block_id, &data[wlen..wlen + TRANS_LIMIT])
+                    .unwrap();
+                wlen += TRANS_LIMIT;
+            } else {
+                BLK_SERVICE.read_block(block_id, &mut buf).unwrap();
+                let this_wlen = cmp::min(data.len() - wlen, TRANS_LIMIT - offset_in_block);
+                buf[offset_in_block..offset_in_block + this_wlen]
+                    .copy_from_slice(&data[wlen..wlen + this_wlen]);
+                BLK_SERVICE.write_block(block_id, &buf).unwrap();
+                wlen += this_wlen;
+            }
+            if wlen >= data.len() {
+                break;
+            }
+        }
     }
 }

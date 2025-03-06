@@ -1,14 +1,14 @@
 use crate::{GRANULE_SIZE, OBJ_ALLOCATOR};
-use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+use alloc::collections::btree_map::BTreeMap;
 use common::{footprint, map_image, map_intermediate_translation_tables, page::PhysPage};
 use core::ops::DerefMut;
 use crate_consts::CNODE_RADIX_BITS;
 use object::{File, Object};
 use sel4::{
+    CNodeCapData, CapRights,
     cap::{Endpoint, Granule, Null, PT},
     cap_type, debug_println,
     init_thread::slot,
-    CNodeCapData, CapRights,
 };
 use slot_manager::LeafSlot;
 use task_helper::{Sel4TaskHelper, TaskHelperTrait};
@@ -75,6 +75,7 @@ pub fn rebuild_cspace() {
 }
 
 pub fn build_kernel_thread(
+    id: usize,
     fault_ep: (Endpoint, u64),
     thread_name: &str,
     file_data: &[u8],
@@ -117,8 +118,9 @@ pub fn build_kernel_thread(
     task.with_context(&ElfFile::new(file_data).expect("parse elf error"));
 
     debug_println!(
-        "[RootTask] Spawn {}. CNode: {:?}, VSpace: {:?}",
+        "[RootTask] Spawn {} {}. CNode: {:?}, VSpace: {:?}",
         thread_name,
+        id,
         task.cnode,
         task.vspace
     );
@@ -126,7 +128,7 @@ pub fn build_kernel_thread(
     Ok(task)
 }
 
-pub fn run_tasks(tasks: &Vec<Sel4Task>) {
+pub fn run_tasks(tasks: &[Sel4Task]) {
     tasks.iter().for_each(Sel4Task::run)
 }
 

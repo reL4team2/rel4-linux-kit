@@ -16,14 +16,14 @@ use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
 use page::PhysPage;
 use sel4::{
+    Cap, CapRights, Fault, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
     cap::{LargePage, Untyped},
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer, with_ipc_buffer_mut, Cap, CapRights, Fault, IpcBuffer, MessageInfoBuilder,
-    ObjectBlueprintArm, UntypedDesc,
+    with_ipc_buffer, with_ipc_buffer_mut,
 };
-use sel4_root_task::{root_task, Never};
+use sel4_root_task::{Never, root_task};
 use services::root::RootEvent;
 use slot_manager::LeafSlot;
 use spin::Mutex;
@@ -69,8 +69,9 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
     // 开始创建任务
     let mut tasks: Vec<Sel4Task> = Vec::new();
-    for task in TASK_FILES.iter() {
+    for (id, task) in TASK_FILES.iter().enumerate() {
         tasks.push(build_kernel_thread(
+            id,
             (fault_ep, tasks.len() as _),
             task.name,
             task.file,
@@ -171,8 +172,7 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
                             .mint_to(swap_slot, CapRights::all(), badge as _)
                             .unwrap();
                         ib.caps_or_badges_mut()[0] = swap_slot.raw() as _;
-                        let msg = rev_msg.extra_caps(1).build();
-                        msg
+                        rev_msg.extra_caps(1).build()
                     }
                     // 发生错误时返回值 不为 -1
                     None => rev_msg.label(1).build(),
@@ -212,8 +212,8 @@ fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer
                 if label >= 8 {
                     log::error!("Unknown root messaage label: {label}")
                 }
-                let fault = with_ipc_buffer(|buffer| Fault::new(&buffer, &message));
-                log::error!("[RootTask] Received Fault: {:?}", fault);
+                let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+                log::error!("[RootTask] Received {} Fault: {:#x?}", badge, fault);
                 sel4_kit::arch::shutdown();
                 // match fault {
                 //     _ => {}

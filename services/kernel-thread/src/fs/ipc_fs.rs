@@ -3,7 +3,10 @@
 //!
 
 use alloc::{boxed::Box, string::String};
-use common::services::{fs::FileSerivce, root::find_service};
+use common::services::{
+    fs::{FileSerivce, Stat},
+    root::find_service,
+};
 use syscalls::Errno;
 
 use super::vfs::{FileInterface, FileMetaData, FileResult, FileSystem};
@@ -45,14 +48,22 @@ impl FileSystem for IPCFileSystem {
         todo!()
     }
 
-    fn open(&self, path: &str, _flags: u64) -> FileResult<Box<dyn FileInterface>> {
-        let (inode, fsize) = self.fs.open(path).unwrap();
+    fn open(&self, path: &str, flags: u64) -> FileResult<Box<dyn FileInterface>> {
+        let (inode, fsize) = self.fs.open(path, flags)?;
         Ok(Box::new(IPCFile {
             path: String::from(path),
             inode: inode as _,
             fsize: fsize as _,
             fs: self.fs.clone(),
         }))
+    }
+
+    fn mkdir(&self, path: &str) -> FileResult<()> {
+        self.fs.mkdir(path).map_err(|_| Errno::EIO)
+    }
+
+    fn unlink(&self, path: &str) -> FileResult<()> {
+        self.fs.unlink(path).map_err(|_| Errno::EBADF)
     }
 }
 
@@ -63,17 +74,25 @@ impl FileInterface for IPCFile {
             .map_err(|_| Errno::EIO)
     }
 
-    fn writeat(&mut self, _off: usize, _data: &[u8]) -> FileResult<usize> {
-        todo!()
-    }
-
-    fn mkdir(&mut self, _name: &str) -> FileResult<()> {
-        todo!()
+    fn writeat(&mut self, off: usize, data: &[u8]) -> FileResult<usize> {
+        self.fs
+            .write_at(self.inode, off, data)
+            .map_err(|_| Errno::EIO)
     }
 
     fn metadata(&self) -> FileResult<super::vfs::FileMetaData> {
         Ok(FileMetaData {
             size: self.fsize as _,
         })
+    }
+
+    fn stat(&self) -> FileResult<Stat> {
+        self.fs.stat(self.inode as _).map_err(|_| Errno::EBADFD)
+    }
+}
+
+impl Drop for IPCFile {
+    fn drop(&mut self) {
+        self.fs.close(self.inode as _).unwrap();
     }
 }

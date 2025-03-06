@@ -1,7 +1,7 @@
 [package]
 name = "ext4-thread"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
@@ -16,4 +16,4 @@ slot-manager = { workspace = true }
 hashbrown = { workspace = true }
 
 # ext4 依赖
-ext4_rs = { git = "https://github.com/yuoo655/ext4_rs.git", rev = "04286c7" }
+ext4_rs = "1.3.0"

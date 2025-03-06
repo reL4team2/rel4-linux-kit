@@ -16,10 +16,10 @@ use core::{
 use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_MASK, PAGE_SIZE};
 use file::TaskFileInfo;
 use info::TaskInfo;
-use object::{Object, ObjectSegment};
+use object::{File, Object, ObjectSection, ObjectSegment};
 use sel4::{
-    init_thread::{self, slot},
     CapRights, Error, VmAttributes,
+    init_thread::{self, slot},
 };
 use signal::TaskSignal;
 use slot_manager::LeafSlot;
@@ -135,7 +135,7 @@ impl Sel4Task {
     /// - `size`  需要查找的内存块大小
     pub fn find_free_area(&self, start: usize, size: usize) -> usize {
         let mut last_addr = self.info.task_vm_end.max(start);
-        for (vaddr, _page) in &self.mapped_page {
+        for vaddr in self.mapped_page.keys() {
             if last_addr + size <= *vaddr {
                 return last_addr;
             }
@@ -203,8 +203,8 @@ impl Sel4Task {
     /// 加载一个 elf 文件到当前任务的地址空间
     ///
     /// - `elf_data` 是 elf 文件的数据
-    pub fn load_elf(&mut self, elf_data: &[u8]) {
-        let file = object::File::parse(elf_data).expect("can't load elf file");
+    pub fn load_elf(&mut self, file: &File<'_>) {
+        // 加载程序到内存
         file.segments().for_each(|seg| {
             let mut data = seg.data().unwrap();
             let mut vaddr = seg.address() as usize;
@@ -221,7 +221,7 @@ impl Sel4Task {
                 };
 
                 // 将 elf 中特定段的内容写入对应的物理页中
-                if data.len() > 0 {
+                if !data.is_empty() {
                     let rsize = cmp::min(PAGE_SIZE - vaddr % PAGE_SIZE, data.len());
                     page_cap.lock()[voffset..voffset + rsize].copy_from_slice(&data[..rsize]);
                     data = &data[rsize..];
@@ -235,6 +235,13 @@ impl Sel4Task {
                 vaddr += PAGE_SIZE - vaddr % PAGE_SIZE;
             }
         });
+
+        // 配置程序最大的位置
+        self.info.task_vm_end = file
+            .sections()
+            .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
+            .div_ceil(PAGE_SIZE as _) as usize
+            * PAGE_SIZE;
     }
 
     /// 进行 brk 操作
@@ -291,6 +298,29 @@ impl Sel4Task {
         Some(data)
     }
 
+    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取 C 语言的字符串信息，直到遇到 \0
+    ///
+    /// - `vaddr` 是需要读取数据的虚拟地址
+    ///
+    /// 说明：
+    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
+    pub fn read_cstr(&self, mut vaddr: usize) -> Option<Vec<u8>> {
+        let mut data = Vec::new();
+        loop {
+            let page = self.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
+            let offset = vaddr % PAGE_SIZE;
+            let position = page.lock()[offset..].iter().position(|x| *x == 0);
+
+            if let Some(position) = position {
+                data.extend_from_slice(&page.lock()[offset..offset + position]);
+                break;
+            }
+            data.extend_from_slice(&page.lock()[offset..]);
+            vaddr += PAGE_SIZE - offset;
+        }
+        Some(data)
+    }
+
     /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下写入数据到特定地址
     ///
     /// - `vaddr` 是需要写入数据的虚拟地址
@@ -298,7 +328,7 @@ impl Sel4Task {
     ///
     /// 说明：
     /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
-    /// TODO: 在写入之前检测所有的地址是否可以写入
+    ///   TODO: 在写入之前检测所有的地址是否可以写入
     pub fn write_bytes(&self, mut vaddr: usize, data: &[u8]) -> Option<()> {
         let vaddr_end = vaddr + data.len();
         while vaddr < vaddr_end {

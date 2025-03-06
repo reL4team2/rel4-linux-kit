@@ -1,5 +1,5 @@
 use alloc::string::{String, ToString};
-use sel4::{with_ipc_buffer_mut, IpcBuffer, MessageInfo};
+use sel4::{IpcBuffer, MessageInfo, with_ipc_buffer_mut};
 
 use crate::consts::REG_LEN;
 
@@ -50,7 +50,7 @@ impl IpcBufferRW for &str {
         let len = ib.msg_regs()[*off] as usize;
         let slice = &ib.msg_bytes()[(*off + 1) * REG_LEN..(*off + 1) * REG_LEN + len];
         let s = core::str::from_utf8(slice).unwrap();
-        *off += 1 + (len + REG_LEN - 1) / REG_LEN;
+        *off += 1 + len.div_ceil(REG_LEN);
         s.to_string()
     }
 
@@ -60,7 +60,7 @@ impl IpcBufferRW for &str {
         ib.msg_regs_mut()[*off] = len as _;
         ib.msg_bytes_mut()[(*off + 1) * REG_LEN..(*off + 1) * REG_LEN + len]
             .copy_from_slice(self.as_bytes());
-        *off += 1 + (len + REG_LEN - 1) / REG_LEN;
+        *off += 1 + len.div_ceil(REG_LEN);
     }
 }
 

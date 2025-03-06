@@ -67,6 +67,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
+name = "bitmaps"
+version = "3.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1d084b0137aaa901caf9f1e8b21daa6aa24d41cd806e111335541eff9683bd6"
+
+[[package]]
 name = "blk-thread"
 version = "0.1.0"
 dependencies = [
@@ -135,6 +141,8 @@ dependencies = [
  "sel4",
  "slot-manager",
  "spin",
+ "syscalls",
+ "zerocopy 0.8.20",
 ]
 
 [[package]]
@@ -218,8 +226,9 @@ dependencies = [
 
 [[package]]
 name = "ext4_rs"
-version = "1.0.0"
-source = "git+https://github.com/yuoo655/ext4_rs.git?rev=04286c7#04286c79da45154a7e007a7ef73bcbe5cad073e1"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a83d7f9145afbeda7c7a589c390caab037073aaf76f3a2f8f287b8773cdc632"
 dependencies = [
  "bitflags",
  "log",
@@ -253,6 +262,15 @@ source = "git+https://github.com/rafalh/rust-fatfs.git#c4bb76929eb115f228720631b
 dependencies = [
  "bitflags",
  "log",
+]
+
+[[package]]
+name = "flatten_objects"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a44a8ee8095192119780ad867a02cfb86c44f3cebd16b7161d84e1fb8e26482"
+dependencies = [
+ "bitmaps",
 ]
 
 [[package]]
@@ -333,6 +351,7 @@ dependencies = [
  "bitflags",
  "common",
  "crate-consts",
+ "flatten_objects",
  "include_bytes_aligned",
  "log",
  "memory_addr",
@@ -388,6 +407,32 @@ name = "log"
 version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+
+[[package]]
+name = "lwext4-thread"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "crate-consts",
+ "flatten_objects",
+ "hashbrown",
+ "log",
+ "lwext4_rust",
+ "sel4",
+ "sel4-logging",
+ "sel4-runtime",
+ "slot-manager",
+ "spin",
+ "syscalls",
+]
+
+[[package]]
+name = "lwext4_rust"
+version = "0.2.0"
+source = "git+https://github.com/Azure-stars/lwext4_rust.git#62519fadd8eece40cd6bbe9bb11943610cfcb908"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "memchr"
@@ -1074,9 +1119,9 @@ checksum = "e91b56cd4cadaeb79bbf1a5645f6b4f8dc5bde8834ad5894a8db35fda9efa1fe"
 
 [[package]]
 name = "unwinding"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "637d511437df708cee34bdec7ba2f1548d256b7acf3ff20e0a1c559f9bf3a987"
+checksum = "51f06a05848f650946acef3bf525fe96612226b61f74ae23ffa4e98bfbb8ab3c"
 dependencies = [
  "gimli",
 ]

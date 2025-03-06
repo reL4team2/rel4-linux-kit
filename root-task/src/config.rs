@@ -51,17 +51,21 @@ pub const TASK_FILES: &[KernelServices] = &[
         file: "uart-thread.elf",
         mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
     },
-    service! {
-        name: "fs-thread",
-        file: "ext4-thread.elf",
-    },
+    // service! {
+    //     name: "fs-thread",
+    //     file: "ext4-thread.elf",
+    // },
     service! {
         name: "kernel-thread",
         file: "kernel-thread.elf"
     },
+    service! {
+        name: "fs-thread",
+        file: "lwext4-thread.elf",
+    },
     // service! {
     //     name: "fs-thread",
-    //     file: include_service!("fat-thread.elf"),
+    //     file: "fat-thread.elf",
     // },
     // service! {
     //     name: "simple-cli",

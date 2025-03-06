@@ -19,7 +19,7 @@ pub struct TaskSignal {
 impl Default for TaskSignal {
     fn default() -> Self {
         Self {
-            mask: SigProcMask::new(),
+            mask: SigProcMask::default(),
             actions: [None; 65],
             pedings: VecDeque::new(),
             save_context: Vec::new(),

@@ -1,19 +1,22 @@
 [package]
-name = "simple-cli"
+name = "lwext4-thread"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
-sel4-ctors-dtors = { workspace = true }
-sel4-panicking = { workspace = true, features = ["alloc"] }
-sel4-panicking-env = { workspace = true }
 sel4-logging = { workspace = true }
-sel4-dlmalloc = { workspace = true }
-sel4-sync = { workspace = true }
 sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
 crate-consts = { workspace = true }
 slot-manager = { workspace = true }
+
+hashbrown = { workspace = true }
+
+# ext4 依赖
+lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false }
+
+flatten_objects = "0.2.2"
+syscalls = { workspace = true }
