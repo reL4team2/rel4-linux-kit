@@ -6,7 +6,6 @@
 
 #### 安装 musl gcc 工具链
 
-
 > 请确保您已安装 `aarch64-linux-musl-cross`,如果没有安装可以先执行
 
 ```shell
@@ -19,14 +18,14 @@ export PATH=$PATH:`pwd`/aarch64-linux-musl-cross/bin
 
 ```shell
 mkdir -p .env
-wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-01-08/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
 ```
 
 #### 下载并构建测例
 
 ```shell
 wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
-
+mkdir -p testcases
 ./tools/modify-multi.py .env/aarch64 testcases
 ```
 
@@ -34,4 +33,7 @@ wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/rel
 
 ```shell
 make run
+
+## if you want to get a clean output.
+make run LOG=error
 ```
