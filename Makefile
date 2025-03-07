@@ -49,6 +49,7 @@ qemu_cmd := \
 		-kernel $(image)
 
 disk_img:
+	mkdir -p mount
 	dd if=/dev/zero of=mount.img bs=4M count=64
 	sync
 	# mkfs.ext4 -b 4096 mount.img

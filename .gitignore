@@ -5,13 +5,14 @@
 /.env/
 /testcases/
 /mount/
-
+/aarch64-linux-musl-cross/
 
 # 忽略 log 文件和临时文件
 *.log
 **.pcap
 mount.img
 __pycache__
+/aarch64-linux-musl-cross.tgz
 
 # 忽略测试文件
 /busybox
