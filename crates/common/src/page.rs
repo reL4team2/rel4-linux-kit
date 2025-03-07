@@ -125,6 +125,14 @@ impl PhysPageLocker<'_> {
         offset %= PAGE_SIZE;
         self.data[offset] = data;
     }
+
+    /// 在 `offset` 处读取一个 usize 数据
+    ///
+    /// - `offset` 需要读取的位置，如果大于页大小，就会取余数
+    pub fn read_usize(&self, mut offset: usize) -> usize {
+        offset %= PAGE_SIZE;
+        unsafe { (self.data.as_ptr().add(offset) as *const usize).read() }
+    }
 }
 
 impl Deref for PhysPageLocker<'_> {

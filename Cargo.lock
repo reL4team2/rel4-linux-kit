@@ -364,6 +364,7 @@ dependencies = [
  "sel4-logging",
  "sel4-root-task",
  "sel4-runtime",
+ "sel4-runtime-common",
  "sel4-stack",
  "slot-manager",
  "spin",
@@ -769,6 +770,7 @@ dependencies = [
 name = "sel4-kit"
 version = "0.1.0"
 dependencies = [
+ "log",
  "sel4",
 ]
 

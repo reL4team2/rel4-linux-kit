@@ -57,6 +57,8 @@ pub struct Sel4Task {
     pub clear_child_tid: Option<usize>,
     /// 任务相关文件信息。
     pub file: TaskFileInfo,
+    /// 定时器
+    pub timer: usize,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
     pub info: TaskInfo,
 }
@@ -84,10 +86,11 @@ impl Drop for Sel4Task {
     }
 }
 
+static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
 impl Sel4Task {
     /// 创建一个新的任务
     pub fn new() -> Result<Self, sel4::Error> {
-        static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         let vspace = alloc_vspace();
         let tcb = alloc_tcb();
@@ -122,12 +125,12 @@ impl Sel4Task {
             clear_child_tid: None,
             file: TaskFileInfo::default(),
             info: TaskInfo::default(),
+            timer: 0,
         })
     }
 
     /// 创建一个新的线程
     pub fn create_thread(&self) -> Result<Self, sel4::Error> {
-        static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         Ok(Sel4Task {
             pid: self.pid,
@@ -142,6 +145,7 @@ impl Sel4Task {
             clear_child_tid: None,
             file: self.file.clone(),
             info: self.info.clone(),
+            timer: 0,
         })
     }
 
@@ -261,5 +265,13 @@ impl Sel4Task {
             .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
             .div_ceil(PAGE_SIZE as _) as usize
             * PAGE_SIZE;
+    }
+
+    /// 设置一个新的定时器 (ns)
+    ///
+    /// - `new_ns` 唤醒时间
+    #[inline]
+    pub fn set_timer(&mut self, new_ns: usize) {
+        self.timer = new_ns;
     }
 }

@@ -2,14 +2,21 @@
 //!
 //!
 
-use common::page::PhysPage;
+use alloc::{string::String, vec::Vec};
+use common::{arch::get_curr_ns, page::PhysPage};
 use crate_consts::PAGE_SIZE;
+use object::Object;
 use sel4::UserContext;
+use syscalls::Errno;
 use zerocopy::IntoBytes;
 
 use crate::{
     child_test::TASK_MAP,
-    consts::task::PAGE_COPY_TEMP,
+    consts::{
+        fd::{DEF_OPEN_FLAGS, FD_CUR_DIR},
+        task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
+    },
+    fs::file::File,
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
 };
@@ -143,4 +150,65 @@ pub(super) fn sys_clone(
     TASK_MAP.lock().insert(new_task_id as _, new_task);
 
     Ok(new_task_id)
+}
+
+pub(super) fn sys_execve(
+    task: &mut Sel4Task,
+    ctx: &mut UserContext,
+    path: *const u8,
+    args: *const *const u8,
+    envp: *const *const u8,
+) -> SysResult {
+    let path = task.deal_path(FD_CUR_DIR, path)?;
+    let argsp = if !args.is_null() {
+        task.read_vec(args as _).ok_or(Errno::EINVAL)?
+    } else {
+        Vec::new()
+    };
+    let envpp = if !envp.is_null() {
+        task.read_vec(envp as _).ok_or(Errno::EINVAL)?
+    } else {
+        Vec::new()
+    };
+    let args = argsp
+        .iter()
+        .map(|x| task.read_cstr(*x).ok_or(Errno::EINVAL))
+        .map(|x| x.map(|x| String::from_utf8(x).unwrap()))
+        .collect::<Result<Vec<_>, Errno>>()?;
+    let _envp = envpp
+        .iter()
+        .map(|x| task.read_cstr(*x).ok_or(Errno::EINVAL))
+        .map(|x| x.map(|x| String::from_utf8(x).unwrap()))
+        .collect::<Result<Vec<_>, Errno>>()?;
+
+    let mut file = File::open(&path, DEF_OPEN_FLAGS)?;
+
+    task.clear_maped();
+
+    let file_data = file.read_all().unwrap();
+    let file = object::File::parse(file_data.as_slice()).expect("can't load elf file");
+    task.load_elf(&file);
+
+    // 填充初始化信息
+    task.info.entry = file.entry() as _;
+    task.info.args = args;
+
+    // 映射栈内存并填充初始化信息
+    task.map_region(DEF_STACK_TOP - 16 * PAGE_SIZE, DEF_STACK_TOP);
+    let sp_ptr = task.init_stack();
+
+    // 写入线程的寄存器信息
+    {
+        *ctx = sel4::UserContext::default();
+        *ctx.pc_mut() = (task.info.entry - 4) as _;
+        *ctx.sp_mut() = sp_ptr as _;
+    }
+
+    Ok(0)
+}
+
+#[inline]
+pub(super) fn sys_sched_yield(task: &mut Sel4Task) -> SysResult {
+    task.timer = get_curr_ns() + 10;
+    Ok(0)
 }

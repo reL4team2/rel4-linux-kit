@@ -2,6 +2,7 @@
 //!
 //!
 
+use common::{arch::get_curr_ns, services::fs::TimeSpec};
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::task::Sel4Task;
@@ -35,5 +36,29 @@ pub(super) fn sys_gettimeofday(
 ) -> SysResult {
     let tv_now = TimeVal::now();
     task.write_bytes(tv as _, tv_now.as_bytes());
+    Ok(0)
+}
+
+pub(super) fn sys_nanosleep(
+    task: &mut Sel4Task,
+    req_ptr: *const TimeSpec,
+    rem_ptr: *mut TimeSpec,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_nanosleep @ req_ptr: {:p}, rem_ptr: {:p}",
+        task.id, req_ptr, rem_ptr
+    );
+    let ns = get_curr_ns();
+    let nano_bytes = task
+        .read_bytes(req_ptr as _, size_of::<TimeSpec>())
+        .unwrap();
+    let req = TimeSpec::ref_from_bytes(&nano_bytes).unwrap();
+    debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
+
+    task.timer = ns + req.sec * 1_000_000_000 + req.nsec;
+
+    if !rem_ptr.is_null() {
+        task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
+    }
     Ok(0)
 }

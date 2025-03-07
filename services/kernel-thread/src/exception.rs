@@ -4,7 +4,7 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::page::PhysPage;
+use common::{arch::get_curr_ns, page::PhysPage};
 use crate_consts::{DEFAULT_SERVE_EP, PAGE_SIZE};
 use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
 use syscalls::Errno;
@@ -54,10 +54,15 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
         task.tcb
             .tcb_write_all_registers(false, &mut user_ctx)
             .unwrap();
-        // 检查信号
-        task.check_signal(&mut user_ctx);
-        // 恢复任务运行状态
-        task.tcb.tcb_resume().unwrap();
+
+        // 如果没有定时器
+        if task.timer == 0 {
+            // 检查信号
+            task.check_signal(&mut user_ctx);
+            // 恢复任务运行状态
+            task.tcb.tcb_resume().unwrap();
+        }
+
         TASK_MAP.lock().insert(task.id as _, task);
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
@@ -87,13 +92,15 @@ pub fn waiting_and_handle() -> ! {
             let mut task_map = TASK_MAP.lock();
             let next_task = task_map.values_mut().find(|x| x.exit.is_none());
             if let Some(next_task) = next_task {
-                next_task.tcb.tcb_resume().unwrap();
+                if next_task.timer == 0 {
+                    next_task.tcb.tcb_resume().unwrap();
+                }
             } else {
-                panic!("system run done");
+                sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
+                common::services::root::shutdown().unwrap();
             }
         }
         let (message, tid) = DEFAULT_SERVE_EP.recv(());
-
         assert!(message.label() < 8, "Unexpected IPC Message");
 
         let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
@@ -105,6 +112,23 @@ pub fn waiting_and_handle() -> ! {
             }
         }
 
+        sel4::r#yield();
+    }
+}
+
+/// 创建一个辅助任务来处理时钟等任务
+pub fn aux_thread() -> ! {
+    sel4::debug_println!("boot aux thread");
+    loop {
+        let mut task_map = TASK_MAP.lock();
+        let curr_ns = get_curr_ns();
+        task_map.values_mut().for_each(|task| {
+            if task.exit.is_none() && curr_ns > task.timer {
+                task.timer = 0;
+                task.tcb.tcb_resume().unwrap();
+            }
+        });
+        drop(task_map);
         sel4::r#yield();
     }
 }

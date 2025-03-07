@@ -116,6 +116,30 @@ impl Sel4Task {
         Some(data)
     }
 
+    /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下读取 C 语言的字符串信息，直到遇到 \0
+    ///
+    /// - `vaddr` 是需要读取数据的虚拟地址
+    ///
+    /// 说明：
+    /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
+    pub fn read_vec(&self, mut vaddr: usize) -> Option<Vec<usize>> {
+        let mut data = Vec::new();
+        let mem_info = self.mem.lock();
+        loop {
+            let page = mem_info.mapped_page.get(&(vaddr / PAGE_SIZE * PAGE_SIZE))?;
+            let mut offset = vaddr % PAGE_SIZE;
+            while offset < PAGE_SIZE {
+                let value = page.lock().read_usize(offset);
+                if value == 0 {
+                    return Some(data);
+                }
+                offset += size_of::<usize>();
+                data.push(value);
+            }
+            vaddr += PAGE_SIZE - offset;
+        }
+    }
+
     /// 在当前任务 [Sel4Task] 的地址空间 [Sel4Task::vspace] 下写入数据到特定地址
     ///
     /// - `vaddr` 是需要写入数据的虚拟地址
@@ -135,5 +159,17 @@ impl Sel4Task {
             vaddr += rsize;
         }
         Some(())
+    }
+
+    /// 清理映射的内存
+    ///
+    /// 如果有已经映射的内存, 清理
+    pub fn clear_maped(&self) {
+        self.mem
+            .lock()
+            .mapped_page
+            .values()
+            .for_each(|x| x.cap().frame_unmap().unwrap());
+        self.mem.lock().mapped_page.clear();
     }
 }

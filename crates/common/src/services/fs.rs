@@ -5,7 +5,7 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
 use slot_manager::LeafSlot;
 use syscalls::Errno;
-use zerocopy::{Immutable, IntoBytes};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 use crate::{
     consts::{IPC_DATA_LEN, REG_LEN, SEND_BULK_LABEL},
@@ -84,7 +84,7 @@ bitflags::bitflags! {
 }
 
 #[repr(C)]
-#[derive(Default, Clone, Copy, Debug, IntoBytes, Immutable)]
+#[derive(Default, Clone, Copy, Debug, IntoBytes, Immutable, FromBytes, KnownLayout)]
 pub struct TimeSpec {
     pub sec: usize,  // 秒
     pub nsec: usize, // 纳秒, 范围在0~999999999

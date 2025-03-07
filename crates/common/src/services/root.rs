@@ -15,11 +15,11 @@ use crate::{services::IpcBufferRW, slot::alloc_slot};
 #[repr(u64)]
 pub enum RootEvent {
     Ping = 0x200,
+    AllocNotification,
+    FindService,
     RegisterIRQ,
     Shutdown,
     TranslateAddr,
-    FindService,
-    AllocNotification,
     #[num_enum(catch_all)]
     Unknown(u64),
 }

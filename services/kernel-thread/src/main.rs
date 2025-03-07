@@ -37,7 +37,8 @@ macro_rules! test_task {
 
 // macro_rules! test_task {
 //     ($file:expr) => {{
-//         let mut file = fs::file::File::open(concat!("/", $file), 2).unwrap();
+//         let mut file =
+//             fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
 //         child_test::add_test_child(&file.read_all().unwrap(), &[$file]).unwrap();
 //     }};
 // }
@@ -75,6 +76,7 @@ fn main() -> ! {
     test_task!("close");
     test_task!("dup");
     test_task!("dup2");
+    test_task!("execve");
     test_task!("fork");
     test_task!("exit");
     test_task!("fstat");
@@ -87,12 +89,17 @@ fn main() -> ! {
     test_task!("openat");
     test_task!("pipe");
     test_task!("read");
+    test_task!("sleep");
     test_task!("test_echo");
     test_task!("uname");
     test_task!("unlink");
     test_task!("wait");
     test_task!("waitpid");
     test_task!("write");
+    test_task!("yield");
+
+    // 启动辅助线程
+    child_test::create_aux_thread();
 
     // 循环处理异常(含伪 syscall)
     exception::waiting_and_handle();

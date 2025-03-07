@@ -15,8 +15,6 @@ use crate::{
 
 use super::{SysResult, types::IoVec};
 
-const FD_CUR_DIR: isize = -100;
-
 pub(super) fn sys_chdir(task: &mut Sel4Task, buf: *const u8) -> SysResult {
     let path_bytes = task.read_cstr(buf as _).unwrap();
     let path = String::from_utf8(path_bytes).unwrap();
@@ -107,34 +105,7 @@ pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize
 }
 
 pub(super) fn sys_unlinkat(task: &Sel4Task, fd: isize, path: *const u8, _flags: u64) -> SysResult {
-    let path_bytes = task.read_cstr(path as _).unwrap();
-    let mut path = String::from_utf8(path_bytes).unwrap();
-
-    let dir_path = if fd == FD_CUR_DIR {
-        task.file.work_dir.clone()
-    } else if fd > 0 {
-        let dir = task
-            .file
-            .file_ds
-            .lock()
-            .get(fd as _)
-            .ok_or(Errno::EBADF)?
-            .clone();
-
-        dir.lock().path() + "/"
-    } else {
-        panic!("not supported")
-    };
-
-    if let Some(strip_path) = path.strip_prefix("./") {
-        path = dir_path + strip_path;
-    } else if path.starts_with("..") {
-        panic!("not supported")
-    } else if path == "." || path.starts_with("/") {
-        path = dir_path;
-    } else {
-        path = dir_path + &path;
-    }
+    let path = task.deal_path(fd, path)?;
     File::unlink(&path).unwrap();
 
     Ok(0)
@@ -177,19 +148,8 @@ pub(super) fn sys_mkdirat(
     path: *const u8,
     mode: usize,
 ) -> SysResult {
-    log::debug!(
-        "mkdir at dirfd: {}  path: {:p}  mode: {:#x}",
-        dirfd,
-        path,
-        mode
-    );
-    let path_bytes = task.read_cstr(path as _).unwrap();
-    let mut path = String::from_utf8(path_bytes).unwrap();
-
-    if dirfd == FD_CUR_DIR {
-        path = task.file.work_dir.clone() + &path;
-    }
-
+    log::warn!("mkdirat @ mod {} is not supported", mode);
+    let path = task.deal_path(dirfd, path)?;
     File::mkdir(&path)
 }
 
@@ -200,35 +160,7 @@ pub(super) fn sys_openat(
     flags: u64,
     _mode: usize,
 ) -> SysResult {
-    let path_bytes = task.read_cstr(path as _).unwrap();
-    let mut path = String::from_utf8(path_bytes).unwrap();
-    log::debug!("open path: {}", path);
-
-    let dir_path = if fd == FD_CUR_DIR {
-        task.file.work_dir.clone()
-    } else if fd > 0 {
-        let dir = task
-            .file
-            .file_ds
-            .lock()
-            .get(fd as _)
-            .ok_or(Errno::EBADF)?
-            .clone();
-
-        dir.lock().path() + "/"
-    } else {
-        panic!("not supported")
-    };
-
-    if let Some(strip_path) = path.strip_prefix("./") {
-        path = dir_path + strip_path;
-    } else if path.starts_with("..") {
-        panic!("not supported")
-    } else if path == "." || path.starts_with("/") {
-        path = dir_path;
-    } else {
-        path = dir_path + &path;
-    }
+    let path = task.deal_path(fd, path)?;
 
     let file = File::open(&path, flags)?;
     match task.file.file_ds.lock().add(Arc::new(Mutex::new(file))) {
