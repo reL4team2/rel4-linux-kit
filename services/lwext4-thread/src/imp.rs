@@ -100,7 +100,7 @@ impl Ext4Disk {
             BLK_SERVICE
                 .read_block(self.block_id, &mut buf[..BLOCK_SIZE])
                 .unwrap();
-            self.block_id += 1;
+            self.set_position(self.position() + BLOCK_SIZE as u64);
             BLOCK_SIZE
         } else {
             // partial block
@@ -114,11 +114,7 @@ impl Ext4Disk {
             BLK_SERVICE.read_block(self.block_id, &mut data).unwrap();
             buf[..count].copy_from_slice(&data[start..start + count]);
 
-            self.offset += count;
-            if self.offset >= BLOCK_SIZE {
-                self.block_id += 1;
-                self.offset -= BLOCK_SIZE;
-            }
+            self.set_position(self.position() + count as u64);
             count
         };
         Ok(read_size)
@@ -130,7 +126,7 @@ impl Ext4Disk {
             BLK_SERVICE
                 .write_block(self.block_id, &buf[..BLOCK_SIZE])
                 .unwrap();
-            self.block_id += 1;
+            self.set_position(self.position() + BLOCK_SIZE as u64);
             BLOCK_SIZE
         } else {
             // partial block
@@ -141,12 +137,7 @@ impl Ext4Disk {
             BLK_SERVICE.read_block(self.block_id, &mut data).unwrap();
             data[start..start + count].copy_from_slice(&buf[..count]);
             BLK_SERVICE.write_block(self.block_id, &data).unwrap();
-
-            self.offset += count;
-            if self.offset >= BLOCK_SIZE {
-                self.block_id += 1;
-                self.offset -= BLOCK_SIZE;
-            }
+            self.set_position(self.position() + count as u64);
             count
         };
         Ok(write_size)

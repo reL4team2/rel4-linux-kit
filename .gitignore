@@ -6,10 +6,12 @@
 /testcases/
 /mount/
 
+
 # 忽略 log 文件和临时文件
 *.log
 **.pcap
 mount.img
+__pycache__
 
 # 忽略测试文件
 /busybox

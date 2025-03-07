@@ -75,15 +75,24 @@ impl FileInterface for IPCFile {
     }
 
     fn writeat(&mut self, off: usize, data: &[u8]) -> FileResult<usize> {
-        self.fs
+        let rsize = self
+            .fs
             .write_at(self.inode, off, data)
-            .map_err(|_| Errno::EIO)
+            .map_err(|_| Errno::EIO)?;
+        if off + rsize > self.fsize as _ {
+            self.fsize = (off + rsize) as _;
+        }
+        Ok(rsize)
     }
 
     fn metadata(&self) -> FileResult<super::vfs::FileMetaData> {
         Ok(FileMetaData {
             size: self.fsize as _,
         })
+    }
+
+    fn getdents64(&self, offset: usize, buffer: &mut [u8]) -> FileResult<(usize, usize)> {
+        self.fs.getdents64(self.inode, offset, buffer)
     }
 
     fn stat(&self) -> FileResult<Stat> {

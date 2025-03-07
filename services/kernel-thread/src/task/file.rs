@@ -54,8 +54,10 @@ impl Sel4Task {
             Ok(dir_path + strip_path)
         } else if path.starts_with("..") {
             panic!("not supported")
-        } else if path == "." || path.starts_with("/") {
+        } else if path == "." {
             Ok(dir_path)
+        } else if path.starts_with("/") {
+            Ok(path)
         } else {
             Ok(dir_path + &path)
         }

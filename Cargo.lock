@@ -352,6 +352,7 @@ dependencies = [
  "common",
  "crate-consts",
  "flatten_objects",
+ "hashbrown",
  "include_bytes_aligned",
  "log",
  "memory_addr",

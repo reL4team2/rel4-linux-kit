@@ -5,14 +5,15 @@ extern crate alloc;
 
 mod imp;
 
-use core::mem::ManuallyDrop;
+use core::{iter::zip, mem::ManuallyDrop};
 
+use alloc::string::String;
 use common::{
     consts::{IPC_DATA_LEN, REG_LEN},
     services::{
         IpcBufferRW,
         block::BlockService,
-        fs::{FileEvent, Stat, StatMode},
+        fs::{Dirent64, FileEvent, Stat, StatMode},
         root::find_service,
     },
 };
@@ -34,7 +35,7 @@ const STORE_CAP: usize = 500;
 static BLK_SERVICE: Lazy<BlockService> = Lazy::new(|| find_service("block-thread").unwrap().into());
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Warn);
+    common::init_log!(log::LevelFilter::Error);
     common::init_recv_slot();
 
     log::info!("Booting...");
@@ -66,7 +67,6 @@ fn handle_events(
             let mut offset = 0;
             let flags = u32::read_buffer(ib, &mut offset);
             let path = <&str>::read_buffer(ib, &mut offset);
-
             let mut ext4_file = Ext4File::new("/", lwext4_rust::InodeTypes::EXT4_DE_DIR);
             if flags & O_CREAT == O_CREAT {
                 if flags & O_DIRECTORY != O_DIRECTORY {
@@ -115,11 +115,9 @@ fn handle_events(
             let data_len = ib.msg_regs()[2] as usize;
             if let Some(ext4_file) = stores.get_mut(inode) {
                 ext4_file.file_seek(offset, 0).unwrap();
-                let rlen = ext4_file
-                    .file_write(&ib.msg_bytes()[3 * REG_LEN..3 * REG_LEN + data_len])
-                    .unwrap();
-
-                ib.msg_regs_mut()[0] = rlen as _;
+                let data = ib.msg_bytes()[3 * REG_LEN..3 * REG_LEN + data_len].to_vec();
+                let wlen = ext4_file.file_write(&data).unwrap();
+                ib.msg_regs_mut()[0] = wlen as _;
                 sel4::reply(ib, rev_msg.length(1).build());
             } else {
                 panic!("Can't Find File")
@@ -174,6 +172,43 @@ fn handle_events(
                 sel4::reply(ib, rev_msg.length(len).build());
             } else {
                 panic!("Can't Find File")
+            }
+        }
+        FileEvent::GetDents64 => {
+            let inode = ib.msg_regs()[0] as usize;
+            let mut offset = ib.msg_regs()[1] as usize;
+            let rlen = (ib.msg_regs()[2] as usize).min(IPC_DATA_LEN - 2 * REG_LEN);
+            if let Some(ext4_file) = stores.get_mut(inode) {
+                let entries = ext4_file.lwext4_dir_entries().unwrap();
+                let mut real_rlen: usize = 0;
+                let mut base_ptr = ib.msg_bytes_mut().as_mut_ptr() as usize + 2 * REG_LEN;
+                for (name, ty) in zip(entries.0, entries.1).skip(offset) {
+                    log::debug!("{:?} , {:?}", String::from_utf8(name.clone()), ty);
+                    let len = name.len() + size_of::<Dirent64>();
+                    let aligned = (len + 7) / 8 * 8;
+                    if real_rlen + aligned > rlen {
+                        break;
+                    }
+                    let dirent = unsafe { (base_ptr as *mut Dirent64).as_mut() }.unwrap();
+                    dirent.ftype = 0;
+                    dirent.reclen = aligned as _;
+                    dirent.ino = 0;
+                    dirent.off = (real_rlen + aligned) as _;
+                    unsafe {
+                        dirent
+                            .name
+                            .as_mut_ptr()
+                            .copy_from(name.as_ptr(), name.len());
+                    }
+                    real_rlen += aligned;
+                    base_ptr += aligned;
+                    offset += 1;
+                }
+                ib.msg_regs_mut()[0] = real_rlen as _;
+                ib.msg_regs_mut()[1] = offset as _;
+                sel4::reply(ib, rev_msg.length(2 + real_rlen.div_ceil(REG_LEN)).build());
+            } else {
+                panic!("Can't find folder")
             }
         }
         _ => {

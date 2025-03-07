@@ -9,7 +9,7 @@ use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
-    fs::{file::File, pipe::create_pipe2},
+    fs::{file::File, get_mounted, mount, pipe::create_pipe2, umount},
     task::Sel4Task,
 };
 
@@ -68,8 +68,11 @@ pub(super) fn sys_getdents64(
         task.id, fd, buf_ptr, len
     );
     let file_table = task.file.file_ds.lock();
-    let _file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
-    todo!("sys_getdents64")
+    let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
+    let mut buffer = vec![0u8; len];
+    let rlen = file.lock().getdents64(&mut buffer)?;
+    task.write_bytes(buf_ptr as _, &buffer[..rlen]);
+    Ok(rlen)
 }
 
 pub(super) fn sys_pipe2(task: &Sel4Task, fdsp: *const u32, flags: u64) -> SysResult {
@@ -167,4 +170,37 @@ pub(super) fn sys_openat(
         Ok(idx) => Ok(idx),
         Err(_) => todo!(),
     }
+}
+
+pub(super) fn sys_mount(
+    task: &Sel4Task,
+    source: *const u8,
+    target: *const u8,
+    fstype: *const u8,
+    flags: u64,
+    data: usize,
+) -> SysResult {
+    let source = String::from_utf8(task.read_cstr(source as _).ok_or(Errno::EINVAL)?).unwrap();
+    let target = String::from_utf8(task.read_cstr(target as _).ok_or(Errno::EINVAL)?).unwrap();
+    let fstype = String::from_utf8(task.read_cstr(fstype as _).ok_or(Errno::EINVAL)?).unwrap();
+    log::debug!(
+        "mount @ {} -> {} {} {:#x} {:#x}",
+        source,
+        target,
+        fstype,
+        flags,
+        data
+    );
+    if source == "/dev/vda2" {
+        mount(&target, get_mounted("/").1).unwrap();
+    } else {
+        return Err(Errno::EPERM);
+    }
+    Ok(0)
+}
+
+pub(super) fn sys_umount(task: &Sel4Task, target: *const u8, flags: u64) -> SysResult {
+    let target = String::from_utf8(task.read_cstr(target as _).ok_or(Errno::EINVAL)?).unwrap();
+    log::debug!("umount @ {} {:#x}", target, flags);
+    umount(&target).map(|_| 0)
 }

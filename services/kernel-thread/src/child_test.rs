@@ -77,7 +77,7 @@ pub fn create_aux_thread() {
     utils::page::map_page_self(0x6_0000_0000, ipc_cap);
     utils::page::map_page_self(0x6_0000_1000, sp_cap);
     let mut ctx = UserContext::default();
-    *ctx.pc_mut() = test_func as u64;
+    *ctx.pc_mut() = test_func as usize as u64;
     *ctx.sp_mut() = 0x6_0000_1000;
     *ctx.c_param_mut(0) = 0x6_0000_0000;
     create_thread(tcb, ctx, 0x6_0000_0000, ipc_cap).unwrap();

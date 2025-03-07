@@ -1,6 +1,7 @@
 //! SysCall 使用到的类型定义
 //!
 //!
+pub mod mm;
 pub mod signal;
 pub mod sys;
 pub mod thread;

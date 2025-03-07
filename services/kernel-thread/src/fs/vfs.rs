@@ -41,6 +41,16 @@ pub trait FileInterface: Sync + Send {
 
     /// 获取当前文件的状态信息
     fn stat(&self) -> FileResult<Stat>;
+
+    /// 获取当前文件目录信息
+    ///
+    /// - `offset` 当前已经读取的文件数
+    /// - `buffer` 读取后填入的缓冲区
+    ///
+    /// TIPS: 返回值的两个数，第一个是填入缓冲区的字符数，第二个是已经读取的文件数
+    fn getdents64(&self, _offset: usize, _buffer: &mut [u8]) -> FileResult<(usize, usize)> {
+        Err(Errno::ENOTDIR)
+    }
 }
 
 /// 文件系统相关接口

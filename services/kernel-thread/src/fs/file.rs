@@ -31,9 +31,10 @@ impl File {
     /// - `flags` 打开文件的时候使用的标志位
     pub fn open(path: &str, flags: u64) -> Result<Self, Errno> {
         // FIXME: 打开的时候丢弃 mount 的路径
-        let (_, ori_file) = super::get_mounted(path);
+        let (fpath, ori_file) = super::get_mounted(path);
+        let open_path = "/".to_string() + path.strip_prefix(&fpath).unwrap();
         Ok(Self {
-            inner: ori_file.open(path, flags)?,
+            inner: ori_file.open(&open_path, flags)?,
             path: path.to_string(),
             off: 0,
         })
@@ -83,8 +84,9 @@ impl File {
     /// - `name` 创建文件夹使用的名称
     #[inline]
     pub fn mkdir(path: &str) -> SysResult {
-        let (_, fs) = super::get_mounted(path);
-        fs.mkdir(path).map(|_| 0)
+        let (fpath, fs) = super::get_mounted(path);
+        let open_path = "/".to_string() + path.strip_prefix(&fpath).unwrap();
+        fs.mkdir(&open_path).map(|_| 0)
     }
 
     /// 获取文件路径
@@ -113,8 +115,36 @@ impl File {
     /// - `path` 需要删除的文件的路径
     #[inline]
     pub fn unlink(path: &str) -> FileResult<()> {
-        let (_, ori_file) = super::get_mounted(path);
-        ori_file.unlink(path)
+        let (fpath, ori_file) = super::get_mounted(path);
+        let open_path = "/".to_string() + path.strip_prefix(&fpath).unwrap();
+        ori_file.unlink(&open_path)
+    }
+
+    /// 设置偏移并返回设置后的值
+    ///
+    /// - `offset`  需要设置的偏移，偏移根据 `which` 的值有所不同
+    /// - `which`
+    ///   - `0` offset 为相对文件起始的位置
+    ///   - `1` offset 为相对当前位置的
+    ///   - `2` offset 为相对结束位置
+    pub fn seek(&mut self, offset: isize, which: usize) -> usize {
+        let new_off = match which {
+            0 => offset as usize,
+            1 => self.off + offset as usize,
+            2 => self.inner.metadata().unwrap().size + offset as usize,
+            _ => unreachable!(),
+        };
+        self.off = new_off;
+        new_off
+    }
+
+    /// 读取文件的节点
+    ///
+    /// - `buffer` 读取文件后填入的缓冲区
+    pub fn getdents64(&mut self, buffer: &mut [u8]) -> FileResult<usize> {
+        let (rlen, offset) = self.inner.getdents64(self.off, buffer)?;
+        self.off = offset;
+        Ok(rlen)
     }
 }
 

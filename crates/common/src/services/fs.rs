@@ -17,6 +17,7 @@ use crate::{
 pub enum FileEvent {
     Ping,
     ReadDir,
+    GetDents64,
     Open,
     ReadAt,
     WriteAt,
@@ -81,6 +82,15 @@ bitflags::bitflags! {
         /// Execute/search permission, others.
         const OTHER_EXEC = 0o1;
     }
+}
+
+#[repr(C)]
+pub struct Dirent64 {
+    pub ino: u64,      // 索引结点号
+    pub off: i64,      // 到下一个dirent的偏移
+    pub reclen: u16,   // 当前dirent的长度
+    pub ftype: u8,     // 文件类型
+    pub name: [u8; 0], // 文件名
 }
 
 #[repr(C)]
@@ -265,6 +275,31 @@ impl FileSerivce {
             unsafe { ptr.as_ref().unwrap().clone() }
         });
         Ok(stat)
+    }
+
+    pub fn getdents64(
+        &self,
+        inode: u64,
+        offset: usize,
+        buf: &mut [u8],
+    ) -> Result<(usize, usize), Errno> {
+        with_ipc_buffer_mut(|ib| {
+            inode.write_buffer(ib, &mut 0);
+            offset.write_buffer(ib, &mut 1);
+            buf.len().write_buffer(ib, &mut 2);
+        });
+        let msg = MessageInfoBuilder::default()
+            .label(FileEvent::GetDents64.into())
+            .length(3)
+            .build();
+        let ret = self.call(msg);
+        assert_eq!(ret.label(), 0);
+        with_ipc_buffer(|ib| {
+            let rlen = ib.msg_regs()[0] as usize;
+            let num = ib.msg_regs()[1] as usize;
+            buf[..rlen].copy_from_slice(&ib.msg_bytes()[2 * REG_LEN..2 * REG_LEN + rlen]);
+            Ok((rlen, num))
+        })
     }
 }
 

@@ -26,20 +26,20 @@ pub mod utils;
 sel4_runtime::entry_point!(main);
 
 macro_rules! test_task {
-    ($file:expr) => {{
+    ($file:expr $(,$args:expr)*) => {{
         const CHILD_ELF: &[u8] = include_bytes_aligned::include_bytes_aligned!(
             16,
             concat!("../../../testcases/", $file)
         );
-        child_test::add_test_child(CHILD_ELF, &[$file]).unwrap();
+        child_test::add_test_child(CHILD_ELF, &[$file $(,$args)*]).unwrap();
     }};
 }
 
 // macro_rules! test_task {
-//     ($file:expr) => {{
+// ($file:expr $(,$args:expr)*) => {{
 //         let mut file =
 //             fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
-//         child_test::add_test_child(&file.read_all().unwrap(), &[$file]).unwrap();
+//         child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
 //     }};
 // }
 
@@ -59,17 +59,6 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
-    // // TODO: Make elf file path dynamically available.
-    // const CHILD_ELF: &[u8] =
-    //     include_bytes_aligned::include_bytes_aligned!(16, "../../../testcases/test_echo");
-    // const CHILD_ELF1: &[u8] =
-    //     include_bytes_aligned::include_bytes_aligned!(16, "../../../testcases/unlink");
-
-    // // 添加测试子任务
-    // child_test::add_test_child(CHILD_ELF, &["busybox", "sh"]).unwrap();
-    // child_test::add_test_child(CHILD_ELF1, &["busybox", "sh"]).unwrap();
-
-    // test_task!("getdents");
     test_task!("brk");
     test_task!("chdir");
     test_task!("clone");
@@ -77,20 +66,25 @@ fn main() -> ! {
     test_task!("dup");
     test_task!("dup2");
     test_task!("execve");
-    test_task!("fork");
     test_task!("exit");
+    test_task!("fork");
     test_task!("fstat");
     test_task!("getcwd");
+    test_task!("getdents");
     test_task!("getpid");
     test_task!("getppid");
     test_task!("gettimeofday");
     test_task!("mkdir_");
+    test_task!("mmap");
+    test_task!("mount");
+    test_task!("munmap");
     test_task!("open");
     test_task!("openat");
     test_task!("pipe");
     test_task!("read");
     test_task!("sleep");
     test_task!("test_echo");
+    test_task!("umount");
     test_task!("uname");
     test_task!("unlink");
     test_task!("wait");
