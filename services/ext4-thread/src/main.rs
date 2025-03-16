@@ -36,8 +36,6 @@ fn main() -> ! {
     let disk = Arc::new(Ext4Disk);
     let ext4 = Ext4::open(disk);
 
-    ext4.ext4_dir_mk("/test_chdir").unwrap();
-
     let rev_msg = MessageInfoBuilder::default();
     loop {
         let (message, _) = DEFAULT_SERVE_EP.recv(());

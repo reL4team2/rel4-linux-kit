@@ -365,7 +365,6 @@ dependencies = [
  "sel4-logging",
  "sel4-root-task",
  "sel4-runtime",
- "sel4-runtime-common",
  "sel4-stack",
  "slot-manager",
  "spin",

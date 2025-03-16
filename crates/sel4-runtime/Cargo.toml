@@ -11,11 +11,7 @@ sel4-panicking-env = { workspace = true }
 sel4-logging = { workspace = true }
 sel4-dlmalloc = { workspace = true }
 sel4-sync = { workspace = true }
-sel4-runtime-common = { workspace = true, features = [
-  "start",
-  "tls",
-  "unwinding",
-] }
+sel4-runtime-common = { workspace = true, features = ["tls", "start"] }
 
 crate-consts = { workspace = true }
 common = { workspace = true }

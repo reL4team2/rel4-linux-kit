@@ -5,26 +5,25 @@
 extern crate alloc;
 
 mod config;
+mod handler;
 mod task;
 mod utils;
 
 use alloc::vec::Vec;
-use common::services::IpcBufferRW;
 use common::*;
 use config::TASK_FILES;
 use crate_consts::*;
 use include_bytes_aligned::include_bytes_aligned;
 use page::PhysPage;
 use sel4::{
-    Cap, CapRights, Fault, IpcBuffer, MessageInfoBuilder, ObjectBlueprintArm, UntypedDesc,
+    Cap, CapRights, ObjectBlueprintArm, UntypedDesc,
     cap::{LargePage, Untyped},
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
-    with_ipc_buffer, with_ipc_buffer_mut,
+    with_ipc_buffer_mut,
 };
 use sel4_root_task::{Never, root_task};
-use services::root::RootEvent;
 use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
@@ -137,88 +136,16 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     });
 
     run_tasks(&tasks);
-    with_ipc_buffer_mut(|ib| handle_ep(tasks.as_mut_slice(), fault_ep, ib))
+    let mut root_task_handler = RootTaskHandler {
+        tasks,
+        fault_ep,
+        badge: 0,
+    };
+    with_ipc_buffer_mut(|ib| root_task_handler.waiting_and_handle(ib))
 }
 
-/// Handle the end point.
-fn handle_ep(tasks: &mut [Sel4Task], fault_ep: Cap<Endpoint>, ib: &mut IpcBuffer) -> ! {
-    let rev_msg = MessageInfoBuilder::default();
-    let swap_slot = OBJ_ALLOCATOR.lock().allocate_slot();
-    loop {
-        let (message, badge) = fault_ep.recv(());
-        let msg_label = RootEvent::from(message.label());
-
-        match msg_label {
-            RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
-            RootEvent::TranslateAddr => {
-                let mut off = 0;
-                let addr = usize::read_buffer(ib, &mut off);
-
-                let phys_addr = tasks[badge as usize]
-                    .mapped_page
-                    .get(&(addr & !0xfff))
-                    .map(|x| x.addr())
-                    .unwrap();
-
-                ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-                sel4::reply(ib, rev_msg.length(off).build());
-            }
-            RootEvent::FindService => {
-                let name = <&str>::read_buffer(ib, &mut 0);
-                let task = tasks.iter().find(|task| task.name == name);
-                let msg = match task {
-                    Some(task) => {
-                        LeafSlot::from(task.srv_ep)
-                            .mint_to(swap_slot, CapRights::all(), badge as _)
-                            .unwrap();
-                        ib.caps_or_badges_mut()[0] = swap_slot.raw() as _;
-                        rev_msg.extra_caps(1).build()
-                    }
-                    // 发生错误时返回值 不为 -1
-                    None => rev_msg.label(1).build(),
-                };
-                sel4::reply(ib, msg);
-                let _ = swap_slot.delete();
-            }
-            // Allocate a irq handler capability
-            // Transfer it to the requested service
-            RootEvent::RegisterIRQ => {
-                let irq = ib.msg_regs()[0];
-                let dst_slot = LeafSlot::new(0);
-                slot::IRQ_CONTROL
-                    .cap()
-                    .irq_control_get(irq, &dst_slot.abs_cptr())
-                    .unwrap();
-
-                ib.caps_or_badges_mut()[0] = 0;
-                sel4::reply(ib, rev_msg.extra_caps(1).build());
-
-                dst_slot.delete().unwrap();
-            }
-            // 申请一个 Notification Capability
-            RootEvent::AllocNotification => {
-                // 在 0 的 slot 处创建一个 Capability
-                OBJ_ALLOCATOR
-                    .lock()
-                    .retype_to_first(sel4::ObjectBlueprint::Notification);
-
-                ib.caps_or_badges_mut()[0] = 0;
-                sel4::reply(ib, rev_msg.extra_caps(1).build());
-
-                LeafSlot::new(0).delete().unwrap();
-            }
-            RootEvent::Shutdown => sel4_kit::arch::shutdown(),
-            RootEvent::Unknown(label) => {
-                if label >= 8 {
-                    log::error!("Unknown root messaage label: {label}")
-                }
-                let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-                log::error!("[RootTask] Received {} Fault: {:#x?}", badge, fault);
-                sel4_kit::arch::shutdown();
-                // match fault {
-                //     _ => {}
-                // }
-            }
-        }
-    }
+pub struct RootTaskHandler {
+    tasks: Vec<Sel4Task>,
+    fault_ep: Cap<Endpoint>,
+    badge: u64,
 }

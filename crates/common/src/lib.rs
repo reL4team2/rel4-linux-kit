@@ -13,7 +13,6 @@ pub mod log_impl;
 pub mod page;
 pub mod services;
 pub mod slot;
-pub mod thread;
 
 pub use obj_allocator::*;
 pub use utils::*;

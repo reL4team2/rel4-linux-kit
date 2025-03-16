@@ -36,6 +36,7 @@ sel4-logging = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-panicking = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-panicking-env = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-runtime-common = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+
 sel4-stack = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-sync = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 

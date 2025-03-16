@@ -107,7 +107,7 @@ pub fn build_kernel_thread(
     task.configure(2 * CNODE_RADIX_BITS, ipc_buffer_addr, ipc_buffer_cap)?;
 
     // Map stack for the task.
-    task.map_stack(10);
+    task.map_stack(20);
 
     // set task priority and max control priority
     task.tcb.tcb_set_sched_params(slot::TCB.cap(), 255, 255)?;

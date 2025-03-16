@@ -6,7 +6,7 @@ QEMU_LOG ?= n
 SEL4_PREFIX :=  $(realpath .)/.env/seL4
 loader_artifacts_dir := $(SEL4_PREFIX)/bin
 loader := $(loader_artifacts_dir)/sel4-kernel-loader
-loader_cli := $(loader_artifacts_dir)/sel4-kernel-loader-add-payload
+loader_cli := sel4-kernel-loader-add-payload
 
 app_crate := root-task
 app := $(BUILD_DIR)/$(app_crate).elf
@@ -33,7 +33,7 @@ build:
 image := $(BUILD_DIR)/image.elf
 
 # Append the payload to the loader using the loader CLI
-buld_img: build $(loader) $(loader_cli)
+buld_img: build $(loader)
 	$(loader_cli) \
 		--loader $(loader) \
 		--sel4-prefix $(SEL4_PREFIX) \

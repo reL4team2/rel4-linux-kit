@@ -14,6 +14,12 @@ tar zxf aarch64-linux-musl-cross.tgz
 export PATH=$PATH:`pwd`/aarch64-linux-musl-cross/bin
 ```
 
+> 安装 sel4-kernel-loader-add-payload
+
+```shell
+cargo install --git https://github.com/seL4/rust-sel4 --rev 1cd063a0f69b2d2045bfa224a36c9341619f0e9b sel4-kernel-loader-add-payload
+```
+
 #### 下载 sel4 内核
 
 ```shell

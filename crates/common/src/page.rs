@@ -13,7 +13,7 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use alloc::slice;
+use core::slice;
 use crate_consts::{DEFAULT_PAGE_PLACEHOLDER, GRANULE_SIZE, PAGE_SIZE};
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use slot_manager::LeafSlot;
