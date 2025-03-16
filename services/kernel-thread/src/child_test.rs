@@ -6,7 +6,7 @@ use crate::{
     utils,
 };
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc};
-use crate_consts::PAGE_SIZE;
+use config::PAGE_SIZE;
 use object::{BinaryFormat, Object};
 use sel4::Result;
 use sel4_runtime::utils::create_thread;

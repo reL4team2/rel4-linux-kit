@@ -77,7 +77,7 @@ name = "blk-thread"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
+ "config",
  "log",
  "sel4",
  "sel4-logging",
@@ -134,7 +134,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "common-macros",
- "crate-consts",
+ "config",
  "log",
  "num_enum",
  "object",
@@ -150,19 +150,16 @@ name = "common-macros"
 version = "0.1.0"
 
 [[package]]
+name = "config"
+version = "0.1.0"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca741a962e1b0bff6d724a1a0958b686406e853bb14061f218562e1896f95e6"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "crate-consts"
-version = "0.1.0"
-dependencies = [
- "sel4",
 ]
 
 [[package]]
@@ -213,7 +210,6 @@ name = "ext4-thread"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
  "ext4_rs",
  "hashbrown",
  "log",
@@ -245,7 +241,6 @@ name = "fat-thread"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
  "fatfs",
  "log",
  "sel4",
@@ -350,7 +345,7 @@ dependencies = [
  "axerrno",
  "bitflags",
  "common",
- "crate-consts",
+ "config",
  "flatten_objects",
  "hashbrown",
  "include_bytes_aligned",
@@ -415,7 +410,6 @@ name = "lwext4-thread"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
  "flatten_objects",
  "hashbrown",
  "log",
@@ -606,7 +600,7 @@ name = "root-task"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
+ "config",
  "include_bytes_aligned",
  "log",
  "object",
@@ -831,7 +825,7 @@ name = "sel4-runtime"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
+ "config",
  "sel4",
  "sel4-ctors-dtors",
  "sel4-dlmalloc",
@@ -965,7 +959,6 @@ name = "simple-cli"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
  "log",
  "sel4",
  "sel4-ctors-dtors",
@@ -1017,7 +1010,7 @@ name = "task-helper"
 version = "0.1.0"
 dependencies = [
  "common",
- "crate-consts",
+ "config",
  "log",
  "sel4",
  "sel4-sync",
@@ -1098,7 +1091,7 @@ version = "0.1.0"
 dependencies = [
  "arm_pl011",
  "common",
- "crate-consts",
+ "config",
  "log",
  "sel4",
  "sel4-kit",

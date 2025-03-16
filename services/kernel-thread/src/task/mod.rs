@@ -9,12 +9,15 @@ mod mem;
 mod signal;
 
 use alloc::sync::Arc;
-use common::page::PhysPage;
+use common::{
+    consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP},
+    page::PhysPage,
+};
+use config::{CNODE_RADIX_BITS, PAGE_SIZE};
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
 };
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE};
 use file::TaskFileInfo;
 use info::TaskInfo;
 use mem::TaskMemInfo;

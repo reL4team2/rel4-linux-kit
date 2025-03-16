@@ -1,7 +1,7 @@
 //! 运行函数工具函数
 //!
 //!
-use crate_consts::DEFAULT_PARENT_EP;
+use common::consts::DEFAULT_PARENT_EP;
 use sel4::{
     CNodeCapData, UserContext,
     cap::{SmallPage, Tcb},

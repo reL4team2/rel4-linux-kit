@@ -7,10 +7,7 @@ use slot_manager::LeafSlot;
 use syscalls::Errno;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
-use crate::{
-    consts::{IPC_DATA_LEN, REG_LEN, SEND_BULK_LABEL},
-    recv_bulk_data,
-};
+use crate::consts::{IPC_DATA_LEN, REG_LEN};
 
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
@@ -153,19 +150,6 @@ impl FileSerivce {
             .label(FileEvent::Ping.into())
             .build();
         Ok(self.call(ping_msg))
-    }
-
-    // FIXME: 应该返回一个数组或者一个结构表示所有的文件
-    // 功能类似于 getdents
-    pub fn read_dir(&self, _dir: &str) -> Result<(), ()> {
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::ReadDir.into())
-            .build();
-        let ret = self.call(msg);
-        assert!(ret.label() == 0);
-        let _datas = recv_bulk_data(self.ep_cap, SEND_BULK_LABEL);
-
-        Ok(())
     }
 
     #[inline]

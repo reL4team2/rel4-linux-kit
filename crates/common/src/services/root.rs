@@ -1,5 +1,4 @@
 use common_macros::ipc_msg;
-use crate_consts::DEFAULT_PARENT_EP;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{
     CapRights, MessageInfo, MessageInfoBuilder,
@@ -8,7 +7,7 @@ use sel4::{
 };
 use slot_manager::LeafSlot;
 
-use crate::{services::IpcBufferRW, slot::alloc_slot};
+use crate::{consts::DEFAULT_PARENT_EP, services::IpcBufferRW, slot::alloc_slot};
 
 #[ipc_msg]
 #[derive(Debug, IntoPrimitive, FromPrimitive)]

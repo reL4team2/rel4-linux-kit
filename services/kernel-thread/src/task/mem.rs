@@ -6,7 +6,7 @@ use core::cmp;
 
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::page::PhysPage;
-use crate_consts::{PAGE_MASK, PAGE_SIZE};
+use config::PAGE_SIZE;
 
 use crate::{consts::task::DEF_HEAP_ADDR, utils::obj::alloc_page};
 
@@ -48,7 +48,7 @@ impl Sel4Task {
         drop(mem_info);
         for vaddr in (origin..value).step_by(PAGE_SIZE) {
             let page_cap = PhysPage::new(alloc_page());
-            self.map_page(vaddr & PAGE_MASK, page_cap);
+            self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
         }
         value
     }

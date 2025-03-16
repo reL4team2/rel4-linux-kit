@@ -14,8 +14,8 @@ sel4-stack = { workspace = true }
 
 sel4-kit = { workspace = true }
 # 自定义依赖
+config = { workspace = true }
 common = { workspace = true }
-crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 task-helper = { workspace = true }
 

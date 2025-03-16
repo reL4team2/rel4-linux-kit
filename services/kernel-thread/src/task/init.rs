@@ -1,5 +1,6 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use crate_consts::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
+use common::consts::DEFAULT_PARENT_EP;
+use config::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
 use slot_manager::LeafSlot;

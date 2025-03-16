@@ -6,15 +6,14 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
-    VIRTIO_MMIO_BLK_VIRT_ADDR,
-    consts::REG_LEN,
+    consts::{DEFAULT_SERVE_EP, REG_LEN},
     services::{
         block::BlockEvent,
         root::{register_irq, register_notify},
         sel4_reply,
     },
 };
-use crate_consts::{DEFAULT_CUSTOM_SLOT, DEFAULT_SERVE_EP, VIRTIO_NET_IRQ};
+use config::{DEFAULT_CUSTOM_SLOT, VIRTIO_MMIO_BLK_VIRT_ADDR, VIRTIO_NET_IRQ};
 use sel4::{
     MessageInfoBuilder,
     cap::{IrqHandler, Notification},

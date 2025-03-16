@@ -14,11 +14,12 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use common::page::PhysPage;
-use core::marker::PhantomData;
-use crate_consts::{
-    DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION, PAGE_SIZE, STACK_ALIGN_SIZE,
+use common::{
+    consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION},
+    page::PhysPage,
 };
+use config::{PAGE_SIZE, STACK_ALIGN_SIZE};
+use core::marker::PhantomData;
 use sel4::{
     AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth,
     VmAttributes as VMAttributes,

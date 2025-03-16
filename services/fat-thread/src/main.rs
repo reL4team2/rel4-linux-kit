@@ -4,8 +4,10 @@
 #[macro_use]
 extern crate alloc;
 
-use common::services::{block::BlockService, fs::FileEvent, root::find_service};
-use crate_consts::DEFAULT_SERVE_EP;
+use common::{
+    consts::DEFAULT_SERVE_EP,
+    services::{block::BlockService, fs::FileEvent, root::find_service},
+};
 use cursor::DiskCursor;
 use sel4::{MessageInfoBuilder, debug_print, debug_println, with_ipc_buffer_mut};
 

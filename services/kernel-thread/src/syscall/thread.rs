@@ -4,7 +4,7 @@
 
 use alloc::{string::String, vec::Vec};
 use common::{arch::get_curr_ns, page::PhysPage};
-use crate_consts::PAGE_SIZE;
+use config::PAGE_SIZE;
 use object::Object;
 use sel4::UserContext;
 use syscalls::Errno;

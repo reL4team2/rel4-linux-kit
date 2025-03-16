@@ -3,10 +3,10 @@
 resolver = "2"
 
 members = [
+  "config",
   "root-task",
   "crates/common",
   "crates/common-macros",
-  "crates/crate-consts",
   "crates/sel4-runtime",
   "crates/slot-manager",
   "crates/task-helper",
@@ -44,7 +44,7 @@ sel4-runtime = { path = "crates/sel4-runtime" }
 sel4-kit = { path = "crates/sel4-kit" }
 
 # 一些公共包
-crate-consts = { path = "crates/crate-consts" }
+config = { path = "config" }
 task-helper = { path = "crates/task-helper" }
 common = { path = "crates/common" }
 common-macros = { path = "crates/common-macros" }

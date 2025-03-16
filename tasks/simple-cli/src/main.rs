@@ -23,7 +23,7 @@ fn command(cmd: &str) {
             debug_println!("- start-kernel: Start User Kernel To Execute Linux App");
         }
         "ls" => {
-            FS_SERVICE.read_dir("_").unwrap();
+            unimplemented!("read_dir is unimplemented")
         }
         "start-kernel" => {
             // 和 kernel-thread 的 exception::waiting_for_start 结合

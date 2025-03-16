@@ -5,6 +5,7 @@ use slot_manager::LeafSlot;
 use crate::{OBJ_ALLOCATOR, RootTaskHandler};
 
 impl RootTaskHandler {
+    /// 处理 sel4 任务触发的异常，例如 VMFault
     pub fn handle_fault(&mut self, fault: Fault) {
         log::error!("[RootTask] Received {} Fault: {:#x?}", self.badge, fault);
         sel4_kit::arch::shutdown();

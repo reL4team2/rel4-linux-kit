@@ -4,8 +4,8 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::{arch::get_curr_ns, page::PhysPage};
-use crate_consts::{DEFAULT_SERVE_EP, PAGE_SIZE};
+use common::{arch::get_curr_ns, consts::DEFAULT_SERVE_EP, page::PhysPage};
+use config::PAGE_SIZE;
 use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
 use syscalls::Errno;
 

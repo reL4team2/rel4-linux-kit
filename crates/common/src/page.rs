@@ -13,14 +13,16 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use config::PAGE_SIZE;
 use core::slice;
-use crate_consts::{DEFAULT_PAGE_PLACEHOLDER, GRANULE_SIZE, PAGE_SIZE};
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use slot_manager::LeafSlot;
 
+use crate::consts::DEFAULT_PAGE_PLACEHOLDER;
+
 /// 空白页占位结构，保证数据 4k 对齐
 #[repr(C, align(4096))]
-pub struct FreePagePlaceHolder([u8; GRANULE_SIZE]);
+pub struct FreePagePlaceHolder([u8; PAGE_SIZE]);
 
 impl FreePagePlaceHolder {
     /// 获取占位页的虚拟地址
@@ -30,7 +32,7 @@ impl FreePagePlaceHolder {
 }
 
 /// 空白页占位，需要写入读写页时将其映射到当前地址空间进行读写。
-static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder = FreePagePlaceHolder([0; GRANULE_SIZE]);
+static mut FREE_PAGE_PLACEHOLDER: FreePagePlaceHolder = FreePagePlaceHolder([0; PAGE_SIZE]);
 
 /// 页映射锁，用于保护页表占位符，防止未释放时重复映射
 static PAGE_MAP_LOCK: AtomicBool = AtomicBool::new(false);
@@ -79,7 +81,7 @@ impl PhysPage {
         .unwrap();
         PhysPageLocker {
             cap,
-            data: unsafe { slice::from_raw_parts_mut(addr as _, GRANULE_SIZE) },
+            data: unsafe { slice::from_raw_parts_mut(addr as _, PAGE_SIZE) },
         }
     }
 }

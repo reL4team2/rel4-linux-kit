@@ -3,7 +3,7 @@
 //!
 
 use common::page::PhysPage;
-use crate_consts::PAGE_SIZE;
+use config::PAGE_SIZE;
 use syscalls::Errno;
 
 use crate::{

@@ -1,8 +1,8 @@
-use crate::{GRANULE_SIZE, OBJ_ALLOCATOR};
+use crate::OBJ_ALLOCATOR;
 use alloc::collections::btree_map::BTreeMap;
 use common::{footprint, map_image, map_intermediate_translation_tables, page::PhysPage};
+use config::{CNODE_RADIX_BITS, PAGE_SIZE};
 use core::ops::DerefMut;
-use crate_consts::CNODE_RADIX_BITS;
 use object::{File, Object};
 use sel4::{
     CNodeCapData, CapRights,
@@ -18,7 +18,7 @@ pub struct TaskImpl;
 pub type Sel4Task = Sel4TaskHelper<TaskImpl>;
 
 impl TaskHelperTrait<Sel4TaskHelper<Self>> for TaskImpl {
-    const DEFAULT_STACK_TOP: usize = 0x1_0000_0000;
+    const DEFAULT_STACK_TOP: usize = config::SERVICE_BOOT_STACK_TOP;
 
     fn allocate_pt(_task: &mut Self::Task) -> PT {
         OBJ_ALLOCATOR.lock().alloc_pt()
@@ -107,7 +107,7 @@ pub fn build_kernel_thread(
     task.configure(2 * CNODE_RADIX_BITS, ipc_buffer_addr, ipc_buffer_cap)?;
 
     // Map stack for the task.
-    task.map_stack(20);
+    task.map_stack(config::SERVICE_BOOT_STACK_SIZE.div_ceil(PAGE_SIZE));
 
     // set task priority and max control priority
     task.tcb.tcb_set_sched_params(slot::TCB.cap(), 255, 255)?;
@@ -183,7 +183,7 @@ pub(crate) fn make_child_vspace<'a>(
     map_intermediate_translation_tables(
         allocator,
         child_vspace,
-        image_footprint.start..(image_footprint.end + GRANULE_SIZE),
+        image_footprint.start..(image_footprint.end + PAGE_SIZE),
     );
 
     // 将ELF的虚地址 map 到物理页

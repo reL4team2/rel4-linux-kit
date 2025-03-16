@@ -1,5 +1,4 @@
-use common::{PL011_ADDR, VIRTIO_MMIO_ADDR, VIRTIO_MMIO_VIRT_ADDR};
-use crate_consts::DMA_ADDR_START;
+use config::{DMA_ADDR_START, PL011_ADDR, VIRTIO_MMIO_ADDR, VIRTIO_MMIO_VIRT_ADDR};
 
 use crate::include_bytes_aligned;
 

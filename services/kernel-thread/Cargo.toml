@@ -30,8 +30,8 @@ axerrno = "0.1"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 
+config = { workspace = true }
 common = { workspace = true }
-crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }

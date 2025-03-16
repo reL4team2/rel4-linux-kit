@@ -1,10 +1,10 @@
 use alloc::collections::BTreeMap;
 use common::services::root::translate_addr;
+use config::DMA_ADDR_START;
 use core::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
-use crate_consts::DMA_ADDR_START;
 use spin::Mutex;
 use virtio_drivers::{BufferDirection, Hal, PAGE_SIZE, PhysAddr};
 

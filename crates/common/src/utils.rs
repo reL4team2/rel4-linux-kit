@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+use config::PAGE_SIZE;
 use core::{cmp, ops::Range};
-use crate_consts::GRANULE_SIZE;
 use object::{
     Object, ObjectSegment, SegmentFlags,
     elf::{PF_R, PF_W, PF_X},
@@ -31,7 +31,7 @@ pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {
         .unwrap()
         .try_into()
         .unwrap();
-    coarsen_footprint(&(min..max), GRANULE_SIZE)
+    coarsen_footprint(&(min..max), PAGE_SIZE)
 }
 
 // 将ELF的虚地址空间 map 到页表中，但不分配物理页
@@ -69,7 +69,7 @@ pub fn map_image<'a>(
     image: &'a impl Object<'a>,
 ) {
     // 计算需要的物理页数
-    let num_pages = footprint.len() / GRANULE_SIZE;
+    let num_pages = footprint.len() / PAGE_SIZE;
     let mut pages = (0..num_pages)
         .map(|_| (allocator.alloc_page(), sel4::CapRightsBuilder::all()))
         .collect::<Vec<(sel4::cap::Granule, sel4::CapRightsBuilder)>>();
@@ -78,26 +78,26 @@ pub fn map_image<'a>(
         let segment_addr = usize::try_from(seg.address()).unwrap();
         let segment_size = usize::try_from(seg.size()).unwrap();
         let segment_footprint =
-            coarsen_footprint(&(segment_addr..(segment_addr + segment_size)), GRANULE_SIZE);
-        let num_pages_spanned_by_segment = segment_footprint.len() / GRANULE_SIZE;
+            coarsen_footprint(&(segment_addr..(segment_addr + segment_size)), PAGE_SIZE);
+        let num_pages_spanned_by_segment = segment_footprint.len() / PAGE_SIZE;
         let segment_data_size = seg.data().unwrap().len();
         let segment_data_footprint = coarsen_footprint(
             &(segment_addr..(segment_addr + segment_data_size)),
-            GRANULE_SIZE,
+            PAGE_SIZE,
         );
-        let num_pages_spanned_by_segment_data = segment_data_footprint.len() / GRANULE_SIZE;
-        let segment_page_index_offset = (segment_footprint.start - footprint.start) / GRANULE_SIZE;
+        let num_pages_spanned_by_segment_data = segment_data_footprint.len() / PAGE_SIZE;
+        let segment_page_index_offset = (segment_footprint.start - footprint.start) / PAGE_SIZE;
 
         for (_, rights) in &mut pages[segment_page_index_offset..][..num_pages_spanned_by_segment] {
             add_rights(rights, seg.flags());
         }
 
         let mut data = seg.data().unwrap();
-        let mut offset_into_page = segment_addr % GRANULE_SIZE;
+        let mut offset_into_page = segment_addr % PAGE_SIZE;
         for (page_cap, _) in
             &pages[segment_page_index_offset..][..num_pages_spanned_by_segment_data]
         {
-            let data_len = (GRANULE_SIZE - offset_into_page).min(data.len());
+            let data_len = (PAGE_SIZE - offset_into_page).min(data.len());
 
             // 映射物理页到 root-task 的虚拟地址空间，并且将数据拷贝到物理页中
             let phys_page = PhysPage::new(*page_cap);
@@ -112,7 +112,7 @@ pub fn map_image<'a>(
 
     // 将物理页映射到 child 的虚拟地址空间
     for (i, (page_cap, rights)) in pages.into_iter().enumerate() {
-        let addr = footprint.start + i * GRANULE_SIZE;
+        let addr = footprint.start + i * PAGE_SIZE;
         page_cap
             .frame_map(vspace, addr, rights.build(), sel4::VmAttributes::DEFAULT)
             .unwrap();

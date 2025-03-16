@@ -6,7 +6,7 @@ extern crate alloc;
 use alloc::collections::vec_deque::VecDeque;
 use arm_pl011::pl011::Pl011Uart;
 use common::{
-    VIRTIO_MMIO_VIRT_ADDR,
+    consts::DEFAULT_SERVE_EP,
     ipc::ipc_saver::IpcSaver,
     services::{
         root::{register_irq, register_notify},
@@ -14,7 +14,7 @@ use common::{
     },
     slot::alloc_slot,
 };
-use crate_consts::{DEFAULT_SERVE_EP, SERIAL_DEVICE_IRQ};
+use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_kit::ipc::{poll_endpoint, poll_notification};
 

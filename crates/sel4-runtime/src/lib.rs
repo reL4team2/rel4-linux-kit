@@ -5,6 +5,5 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-pub mod consts;
 pub mod entry;
 pub mod utils;

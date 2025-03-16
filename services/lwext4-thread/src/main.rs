@@ -9,7 +9,7 @@ use core::{iter::zip, mem::ManuallyDrop};
 
 use alloc::string::String;
 use common::{
-    consts::{IPC_DATA_LEN, REG_LEN},
+    consts::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
     services::{
         IpcBufferRW,
         block::BlockService,
@@ -17,7 +17,6 @@ use common::{
         root::find_service,
     },
 };
-use crate_consts::DEFAULT_SERVE_EP;
 use flatten_objects::FlattenObjects;
 use imp::Ext4Disk;
 use lwext4_rust::{

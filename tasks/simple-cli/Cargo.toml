@@ -15,5 +15,4 @@ sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-crate-consts = { workspace = true }
 slot-manager = { workspace = true }

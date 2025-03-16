@@ -3,9 +3,8 @@
 //!
 extern crate sel4_panicking;
 
-use crate::consts::*;
+use config::{DEFAULT_EMPTY_SLOT_INDEX, SERVICE_HEAP_SIZE};
 use core::{mem::transmute, ptr};
-use crate_consts::DEFAULT_EMPTY_SLOT_INDEX;
 use sel4::{IpcBuffer, set_ipc_buffer};
 use sel4_ctors_dtors::run_ctors;
 use sel4_dlmalloc::{StaticDlmallocGlobalAlloc, StaticHeap};
@@ -17,24 +16,30 @@ use sel4_sync::PanickingRawMutex;
 
 sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
 
+/// [sel4_runtime_common] 默认的 start 在启动的时候会将 `__sel4_runtime_common__stack_bottom`
+/// 中保存的地址作为栈顶,这里的符号是 __stack_bottom 确实很让人疑惑，可能是 `rust-sel4`
+/// 的作者有些不一样的考虑。
 #[unsafe(export_name = "__sel4_runtime_common__stack_bottom")]
-static STACK_TOP: usize = 0x1_0000_0000;
+static STACK_TOP: usize = config::SERVICE_BOOT_STACK_TOP;
+
+/// 服务进程使用的堆，这个堆将会被用来分配内存。
+static STATIC_HEAP: StaticHeap<SERVICE_HEAP_SIZE> = StaticHeap::new();
 
 #[global_allocator]
 static GLOBAL_ALLOCATOR: StaticDlmallocGlobalAlloc<
     PanickingRawMutex,
-    &'static StaticHeap<HEAP_SIZE>,
+    &'static StaticHeap<SERVICE_HEAP_SIZE>,
 > = StaticDlmallocGlobalAlloc::new(PanickingRawMutex::new(), &STATIC_HEAP);
 
-static STATIC_HEAP: StaticHeap<HEAP_SIZE> = StaticHeap::new();
-
-unsafe extern "Rust" {
-    fn _impl_main() -> !;
-    static _end: usize;
-}
-
+/// 主要的 rust 入口
+///
+/// 任务在启动的时候首先进入 rust
+/// 的入口，在这个函数中将会进行初始化，初始化完成之后会调用真正的入口函数。
 #[unsafe(export_name = "sel4_runtime_rust_entry")]
 unsafe extern "C" fn main_entry() -> ! {
+    unsafe extern "Rust" {
+        fn _impl_main() -> !;
+    }
     let cont_fn = |_| {
         init_ipc_buffer();
         run_ctors();
