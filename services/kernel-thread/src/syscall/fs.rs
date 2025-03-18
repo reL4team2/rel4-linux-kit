@@ -9,24 +9,19 @@ use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
+    consts::fd::FD_CUR_DIR,
     fs::{file::File, get_mounted, mount, pipe::create_pipe2, umount},
     task::Sel4Task,
 };
 
 use super::{SysResult, types::IoVec};
 
-pub(super) fn sys_chdir(task: &mut Sel4Task, buf: *const u8) -> SysResult {
-    let path_bytes = task.read_cstr(buf as _).unwrap();
-    let path = String::from_utf8(path_bytes).unwrap();
-
-    if path.starts_with('.') {
-        panic!("relative path is not supported now!")
-    } else if path.starts_with('/') {
-        task.file.work_dir = path;
-    } else {
-        task.file.work_dir += &path;
-        task.file.work_dir += "/";
-    }
+pub(super) fn sys_chdir(task: &mut Sel4Task, path: *const u8) -> SysResult {
+    let path = task.deal_path(FD_CUR_DIR, path)?;
+    const O_DIRECTORY: u64 = 0o40000;
+    // 确保路径存在
+    File::open(&path, O_DIRECTORY)?;
+    task.file.work_dir = path;
 
     Ok(0)
 }

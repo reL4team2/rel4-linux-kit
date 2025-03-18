@@ -40,6 +40,7 @@ macro_rules! test_task {
         let mut file =
             fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
         child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
+        sel4::debug_println!("loading file: {}", $file);
     }};
 }
 
