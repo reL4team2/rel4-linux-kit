@@ -56,3 +56,6 @@ pub const DEFAULT_EMPTY_SLOT_INDEX: usize = 32;
 
 /// 默认的栈对齐的大小
 pub const STACK_ALIGN_SIZE: usize = 16;
+
+/// 页共享使用的初始地址
+pub const SHARE_PAGE_START: usize = 0x1_001F_0000;

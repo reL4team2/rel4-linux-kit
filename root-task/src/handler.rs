@@ -1,4 +1,11 @@
-use common::services::{IpcBufferRW, root::RootEvent};
+use core::sync::atomic::AtomicUsize;
+
+use common::{
+    page::PhysPage,
+    services::{IpcBufferRW, root::RootEvent},
+    slot::alloc_slot,
+};
+use config::PAGE_SIZE;
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use slot_manager::LeafSlot;
 
@@ -11,6 +18,9 @@ impl RootTaskHandler {
         sel4_kit::arch::shutdown();
     }
     /// 等待任务传递的消息，并进行处理
+    ///
+    /// TODO: 使用统一的回复接口，使用统一的 Result，返回时返回 label 和 length。
+    /// 如果有返回 Capability 如何处理？
     pub fn waiting_and_handle(&mut self, ib: &mut IpcBuffer) -> ! {
         let rev_msg = MessageInfoBuilder::default();
         let swap_slot = OBJ_ALLOCATOR.lock().allocate_slot();
@@ -21,6 +31,50 @@ impl RootTaskHandler {
 
             match msg_label {
                 RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
+                RootEvent::CreateChannel => {
+                    static CHANNEL_ID: AtomicUsize = AtomicUsize::new(1);
+                    let addr = ib.msg_regs()[0] as usize;
+                    let page_count = ib.msg_regs()[1] as usize;
+                    let pages = OBJ_ALLOCATOR.lock().alloc_pages(page_count);
+                    pages
+                        .iter()
+                        .map(|x| {
+                            let slot = alloc_slot();
+                            slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
+                                .unwrap();
+                            slot
+                        })
+                        .enumerate()
+                        .for_each(|(idx, x)| {
+                            self.tasks[badge as usize]
+                                .map_page(addr + idx * PAGE_SIZE, PhysPage::new(x.cap()));
+                        });
+                    let channel_id = CHANNEL_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
+                    self.channels.push((channel_id, pages));
+                    ib.msg_regs_mut()[0] = channel_id as u64;
+                    sel4::reply(ib, rev_msg.length(1).build());
+                }
+                RootEvent::JoinChannel => {
+                    let channel_id = ib.msg_regs()[0] as usize;
+                    let addr = ib.msg_regs()[1] as usize;
+                    if let Some((_, pages)) = self.channels.iter().find(|x| x.0 == channel_id) {
+                        pages
+                            .iter()
+                            .map(|x| {
+                                let slot = alloc_slot();
+                                slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
+                                    .unwrap();
+                                slot
+                            })
+                            .enumerate()
+                            .for_each(|(idx, x)| {
+                                self.tasks[badge as usize]
+                                    .map_page(addr + idx * PAGE_SIZE, PhysPage::new(x.cap()));
+                            });
+                        ib.msg_regs_mut()[0] = (pages.len() * PAGE_SIZE) as u64;
+                        sel4::reply(ib, rev_msg.length(1).build());
+                    }
+                }
                 RootEvent::TranslateAddr => {
                     let mut off = 0;
                     let addr = usize::read_buffer(ib, &mut off);
@@ -76,6 +130,18 @@ impl RootTaskHandler {
                     ib.caps_or_badges_mut()[0] = 0;
                     sel4::reply(ib, rev_msg.extra_caps(1).build());
 
+                    LeafSlot::new(0).delete().unwrap();
+                }
+                RootEvent::AllocPage => {
+                    assert_eq!(message.length(), 1);
+                    let addr = ib.msg_regs()[0] as usize;
+                    let page = OBJ_ALLOCATOR.lock().alloc_page();
+                    self.tasks[badge as usize].map_page(addr, PhysPage::new(page));
+                    LeafSlot::new(0)
+                        .copy_from(&LeafSlot::new(page.bits() as _), CapRights::all())
+                        .unwrap();
+                    ib.caps_or_badges_mut()[0] = 0;
+                    sel4::reply(ib, rev_msg.extra_caps(1).build());
                     LeafSlot::new(0).delete().unwrap();
                 }
                 RootEvent::Shutdown => sel4_kit::arch::shutdown(),

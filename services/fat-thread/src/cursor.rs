@@ -49,7 +49,8 @@ impl fatfs::Read for DiskCursor {
 
         let read_size = if self.offset != 0 || buf.len() < 512 {
             let mut data = vec![0u8; 512];
-            blk_ep.read_block(self.sector as usize, &mut data).unwrap();
+            todo!();
+            // blk_ep.read_block(self.sector as usize, &mut data).unwrap();
 
             let start = self.offset;
             let end = (self.offset + buf.len()).min(512);
@@ -62,7 +63,8 @@ impl fatfs::Read for DiskCursor {
             let rlen = (buf.len() / 512) * 512;
             assert!(rlen % 0x200 == 0);
             // 如果不用同一个数组 会导致读取数据的时候出现问题
-            blk_ep.read_block(self.sector as usize, buf).unwrap();
+            // blk_ep.read_block(self.sector as usize, buf).unwrap();
+            todo!();
             512
         };
 

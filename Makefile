@@ -54,7 +54,7 @@ disk_img:
 	sync
 	# mkfs.ext4 -b 4096 mount.img
 	# mkfs.vfat -F 32 mount.img
-	mkfs.ext4 -F -O ^metadata_csum_seed mount.img
+	mkfs.ext4 -b 4096 -F -O ^metadata_csum_seed mount.img
 	sudo mount mount.img mount
 	sudo cp -r testcases/* mount/
 	sync

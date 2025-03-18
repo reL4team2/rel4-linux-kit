@@ -12,35 +12,12 @@ pub struct Ext4Disk {
 impl KernelDevOp for Ext4Disk {
     type DevType = Self;
 
-    fn write(dev: &mut Self::DevType, mut buf: &[u8]) -> Result<usize, i32> {
-        let mut write_len = 0;
-        while !buf.is_empty() {
-            match dev.write_one(buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    buf = &buf[n..];
-                    write_len += n;
-                }
-                Err(_e) => return Err(-1),
-            }
-        }
-        Ok(write_len)
+    fn write(dev: &mut Self::DevType, buf: &[u8]) -> Result<usize, i32> {
+        dev.write_one(buf)
     }
 
-    fn read(dev: &mut Self::DevType, mut buf: &mut [u8]) -> Result<usize, i32> {
-        let mut read_len = 0;
-        while !buf.is_empty() {
-            match dev.read_one(buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    let tmp = buf;
-                    buf = &mut tmp[n..];
-                    read_len += n;
-                }
-                Err(_e) => return Err(-1),
-            }
-        }
-        Ok(read_len)
+    fn read(dev: &mut Self::DevType, buf: &mut [u8]) -> Result<usize, i32> {
+        dev.read_one(buf)
     }
 
     fn seek(dev: &mut Self::DevType, off: i64, whence: i32) -> Result<i64, i32> {
@@ -94,52 +71,35 @@ impl Ext4Disk {
         self.offset = pos as usize % BLOCK_SIZE;
     }
 
+    #[inline]
     fn read_one(&mut self, buf: &mut [u8]) -> Result<usize, i32> {
-        let read_size = if self.offset == 0 && buf.len() >= BLOCK_SIZE {
-            // whole block
-            BLK_SERVICE
-                .read_block(self.block_id, &mut buf[..BLOCK_SIZE])
-                .unwrap();
-            self.set_position(self.position() + BLOCK_SIZE as u64);
-            BLOCK_SIZE
-        } else {
-            // partial block
-            let mut data = [0u8; BLOCK_SIZE];
-            let start = self.offset;
-            let count = buf.len().min(BLOCK_SIZE - self.offset);
-            if start > BLOCK_SIZE {
-                log::debug!("block size: {} start {}", BLOCK_SIZE, start);
-            }
-
-            BLK_SERVICE.read_block(self.block_id, &mut data).unwrap();
-            buf[..count].copy_from_slice(&data[start..start + count]);
-
-            self.set_position(self.position() + count as u64);
-            count
-        };
-        Ok(read_size)
+        assert_eq!(buf.len() % BLOCK_SIZE, 0);
+        assert_eq!(self.offset, 0);
+        assert!(buf.len() <= 0x2000);
+        let ptr = 0x3_0000_0000 as *const u8;
+        BLK_SERVICE
+            .read_block(self.block_id, buf.len() / BLOCK_SIZE)
+            .unwrap();
+        unsafe {
+            ptr.copy_to_nonoverlapping(buf.as_mut_ptr(), buf.len());
+        }
+        self.set_position(self.position() + buf.len() as u64);
+        Ok(buf.len())
     }
 
+    #[inline]
     fn write_one(&mut self, buf: &[u8]) -> Result<usize, i32> {
-        let write_size = if self.offset == 0 && buf.len() >= BLOCK_SIZE {
-            // whole block
-            BLK_SERVICE
-                .write_block(self.block_id, &buf[..BLOCK_SIZE])
-                .unwrap();
-            self.set_position(self.position() + BLOCK_SIZE as u64);
-            BLOCK_SIZE
-        } else {
-            // partial block
-            let mut data = [0u8; BLOCK_SIZE];
-            let start = self.offset;
-            let count = buf.len().min(BLOCK_SIZE - self.offset);
-
-            BLK_SERVICE.read_block(self.block_id, &mut data).unwrap();
-            data[start..start + count].copy_from_slice(&buf[..count]);
-            BLK_SERVICE.write_block(self.block_id, &data).unwrap();
-            self.set_position(self.position() + count as u64);
-            count
-        };
-        Ok(write_size)
+        assert_eq!(buf.len() % BLOCK_SIZE, 0);
+        assert_eq!(self.offset, 0);
+        assert!(buf.len() <= 0x2000);
+        let ptr = 0x3_0000_0000 as *mut u8;
+        unsafe {
+            ptr.copy_from_nonoverlapping(buf.as_ptr(), buf.len());
+        }
+        BLK_SERVICE
+            .write_block(self.block_id, buf.len() / BLOCK_SIZE)
+            .unwrap();
+        self.set_position(self.position() + buf.len() as u64);
+        Ok(buf.len())
     }
 }

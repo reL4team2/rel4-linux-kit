@@ -14,3 +14,4 @@ log = "0.4"
 common = { workspace = true }
 config = { workspace = true }
 virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "61ece50", default-features = false }
+flatten_objects = { workspace = true }

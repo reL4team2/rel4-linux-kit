@@ -14,7 +14,7 @@ use common::{
         IpcBufferRW,
         block::BlockService,
         fs::{Dirent64, FileEvent, Stat, StatMode},
-        root::find_service,
+        root::{create_channel, find_service, join_channel},
     },
 };
 use flatten_objects::FlattenObjects;
@@ -23,7 +23,8 @@ use lwext4_rust::{
     Ext4BlockWrapper, Ext4File, InodeTypes,
     bindings::{O_CREAT, O_TRUNC},
 };
-use sel4::{IpcBuffer, MessageInfo, MessageInfoBuilder, with_ipc_buffer_mut};
+use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};
+use sel4_runtime::utils::alloc_free_addr;
 use spin::Lazy;
 use syscalls::Errno;
 
@@ -40,27 +41,45 @@ fn main() -> ! {
     log::info!("Booting...");
 
     BLK_SERVICE.ping().unwrap();
+    // let share_page = alloc_page(alloc_slot(), 0x3_0000_0000).unwrap();
+    //
+    // BLK_SERVICE.init(share_page.cap()).unwrap();
+    let channel_id = create_channel(0x3_0000_0000, 2).unwrap();
+    BLK_SERVICE.init(channel_id).unwrap();
 
     let mut stores = FlattenObjects::<Ext4File, STORE_CAP>::new();
+    let mut mapped = FlattenObjects::<(usize, usize), 32>::new();
     let _ = ManuallyDrop::new(Ext4BlockWrapper::<Ext4Disk>::new(Ext4Disk::new()).unwrap());
 
     loop {
-        let (message, _) = DEFAULT_SERVE_EP.recv(());
-        with_ipc_buffer_mut(|ib| handle_events(message, &mut stores, ib));
+        with_ipc_buffer_mut(|ib| handle_events(&mut stores, &mut mapped, ib));
     }
 }
 
 fn handle_events(
-    message: MessageInfo,
     stores: &mut FlattenObjects<Ext4File, STORE_CAP>,
+    mapped: &mut FlattenObjects<(usize, usize), 32>,
     ib: &mut IpcBuffer,
 ) {
+    let (message, badge) = DEFAULT_SERVE_EP.recv(());
     let rev_msg = MessageInfoBuilder::default();
 
     let msg_label = FileEvent::from(message.label());
     log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
     match msg_label {
         FileEvent::Ping => sel4::reply(ib, rev_msg.build()),
+        FileEvent::Init => {
+            let ptr = alloc_free_addr(0) as *mut u8;
+            assert_eq!(message.length(), 1);
+            let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
+            let size = join_channel(channel_id, ptr as usize).unwrap();
+            mapped
+                .add_at(badge as _, (ptr as usize, channel_id))
+                .map_err(|_| ())
+                .unwrap();
+            sel4::reply(ib, rev_msg.build());
+            alloc_free_addr(size);
+        }
         FileEvent::Open => {
             // TODO: Open Directory
             let mut offset = 0;
@@ -96,15 +115,17 @@ fn handle_events(
             }
         }
         FileEvent::ReadAt => {
+            let addr = mapped.get(badge as usize).unwrap().0;
             let (inode, offset) = (ib.msg_regs()[0] as usize, ib.msg_regs()[1] as _);
+            let buf_len = ib.msg_regs()[2] as usize;
             if let Some(ext4_file) = stores.get_mut(inode) {
-                let mut buffer = [0u8; IPC_DATA_LEN - REG_LEN];
+                // let mut buffer = [0u8; IPC_DATA_LEN - REG_LEN];
                 ext4_file.file_seek(offset, 0).unwrap();
-                let rlen = ext4_file.file_read(&mut buffer).unwrap();
+                let buffer = unsafe { core::slice::from_raw_parts_mut(addr as _, buf_len) };
+                let rlen = ext4_file.file_read(buffer).unwrap();
 
                 ib.msg_regs_mut()[0] = rlen as _;
-                ib.msg_bytes_mut()[REG_LEN..REG_LEN + rlen].copy_from_slice(&buffer[..rlen]);
-                sel4::reply(ib, rev_msg.length(1 + rlen.div_ceil(REG_LEN)).build());
+                sel4::reply(ib, rev_msg.length(1).build());
             } else {
                 panic!("Can't Find File")
             }

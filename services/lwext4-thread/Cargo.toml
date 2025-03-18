@@ -17,5 +17,5 @@ hashbrown = { workspace = true }
 # ext4 依赖
 lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false }
 
-flatten_objects = "0.2.2"
+flatten_objects = { workspace = true }
 syscalls = { workspace = true }

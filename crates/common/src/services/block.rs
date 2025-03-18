@@ -2,14 +2,13 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
 use slot_manager::LeafSlot;
 
-use crate::consts::REG_LEN;
-
 #[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum BlockEvent {
     AllocPage,
     Ping,
     Capacity,
+    Init,
     ReadBlock,
     WriteBlock,
     ReadBlocks,
@@ -18,18 +17,6 @@ pub enum BlockEvent {
     Unknown(u64),
 }
 
-// FIXME: 公共 patten 就是:
-//      1. Label 转换为 message
-//      2. Service 的初始化 new from_bits
-//      3. Call Message, 甚至 包含 ping?
-//
-// 其他：可以将 reply 封装为闭包函数
-//      reply_ok();
-//      reply_error();
-//      reply_msg(|ipc_buffer| {} -> msg);
-//
-// 其他：可以使用类似 Builder 的链式操作构建 MessageBuffer.
-//
 impl BlockEvent {
     fn msg(&self) -> MessageInfoBuilder {
         MessageInfoBuilder::default().label((*self).into())
@@ -63,35 +50,36 @@ impl BlockService {
         self.call(ping_msg)
     }
 
-    pub fn read_block(&self, block_id: usize, buffer: &mut [u8]) -> Result<(), ()> {
-        with_ipc_buffer_mut(|ipc_buf| {
-            ipc_buf.msg_regs_mut()[0] = block_id as _;
+    pub fn init(&self, channel_id: usize) -> Result<(), ()> {
+        with_ipc_buffer_mut(|ib| {
+            ib.msg_regs_mut()[0] = channel_id as _;
         });
-        let msg = BlockEvent::ReadBlock.msg().length(1).build();
-        // Send and Wait a message
-        self.call(msg)?;
-        // Copy data from the buffer of the ipc message.
-        with_ipc_buffer(|ipc_buf| {
-            let len = 0x200;
-            buffer[..len].copy_from_slice(&ipc_buf.msg_bytes()[..len]);
-        });
+        let msg = BlockEvent::Init.msg().length(1).build();
+        let ret = self.call(msg)?;
+        assert_eq!(ret.label(), 0);
+
         Ok(())
     }
 
-    pub fn write_block(&self, block_id: usize, buffer: &[u8]) -> Result<(), ()> {
-        assert_eq!(buffer.len(), 0x200);
+    pub fn read_block(&self, block_id: usize, block_num: usize) -> Result<MessageInfo, ()> {
         with_ipc_buffer_mut(|ipc_buf| {
             ipc_buf.msg_regs_mut()[0] = block_id as _;
-            ipc_buf.msg_bytes_mut()[REG_LEN..REG_LEN + buffer.len()].copy_from_slice(buffer);
+            ipc_buf.msg_regs_mut()[1] = block_num as _;
         });
-        let msg = BlockEvent::WriteBlock
-            .msg()
-            .length(1 + buffer.len() / REG_LEN)
-            .build();
+        let msg = BlockEvent::ReadBlock.msg().length(2).build();
         // Send and Wait a message
+        self.call(msg)
+    }
+
+    pub fn write_block(&self, block_id: usize, block_num: usize) -> Result<MessageInfo, ()> {
+        with_ipc_buffer_mut(|ipc_buf| {
+            ipc_buf.msg_regs_mut()[0] = block_id as _;
+            ipc_buf.msg_regs_mut()[1] = block_num as _;
+        });
+        let msg = BlockEvent::WriteBlock.msg().length(2).build();
         let ret = self.call(msg)?;
         assert_eq!(ret.label(), 0);
-        Ok(())
+        Ok(ret)
     }
 
     pub fn capacity(&self) -> Result<u64, ()> {

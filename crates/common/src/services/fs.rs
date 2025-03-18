@@ -13,6 +13,7 @@ use crate::consts::{IPC_DATA_LEN, REG_LEN};
 #[repr(u64)]
 pub enum FileEvent {
     Ping,
+    Init,
     ReadDir,
     GetDents64,
     Open,
@@ -121,6 +122,8 @@ pub struct Stat {
 #[derive(Clone, Debug)]
 pub struct FileSerivce {
     ep_cap: Endpoint,
+    share_addr: usize,
+    share_size: usize,
 }
 
 impl FileSerivce {
@@ -137,7 +140,11 @@ impl FileSerivce {
     }
 
     pub const fn new(endpoint: Endpoint) -> Self {
-        Self { ep_cap: endpoint }
+        Self {
+            ep_cap: endpoint,
+            share_addr: 0,
+            share_size: 0,
+        }
     }
 
     #[inline]
@@ -152,13 +159,25 @@ impl FileSerivce {
         Ok(self.call(ping_msg))
     }
 
+    pub fn init(&mut self, channel_id: usize, addr: usize, size: usize) -> Result<MessageInfo, ()> {
+        self.share_addr = addr;
+        self.share_size = size;
+        with_ipc_buffer_mut(|ib| ib.msg_regs_mut()[0] = channel_id as _);
+        let ping_msg = MessageInfoBuilder::default()
+            .label(FileEvent::Init.into())
+            .length(1)
+            .build();
+        Ok(self.call(ping_msg))
+    }
+
     #[inline]
     pub fn read_at(&self, inode: u64, offset: usize, buf: &mut [u8]) -> Result<usize, ()> {
+        let trans_len = cmp::min(buf.len(), self.share_size);
         with_ipc_buffer_mut(|ib| {
             let regs = ib.msg_regs_mut();
             regs[0] = inode;
             regs[1] = offset as _;
-            regs[2] = buf.len() as _;
+            regs[2] = trans_len as u64;
         });
         let msg = MessageInfoBuilder::default()
             .label(FileEvent::ReadAt.into())
@@ -166,11 +185,12 @@ impl FileSerivce {
             .build();
         let ret = self.call(msg);
         assert_eq!(ret.label(), 0);
-        with_ipc_buffer(|ib| {
-            let rlen = ib.msg_regs()[0] as usize;
-            buf[..rlen].copy_from_slice(&ib.msg_bytes()[REG_LEN..REG_LEN + rlen]);
-            Ok(rlen)
-        })
+        let rlen = with_ipc_buffer(|ib| ib.msg_regs()[0] as usize);
+        let ptr = self.share_addr as *mut u8;
+        unsafe {
+            ptr.copy_to_nonoverlapping(buf.as_mut_ptr(), rlen);
+        }
+        Ok(rlen)
     }
 
     #[inline]

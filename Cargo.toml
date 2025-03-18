@@ -11,8 +11,7 @@ members = [
   "crates/slot-manager",
   "crates/task-helper",
   "services/blk-thread",
-  "services/fat-thread",
-  "services/ext4-thread",
+  # "services/fat-thread",
   "services/lwext4-thread",
   "services/uart-thread",
   "services/kernel-thread",
@@ -36,6 +35,7 @@ sel4-logging = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-panicking = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-panicking-env = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-runtime-common = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
+sel4-async-single-threaded-executor = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 
 sel4-stack = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
 sel4-sync = { git = "https://github.com/seL4/rust-sel4", rev = "5b9ebfd" }
@@ -49,6 +49,7 @@ task-helper = { path = "crates/task-helper" }
 common = { path = "crates/common" }
 common-macros = { path = "crates/common-macros" }
 slot-manager = { path = "crates/slot-manager" }
+flatten_objects = "0.2.2"
 
 spin = "0.9.8"
 syscalls = { version = "0.6", default-features = false }

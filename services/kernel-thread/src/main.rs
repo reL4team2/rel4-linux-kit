@@ -25,23 +25,23 @@ pub mod utils;
 
 sel4_runtime::entry_point!(main);
 
-macro_rules! test_task {
-    ($file:expr $(,$args:expr)*) => {{
-        const CHILD_ELF: &[u8] = include_bytes_aligned::include_bytes_aligned!(
-            16,
-            concat!("../../../testcases/", $file)
-        );
-        child_test::add_test_child(CHILD_ELF, &[$file $(,$args)*]).unwrap();
-    }};
-}
-
 // macro_rules! test_task {
-// ($file:expr $(,$args:expr)*) => {{
-//         let mut file =
-//             fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
-//         child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
+//     ($file:expr $(,$args:expr)*) => {{
+//         const CHILD_ELF: &[u8] = include_bytes_aligned::include_bytes_aligned!(
+//             16,
+//             concat!("../../../testcases/", $file)
+//         );
+//         child_test::add_test_child(CHILD_ELF, &[$file $(,$args)*]).unwrap();
 //     }};
 // }
+
+macro_rules! test_task {
+($file:expr $(,$args:expr)*) => {{
+        let mut file =
+            fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
+        child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
+    }};
+}
 
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot

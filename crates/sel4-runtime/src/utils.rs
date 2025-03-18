@@ -1,6 +1,8 @@
 //! 运行函数工具函数
 //!
 //!
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use common::consts::DEFAULT_PARENT_EP;
 use sel4::{
     CNodeCapData, UserContext,
@@ -43,4 +45,12 @@ pub fn create_thread(
     )?;
     tcb.tcb_set_sched_params(slot::TCB.cap(), 0, 255)?;
     tcb.tcb_write_all_registers(true, &mut ctx)
+}
+
+/// 申请一个空闲的地址
+///
+/// - `size` 需要申请的地址块的大小
+pub fn alloc_free_addr(size: usize) -> usize {
+    static FREE_SIZE: AtomicUsize = AtomicUsize::new(config::SHARE_PAGE_START);
+    FREE_SIZE.fetch_add(size, Ordering::SeqCst)
 }

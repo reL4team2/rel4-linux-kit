@@ -44,6 +44,8 @@ pub const TASK_FILES: &[KernelServices] = &[
         file: "blk-thread.elf",
         mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
         dma: &[(DMA_ADDR_START, 0x2000)]
+        // 可以添加 Shared 字段来提前设置预共享的页面
+        // shared: &[(start, sharedid, usize)]
     },
     service! {
         name: "uart-thread",

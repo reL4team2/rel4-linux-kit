@@ -17,7 +17,7 @@ use include_bytes_aligned::include_bytes_aligned;
 use page::PhysPage;
 use sel4::{
     Cap, CapRights, ObjectBlueprintArm, UntypedDesc,
-    cap::{LargePage, Untyped},
+    cap::{LargePage, SmallPage, Untyped},
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
@@ -140,6 +140,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         tasks,
         fault_ep,
         badge: 0,
+        channels: Vec::new(),
     };
     with_ipc_buffer_mut(|ib| root_task_handler.waiting_and_handle(ib))
 }
@@ -148,4 +149,5 @@ pub struct RootTaskHandler {
     tasks: Vec<Sel4Task>,
     fault_ep: Cap<Endpoint>,
     badge: u64,
+    channels: Vec<(usize, Vec<SmallPage>)>,
 }

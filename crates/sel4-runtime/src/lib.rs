@@ -6,4 +6,5 @@
 #![deny(missing_docs)]
 
 pub mod entry;
+pub mod heap;
 pub mod utils;
