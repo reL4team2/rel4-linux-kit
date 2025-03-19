@@ -1,7 +1,7 @@
 [package]
-name = "ext4-thread"
+name = "lwext4-thread"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
@@ -10,8 +10,12 @@ sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
+hashbrown = { workspace = true }
+
 # ext4 依赖
-ext4_rs = { git = "https://github.com/yuoo655/ext4_rs.git", rev = "04286c7" }
+lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false }
+
+flatten_objects = { workspace = true }
+syscalls = { workspace = true }

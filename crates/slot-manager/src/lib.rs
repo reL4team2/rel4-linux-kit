@@ -37,8 +37,8 @@
 use core::ops::Range;
 
 use sel4::{
-    init_thread::{slot, Slot},
     AbsoluteCPtr, Cap, CapRights, CapType,
+    init_thread::{Slot, slot},
 };
 
 /// 叶子 slot
@@ -157,6 +157,14 @@ impl LeafSlot {
     #[inline]
     pub fn mint_to(&self, dst: LeafSlot, cr: CapRights, badge: usize) -> Result<(), sel4::Error> {
         dst.abs_cptr().mint(&self.abs_cptr(), cr, badge as _)
+    }
+
+    /// 将 Capability 移动到指定的 [LeafSlot]
+    ///
+    /// - `dst`  需要移动到的 [LeafSlot]
+    #[inline]
+    pub fn move_to(&self, dst: Self) -> Result<(), sel4::Error> {
+        dst.abs_cptr().move_(&self.abs_cptr())
     }
 
     /// 保存回复 Capability

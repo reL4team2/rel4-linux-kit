@@ -7,19 +7,19 @@
 [package]
 name = "kernel-thread"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [features]
-example = []
 default = []
 
 [dependencies]
 sel4 = { workspace = true }
 sel4-logging = { workspace = true }
+sel4-kit = { workspace = true }
 sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
-syscalls = { version = "0.6", default-features = false }
+syscalls = { workspace = true }
 sel4-elf-header = { workspace = true }
 sel4-initialize-tls = { workspace = true }
 sel4-stack = { workspace = true }
@@ -30,9 +30,12 @@ axerrno = "0.1"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 
+config = { workspace = true }
 common = { workspace = true }
-crate-consts = { workspace = true }
 slot-manager = { workspace = true }
 
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
 include_bytes_aligned = "0.1.3"
+flatten_objects = "0.2.2"
+
+hashbrown = { workspace = true }

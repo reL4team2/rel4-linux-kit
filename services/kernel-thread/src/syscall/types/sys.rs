@@ -2,6 +2,7 @@
 //!
 //!
 
+use common::arch::{US_PER_SEC, get_curr_us};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// 系统信息
@@ -19,4 +20,25 @@ pub struct UtsName {
     pub machine: [u8; 65],
     /// 域名
     pub domainname: [u8; 65],
+}
+
+/// 时间结构
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, FromBytes, Immutable, KnownLayout, IntoBytes)]
+pub struct TimeVal {
+    /// 秒
+    pub sec: usize,
+    /// 微秒，范围在 0~999999
+    pub usec: usize,
+}
+
+impl TimeVal {
+    /// 获取当前的时间
+    pub fn now() -> Self {
+        let us = get_curr_us();
+        Self {
+            sec: us / US_PER_SEC,
+            usec: us % US_PER_SEC,
+        }
+    }
 }

@@ -6,7 +6,7 @@ QEMU_LOG ?= n
 SEL4_PREFIX :=  $(realpath .)/.env/seL4
 loader_artifacts_dir := $(SEL4_PREFIX)/bin
 loader := $(loader_artifacts_dir)/sel4-kernel-loader
-loader_cli := $(loader_artifacts_dir)/sel4-kernel-loader-add-payload
+loader_cli := sel4-kernel-loader-add-payload
 
 app_crate := root-task
 app := $(BUILD_DIR)/$(app_crate).elf
@@ -33,7 +33,7 @@ build:
 image := $(BUILD_DIR)/image.elf
 
 # Append the payload to the loader using the loader CLI
-buld_img: build $(loader) $(loader_cli)
+buld_img: build $(loader)
 	$(loader_cli) \
 		--loader $(loader) \
 		--sel4-prefix $(SEL4_PREFIX) \
@@ -48,7 +48,20 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
-run: buld_img
+disk_img:
+	mkdir -p mount
+	dd if=/dev/zero of=mount.img bs=4M count=64
+	sync
+	# mkfs.ext4 -b 4096 mount.img
+	# mkfs.vfat -F 32 mount.img
+	mkfs.ext4 -b 4096 -F -O ^metadata_csum_seed mount.img
+	sudo mount mount.img mount
+	sudo cp -r testcases/* mount/
+	sync
+	sudo umount mount
+	sync
+
+run: buld_img disk_img
 	$(qemu_cmd)
 	@rm $(image)
 
@@ -58,29 +71,7 @@ busybox:
 clean:
 	rm -rf $(BUILD_DIR)
 
-test-examples: 
-	@make -C examples/linux-apps/helloworld
-	@./tools/ins_modify.py examples/linux-apps/helloworld/main.elf .env/example
-	@cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
-	@cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate) --exclude kernel-thread
-	@cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
-	@$(loader_cli) \
-		--loader $(loader) \
-		--sel4-prefix $(SEL4_PREFIX) \
-		--app $(app) \
-		-o $(image)
-	$(qemu_cmd)
-	@rm $(image)
-	@make -C examples/linux-apps/sigtest
-	@./tools/ins_modify.py examples/linux-apps/sigtest/main.elf .env/example
-	@cargo build $(CARGO_BUILD_ARGS) -p kernel-thread --features "example"
-	@cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
-	@$(loader_cli) \
-		--loader $(loader) \
-		--sel4-prefix $(SEL4_PREFIX) \
-		--app $(app) \
-		-o $(image)
-	$(qemu_cmd)
-	@rm $(image)
+cloc:
+	cloc . --not-match-d=.env --not-match-d=target/
 
 .PHONY: run clean

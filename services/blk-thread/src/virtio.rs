@@ -1,12 +1,12 @@
 use alloc::collections::BTreeMap;
 use common::services::root::translate_addr;
+use config::DMA_ADDR_START;
 use core::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
-use crate_consts::DMA_ADDR_START;
 use spin::Mutex;
-use virtio_drivers::{BufferDirection, Hal, PhysAddr, PAGE_SIZE};
+use virtio_drivers::{BufferDirection, Hal, PAGE_SIZE, PhysAddr};
 
 static DMA_ADDR: AtomicUsize = AtomicUsize::new(DMA_ADDR_START);
 static ADDR_MAP: Mutex<BTreeMap<usize, usize>> = Mutex::new(BTreeMap::new());

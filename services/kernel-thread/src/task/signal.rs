@@ -6,6 +6,8 @@ use crate::syscall::types::signal::{SigAction, SigProcMask};
 use super::Sel4Task;
 
 pub struct TaskSignal {
+    /// 程序结束时发出的信号
+    pub exit_sig: u32,
     /// 信号屏蔽位
     pub mask: SigProcMask,
     /// 信号处理函数
@@ -19,7 +21,8 @@ pub struct TaskSignal {
 impl Default for TaskSignal {
     fn default() -> Self {
         Self {
-            mask: SigProcMask::new(),
+            exit_sig: Default::default(),
+            mask: SigProcMask::default(),
             actions: [None; 65],
             pedings: VecDeque::new(),
             save_context: Vec::new(),

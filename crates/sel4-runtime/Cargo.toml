@@ -1,7 +1,7 @@
 [package]
 name = "sel4-runtime"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
@@ -11,13 +11,9 @@ sel4-panicking-env = { workspace = true }
 sel4-logging = { workspace = true }
 sel4-dlmalloc = { workspace = true }
 sel4-sync = { workspace = true }
-sel4-runtime-common = { workspace = true, features = [
-  "start",
-  "tls",
-  "unwinding",
-] }
+sel4-runtime-common = { workspace = true, features = ["tls", "start"] }
 
-crate-consts = { workspace = true }
+config = { workspace = true }
 common = { workspace = true }
 slot-manager = { workspace = true }
 sel4-kit = { workspace = true }

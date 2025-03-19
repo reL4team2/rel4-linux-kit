@@ -1,4 +1,4 @@
-use sel4::{cap::Untyped, UntypedDesc};
+use sel4::{UntypedDesc, cap::Untyped};
 
 /// Display the boot information in the console.
 pub fn display_bootinfo(

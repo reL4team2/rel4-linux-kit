@@ -1,0 +1,40 @@
+name: Cargo Build Test
+
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install generaic tools
+      run: sudo apt-get install -y make cmake gcc libclang-dev
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: nightly-2024-12-25
+        components: rust-src, clippy, rustfmt
+    - name: Install cargo-binutils from crates.io
+      uses: baptiste0928/cargo-install@v3
+      with:
+        crate: cargo-binutils
+    - name: Cache Musl GCC
+      id: cache-musl
+      uses: actions/cache@v4
+      with:
+        path: aarch64-linux-musl-cross
+        key: aarch64-linux-musl-cross
+    - name: Download Musl Toolchain
+      if: steps.cache-musl.outputs.cache-hit != 'true'
+      run: |
+        wget https://musl.cc/aarch64-linux-musl-cross.tgz
+        tar -xf aarch64-linux-musl-cross.tgz
+    - name: Add toolchain to PATH
+      run: echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+    - run: aarch64-linux-musl-gcc --version
+    - name: Download sel4
+      run: |
+        mkdir -p .env
+        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+    - name: Test Build 
+      run: make build

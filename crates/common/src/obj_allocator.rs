@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
 use sel4::{
-    cap::{CNode, Endpoint, Granule, Notification, Tcb, Untyped, VSpace, PT},
+    CapTypeForObjectOfFixedSize,
+    cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace},
     cap_type,
     init_thread::slot,
-    CapTypeForObjectOfFixedSize,
 };
 use slot_manager::LeafSlot;
 

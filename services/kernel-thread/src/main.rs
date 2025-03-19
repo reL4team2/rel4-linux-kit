@@ -25,6 +25,25 @@ pub mod utils;
 
 sel4_runtime::entry_point!(main);
 
+// macro_rules! test_task {
+//     ($file:expr $(,$args:expr)*) => {{
+//         const CHILD_ELF: &[u8] = include_bytes_aligned::include_bytes_aligned!(
+//             16,
+//             concat!("../../../testcases/", $file)
+//         );
+//         child_test::add_test_child(CHILD_ELF, &[$file $(,$args)*]).unwrap();
+//     }};
+// }
+
+macro_rules! test_task {
+($file:expr $(,$args:expr)*) => {{
+        let mut file =
+            fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
+        child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
+        sel4::debug_println!("loading file: {}", $file);
+    }};
+}
+
 fn main() -> ! {
     // 初始化接收 IPC 传递的 Capability 的 Slot
     common::init_recv_slot();
@@ -41,8 +60,41 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
-    // 添加测试子任务
-    child_test::add_test_child().unwrap();
+    test_task!("brk");
+    test_task!("chdir");
+    test_task!("clone");
+    test_task!("close");
+    test_task!("dup");
+    test_task!("dup2");
+    test_task!("execve");
+    test_task!("exit");
+    test_task!("fork");
+    test_task!("fstat");
+    test_task!("getcwd");
+    test_task!("getdents");
+    test_task!("getpid");
+    test_task!("getppid");
+    test_task!("gettimeofday");
+    test_task!("mkdir_");
+    test_task!("mmap");
+    test_task!("mount");
+    test_task!("munmap");
+    test_task!("open");
+    test_task!("openat");
+    test_task!("pipe");
+    test_task!("read");
+    test_task!("sleep");
+    test_task!("test_echo");
+    test_task!("umount");
+    test_task!("uname");
+    test_task!("unlink");
+    test_task!("wait");
+    test_task!("waitpid");
+    test_task!("write");
+    test_task!("yield");
+
+    // 启动辅助线程
+    child_test::create_aux_thread();
 
     // 循环处理异常(含伪 syscall)
     exception::waiting_and_handle();

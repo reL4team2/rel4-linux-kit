@@ -1,10 +1,13 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use crate_consts::{PAGE_SIZE, STACK_ALIGN_SIZE};
+use common::consts::DEFAULT_PARENT_EP;
+use config::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use memory_addr::MemoryAddr;
+use sel4::{CNodeCapData, init_thread::slot};
+use slot_manager::LeafSlot;
 
 use crate::consts::task::DEF_STACK_TOP;
 
-use super::{auxv::AuxV, Sel4Task};
+use super::{Sel4Task, auxv::AuxV};
 
 impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
@@ -38,7 +41,8 @@ impl Sel4Task {
         // +------------------+
         let mut stack_ptr = DEF_STACK_TOP;
 
-        let mut page_writer = self
+        let mem = self.mem.lock();
+        let mut page_writer = mem
             .mapped_page
             .get(&(DEF_STACK_TOP - PAGE_SIZE))
             .unwrap()
@@ -52,12 +56,12 @@ impl Sel4Task {
                 // TODO: set end bit was zeroed manually.
                 stack_ptr = (stack_ptr - arg.bytes().len()).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, arg.as_bytes());
-                page_writer.write_u8(stack_ptr + arg.as_bytes().len(), 0);
+                page_writer.write_u8(stack_ptr + arg.len(), 0);
                 stack_ptr
             })
             .collect();
 
-        let envs = vec![
+        let envs = [
             "LD_LIBRARY_PATH=/",
             "PS1=\x1b[1m\x1b[32mrelk\x1b[0m:\x1b[1m\x1b[34m\\w\x1b[0m\\$ \0",
             "PATH=/:/bin:/usr/bin",
@@ -68,7 +72,7 @@ impl Sel4Task {
             .map(|env| {
                 stack_ptr = (stack_ptr - env.bytes().len()).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, env.as_bytes());
-                page_writer.write_u8(stack_ptr + env.as_bytes().len(), 0);
+                page_writer.write_u8(stack_ptr + env.len(), 0);
                 stack_ptr
             })
             .collect();
@@ -102,5 +106,21 @@ impl Sel4Task {
         // push argv
         push_num(args_ptr.len());
         stack_ptr
+    }
+
+    /// 初始化 [sel4::cap::Tcb] 信息
+    ///
+    /// 初始化 tcb 信息，设置调度优先级，目前设定为固定值
+    /// TODO: 更改调度优先级的设置，更加灵活自由
+    pub fn init_tcb(&self) -> Result<(), sel4::Error> {
+        self.tcb.tcb_configure(
+            DEFAULT_PARENT_EP.cptr(),
+            self.cnode,
+            CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
+            self.vspace,
+            0,
+            LeafSlot::new(0).cap(),
+        )?;
+        self.tcb.tcb_set_sched_params(slot::TCB.cap(), 0, 255)
     }
 }

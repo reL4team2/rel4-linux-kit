@@ -19,15 +19,10 @@ pub enum SigMaskHow {
 
 /// 信号屏蔽位
 #[repr(C)]
-#[derive(Debug, Clone, Copy, FromBytes, Immutable, KnownLayout, IntoBytes)]
+#[derive(Debug, Default, Clone, Copy, FromBytes, Immutable, KnownLayout, IntoBytes)]
 pub struct SigProcMask(usize);
 
 impl SigProcMask {
-    /// 创建一个新的信号屏蔽位
-    pub const fn new() -> Self {
-        Self(0)
-    }
-
     /// 处理信号屏蔽位
     ///
     /// - `how`  处理方式

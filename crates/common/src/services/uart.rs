@@ -1,5 +1,5 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use sel4::{cap::Endpoint, with_ipc_buffer, MessageInfo, MessageInfoBuilder};
+use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer};
 use slot_manager::LeafSlot;
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]

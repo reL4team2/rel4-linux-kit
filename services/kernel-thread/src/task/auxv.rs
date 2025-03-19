@@ -1,5 +1,6 @@
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types, dead_code)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum AuxV {
     /// end of vector
     NULL = 0,

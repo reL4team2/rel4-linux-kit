@@ -1,9 +1,9 @@
 //! obj 管理模块，提供了对象的管理功能
 use common::ObjectAllocator;
-use crate_consts::DEFAULT_CUSTOM_SLOT;
+use config::DEFAULT_CUSTOM_SLOT;
 use sel4::{
-    cap::{CNode, Granule, Notification, Tcb, VSpace, PT},
     Cap,
+    cap::{CNode, Granule, Notification, PT, Tcb, VSpace},
 };
 use slot_manager::LeafSlot;
 use spin::Mutex;
