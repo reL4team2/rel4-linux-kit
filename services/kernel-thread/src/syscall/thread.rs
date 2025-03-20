@@ -17,6 +17,7 @@ use crate::{
         task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     },
     fs::file::File,
+    syscall::types::thread::WaitOption,
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
 };
@@ -54,11 +55,12 @@ pub(super) fn sys_wait4(
     ctx: &mut UserContext,
     pid: isize,
     status: *const i32,
-    option: usize,
+    option: u32,
 ) -> SysResult {
     log::warn!("wait for {} ptr: {:p} option: {}", pid, status, option);
-    if option != 0 {
-        panic!("option != 0 is not supported");
+    let options = WaitOption::from_bits_truncate(option);
+    if options.contains(WaitOption::WUNTRACED) {
+        panic!("option({:?}  {}) is not supported", options, option);
     }
     let mut task_map = TASK_MAP.lock();
     let finded = task_map
@@ -66,6 +68,9 @@ pub(super) fn sys_wait4(
         .find(|(_, target)| target.exit.is_some() && target.ppid == task.pid);
 
     if finded.is_none() {
+        if options.contains(WaitOption::WHOHANG) {
+            return Ok(0);
+        }
         *ctx.pc_mut() -= 4;
         return Ok(pid as _);
     }

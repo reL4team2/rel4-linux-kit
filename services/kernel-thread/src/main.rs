@@ -60,38 +60,7 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
-    test_task!("brk");
-    test_task!("chdir");
-    test_task!("clone");
-    test_task!("close");
-    test_task!("dup");
-    test_task!("dup2");
-    test_task!("execve");
-    test_task!("exit");
-    test_task!("fork");
-    test_task!("fstat");
-    test_task!("getcwd");
-    test_task!("getdents");
-    test_task!("getpid");
-    test_task!("getppid");
-    test_task!("gettimeofday");
-    test_task!("mkdir_");
-    test_task!("mmap");
-    test_task!("mount");
-    test_task!("munmap");
-    test_task!("open");
-    test_task!("openat");
-    test_task!("pipe");
-    test_task!("read");
-    test_task!("sleep");
-    test_task!("test_echo");
-    test_task!("umount");
-    test_task!("uname");
-    test_task!("unlink");
-    test_task!("wait");
-    test_task!("waitpid");
-    test_task!("write");
-    test_task!("yield");
+    test_task!("busybox", "sh", "/init.sh");
 
     // 启动辅助线程
     child_test::create_aux_thread();

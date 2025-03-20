@@ -57,7 +57,9 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
     // 用最大块的内存初始化 Capability 分配器
     // 从 untyped object Retype 为特定的 object
-    common::slot::init(bootinfo.empty().range());
+    // TODO: 使用合适的 CSpace 边缘处理模式
+    // 可能的做法是单独搞一个 ObjectAllocator 来分配 CSpace
+    common::slot::init(bootinfo.empty().range().start..usize::MAX, None);
     OBJ_ALLOCATOR.lock().init(mem_untypes.pop().unwrap().0);
 
     // 重建 Capability 空间，构建为多级 CSpace

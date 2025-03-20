@@ -12,7 +12,7 @@ pub const SERVICE_BOOT_STACK_TOP: usize = 0x1_0000_0000;
 pub const SERVICE_BOOT_STACK_SIZE: usize = 0x1_0000;
 
 /// 服务任务默认的堆大小
-pub const SERVICE_HEAP_SIZE: usize = 0x8_0000;
+pub const SERVICE_HEAP_SIZE: usize = 0x20_0000;
 
 /// VIRTIO_MMIO 使用的地址
 pub const VIRTIO_MMIO_ADDR: usize = 0xa003e00;

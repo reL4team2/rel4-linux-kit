@@ -4,6 +4,7 @@
 
 use alloc::{boxed::Box, string::String, sync::Arc};
 use common::services::fs::Stat;
+use num_enum::TryFromPrimitive;
 use spin::mutex::Mutex;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
@@ -11,6 +12,7 @@ use zerocopy::{FromBytes, IntoBytes};
 use crate::{
     consts::fd::FD_CUR_DIR,
     fs::{file::File, get_mounted, mount, pipe::create_pipe2, umount},
+    syscall::types::fs::FcntlCmd,
     task::Sel4Task,
 };
 
@@ -192,6 +194,19 @@ pub(super) fn sys_mount(
         return Err(Errno::EPERM);
     }
     Ok(0)
+}
+
+/// TODO: 检查 `arg` 参数，完善 `fcntl` 系统调用
+pub(super) fn sys_fcntl(task: &Sel4Task, fd: usize, cmd: u32, _arg: usize) -> SysResult {
+    let cmd = FcntlCmd::try_from_primitive(cmd).map_err(|_| Errno::EINVAL)?;
+
+    // 检查文件是否存在
+    let _file = task.file.file_ds.lock().get_mut(fd).ok_or(Errno::EBADF)?;
+    match cmd {
+        FcntlCmd::DUPFD | FcntlCmd::DUPFDCLOEXEC => sys_dup(task, fd),
+        FcntlCmd::SETFD => Ok(0),
+        _ => todo!("cmd is not implemented: {:?}", cmd),
+    }
 }
 
 pub(super) fn sys_umount(task: &Sel4Task, target: *const u8, flags: u64) -> SysResult {

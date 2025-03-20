@@ -42,7 +42,6 @@ pub fn rebuild_cspace() {
             CNodeCapData::skip(0).into_word(),
         )
         .unwrap();
-
     // load
     LeafSlot::new(0)
         .abs_cptr()
