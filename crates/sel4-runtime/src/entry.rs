@@ -28,7 +28,7 @@ unsafe extern "C" fn main_entry() -> ! {
         run_ctors();
 
         // 初始化 slot-manager
-        common::slot::init(DEFAULT_EMPTY_SLOT_INDEX..usize::MAX);
+        common::slot::init(DEFAULT_EMPTY_SLOT_INDEX..usize::MAX, None);
 
         match catch_unwind(|| unsafe { _impl_main() }) {
             Ok(never) => never,
@@ -42,6 +42,8 @@ unsafe extern "C" fn main_entry() -> ! {
 }
 
 /// 非主线程启动后的入口函数
+///
+/// # Safety
 ///
 /// - `handler` 初始化之后使用的入口函数
 /// - `ib`      [IpcBuffer] 使用的虚拟地址，需要 4k 对齐

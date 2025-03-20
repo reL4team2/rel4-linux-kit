@@ -26,7 +26,6 @@ sel4-stack = { workspace = true }
 sel4-root-task = { workspace = true }
 bitflags = "2.6"
 memory_addr = "0.3"
-axerrno = "0.1"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 

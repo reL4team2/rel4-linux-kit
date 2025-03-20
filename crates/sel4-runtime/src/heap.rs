@@ -23,4 +23,3 @@ static GLOBAL_ALLOCATOR: StaticDlmallocGlobalAlloc<
     PanickingRawMutex,
     &StaticHeap<SERVICE_HEAP_SIZE>,
 > = StaticDlmallocGlobalAlloc::new(PanickingRawMutex::new(), &STATIC_HEAP);
-

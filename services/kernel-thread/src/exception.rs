@@ -91,11 +91,7 @@ pub fn waiting_and_handle() -> ! {
         {
             let mut task_map = TASK_MAP.lock();
             let next_task = task_map.values_mut().find(|x| x.exit.is_none());
-            if let Some(next_task) = next_task {
-                if next_task.timer == 0 {
-                    next_task.tcb.tcb_resume().unwrap();
-                }
-            } else {
+            if next_task.is_none() {
                 sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
                 common::services::root::shutdown().unwrap();
             }

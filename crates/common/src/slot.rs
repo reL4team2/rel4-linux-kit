@@ -4,13 +4,20 @@
 use core::ops::Range;
 
 use slot_manager::{LeafSlot, SlotManager};
-use spin::Mutex;
+use spin::{Mutex, once::Once};
 
 static SLOT_MANAGER: Mutex<SlotManager> = Mutex::new(SlotManager::empty());
+static SLOT_EDGE_HANDLER: Once<fn() -> LeafSlot> = Once::new();
 
 /// 初始化 [SLOT_MANAGER]
-pub fn init(empty_slots: Range<usize>) {
+///
+/// - `empty_slots`  空白的 slot 范围
+/// - `handler`      当申请的 slot 在一级 CSpace 的边缘时的处理函数
+pub fn init(empty_slots: Range<usize>, handler: Option<fn() -> LeafSlot>) {
     SLOT_MANAGER.lock().init_empty_slots(empty_slots);
+    if let Some(handler) = handler {
+        SLOT_EDGE_HANDLER.call_once(|| handler);
+    }
 }
 
 /// 申请一个 [LeafSlot]

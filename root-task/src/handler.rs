@@ -3,7 +3,6 @@ use core::sync::atomic::AtomicUsize;
 use common::{
     page::PhysPage,
     services::{IpcBufferRW, root::RootEvent},
-    slot::alloc_slot,
 };
 use config::PAGE_SIZE;
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
@@ -39,7 +38,7 @@ impl RootTaskHandler {
                     pages
                         .iter()
                         .map(|x| {
-                            let slot = alloc_slot();
+                            let slot = OBJ_ALLOCATOR.lock().allocate_slot();
                             slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
                                 .unwrap();
                             slot
@@ -61,7 +60,7 @@ impl RootTaskHandler {
                         pages
                             .iter()
                             .map(|x| {
-                                let slot = alloc_slot();
+                                let slot = OBJ_ALLOCATOR.lock().allocate_slot();
                                 slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
                                     .unwrap();
                                 slot

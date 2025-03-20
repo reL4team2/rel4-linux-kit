@@ -57,6 +57,7 @@ disk_img:
 	mkfs.ext4 -b 4096 -F -O ^metadata_csum_seed mount.img
 	sudo mount mount.img mount
 	sudo cp -r testcases/* mount/
+	sudo cp support/tests/init.sh mount/
 	sync
 	sudo umount mount
 	sync

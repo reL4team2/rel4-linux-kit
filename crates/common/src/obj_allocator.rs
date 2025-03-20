@@ -52,7 +52,7 @@ impl ObjectAllocator {
                     &sel4::init_thread::slot::CNODE
                         .cap()
                         .absolute_cptr_for_self(),
-                    leaf_slot.offset_of_cnode(),
+                    leaf_slot.cnode_idx(),
                     1,
                 )
                 .expect("can't allocate notification");
