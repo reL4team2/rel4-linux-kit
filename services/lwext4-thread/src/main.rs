@@ -41,10 +41,7 @@ fn main() -> ! {
     log::info!("Booting...");
 
     BLK_SERVICE.ping().unwrap();
-    // let share_page = alloc_page(alloc_slot(), 0x3_0000_0000).unwrap();
-    //
-    // BLK_SERVICE.init(share_page.cap()).unwrap();
-    let channel_id = create_channel(0x3_0000_0000, 2).unwrap();
+    let channel_id = create_channel(0x3_0000_0000, 4).unwrap();
     BLK_SERVICE.init(channel_id).unwrap();
 
     let mut stores = FlattenObjects::<Ext4File, STORE_CAP>::new();

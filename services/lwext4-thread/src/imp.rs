@@ -75,7 +75,7 @@ impl Ext4Disk {
     fn read_one(&mut self, buf: &mut [u8]) -> Result<usize, i32> {
         assert_eq!(buf.len() % BLOCK_SIZE, 0);
         assert_eq!(self.offset, 0);
-        assert!(buf.len() <= 0x2000);
+        assert!(buf.len() <= 0x4000);
         let ptr = 0x3_0000_0000 as *const u8;
         BLK_SERVICE
             .read_block(self.block_id, buf.len() / BLOCK_SIZE)
@@ -91,7 +91,7 @@ impl Ext4Disk {
     fn write_one(&mut self, buf: &[u8]) -> Result<usize, i32> {
         assert_eq!(buf.len() % BLOCK_SIZE, 0);
         assert_eq!(self.offset, 0);
-        assert!(buf.len() <= 0x2000);
+        assert!(buf.len() <= 0x4000);
         let ptr = 0x3_0000_0000 as *mut u8;
         unsafe {
             ptr.copy_from_nonoverlapping(buf.as_ptr(), buf.len());

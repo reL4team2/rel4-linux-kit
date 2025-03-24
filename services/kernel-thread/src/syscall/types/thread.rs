@@ -43,4 +43,14 @@ bitflags::bitflags! {
 
     }
 
+    /// `WaitOption` 用于表示 `sys_wait4` 的 `option` 参数
+    #[derive(Debug, Clone, Copy)]
+    pub struct WaitOption: u32 {
+        /// 如果没有子进程退出，wait4 立即返回 0，而不会阻塞等待。
+        const WHOHANG    =     1 << 0;
+        /// 让 wait4 也返回因 SIGSTOP (如 CTRL+Z) 暂停的子进程信息。
+        /// 默认情况下，wait4 只会返回已退出的子进程。
+        const WUNTRACED  =     1 << 1;
+    }
+
 }

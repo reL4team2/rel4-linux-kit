@@ -109,7 +109,7 @@ fn main() -> ! {
 
                     let token = unsafe {
                         virtio_blk
-                            .write_blocks_nb(block_id, &mut request, &buffer, &mut resp)
+                            .write_blocks_nb(block_id, &mut request, buffer, &mut resp)
                             .unwrap()
                     };
                     // 顺序不能变，先等待中断，然后处理 virtio_blk 的中断
@@ -120,7 +120,7 @@ fn main() -> ! {
 
                     unsafe {
                         virtio_blk
-                            .complete_write_blocks(token, &request, &buffer, &mut resp)
+                            .complete_write_blocks(token, &request, buffer, &mut resp)
                             .unwrap();
                     }
                     sel4::reply(ib, rev_msg.build());
