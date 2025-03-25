@@ -1,3 +1,17 @@
+//! 时钟相关的 crate
+//!
+//! 使用 `CNTP_xx_EL0` 来获取当前时间，进行定时器控制。
+//! `cntp_ctl_el0`, `cntp_cval_el0`, `cntpct_el0`, `cntfrq_el0` 分别是控制寄存器、比较寄存器、计数寄存器、频率寄存器。
+//!
+//! `CNTP_CVAL_EL0` <https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/CNTP-CVAL-EL0--Counter-timer-Physical-Timer-CompareValue-Register>
+//! `CNTP_CTL_EL0` <https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/CNTP-CTL-EL0--Counter-timer-Physical-Timer-Control-Register>
+//! `CNTPCT_EL0` <https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/CNTPCT-EL0--Counter-timer-Physical-Count-Register>
+//! `CNTFRQ_EL0` <https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/CNTFRQ-EL0--Counter-timer-Frequency-Register>
+//!
+
+/// PCNT 使用的中断号
+pub const GENERIC_TIMER_PCNT_IRQ: usize = 30;
+
 /// 获取当前的时间(ns)
 #[cfg(target_arch = "aarch64")]
 #[inline]
