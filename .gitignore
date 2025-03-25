@@ -11,6 +11,7 @@
 *.log
 **.pcap
 mount.img
+qemu.dtb
 __pycache__
 /aarch64-linux-musl-cross.tgz
 

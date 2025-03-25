@@ -1,4 +1,18 @@
+
+const CPU_OFF: u32 = 0x8400_0002;
+
 /// 关机指令
+/// 
+/// ```plain
+/// psci {
+///     migrate = <0xc4000005>;
+///     cpu_on = <0xc4000003>;
+///     cpu_off = <0x84000002>;
+///     cpu_suspend = <0xc4000001>;
+///     method = "smc";
+///     compatible = "arm,psci-1.0", "arm,psci-0.2", "arm,psci";
+/// };
+/// ```
 #[allow(dead_code)]
 pub fn shutdown() -> ! {
     // use sel4::InvocationContext;
@@ -16,7 +30,7 @@ pub fn shutdown() -> ! {
     sel4::init_thread::slot::SMC
         .cap()
         .smc_call(&sel4::sys::seL4_ARM_SMCContext {
-            x0: 0x8400_0008,
+            x0: CPU_OFF as _,
             ..Default::default()
         })
         .unwrap();
