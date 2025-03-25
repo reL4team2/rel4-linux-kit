@@ -21,6 +21,9 @@ qemu_args += -device virtio-blk-device,drive=x0
 ifeq ($(QEMU_LOG), y)
 	qemu_args += -D qemu.log -d in_asm,int,pcall,cpu_reset,guest_errors
 endif
+ifeq ($(DUMP_DTB), y)
+	qemu_args += -machine dumpdtb=qemu.dtb
+endif
 
 CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 	--target $(TARGET) \
@@ -66,13 +69,17 @@ run: buld_img disk_img
 	$(qemu_cmd)
 	@rm $(image)
 
+examples:
+	make -C examples/linux-apps all
+
 busybox:
 	wget https://github.com/Azure-stars/rust-root-task-demo-mi-dev/raw/refs/heads/main/busybox
 
 clean:
 	rm -rf $(BUILD_DIR)
+	make -C examples/linux-apps clean
 
 cloc:
 	cloc . --not-match-d=.env --not-match-d=target/
 
-.PHONY: run clean
+.PHONY: run clean examples
