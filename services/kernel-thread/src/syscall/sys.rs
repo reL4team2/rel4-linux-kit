@@ -5,7 +5,7 @@
 use common::{arch::get_curr_ns, services::fs::TimeSpec};
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::task::Sel4Task;
+use crate::{task::Sel4Task, timer::flush_timer};
 
 use super::{
     SysResult,
@@ -56,6 +56,7 @@ pub(super) fn sys_nanosleep(
     debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
 
     task.timer = ns + req.sec * 1_000_000_000 + req.nsec;
+    flush_timer(task.timer);
 
     if !rem_ptr.is_null() {
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());

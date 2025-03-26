@@ -6,7 +6,7 @@
 //! 为宏内核支持引入多余的部件。
 use core::future::poll_fn;
 
-use common::{arch::get_curr_ns, consts::DEFAULT_SERVE_EP, page::PhysPage};
+use common::{consts::DEFAULT_SERVE_EP, page::PhysPage};
 use config::PAGE_SIZE;
 use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
 use sel4_kit::ipc::poll_endpoint;
@@ -117,23 +117,6 @@ pub async fn waiting_and_handle() {
                 }
             }
         }
-    }
-}
-
-/// 创建一个辅助任务来处理时钟等任务
-pub async fn aux_thread() {
-    sel4::debug_println!("boot aux thread");
-    loop {
-        yield_now().await;
-        let mut task_map = TASK_MAP.lock();
-        let curr_ns = get_curr_ns();
-        task_map.values_mut().for_each(|task| {
-            if task.exit.is_none() && curr_ns > task.timer {
-                task.timer = 0;
-                task.tcb.tcb_resume().unwrap();
-            }
-        });
-        drop(task_map);
     }
 }
 

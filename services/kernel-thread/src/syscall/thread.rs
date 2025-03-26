@@ -3,7 +3,7 @@
 //!
 
 use alloc::{string::String, vec::Vec};
-use common::{arch::get_curr_ns, page::PhysPage};
+use common::page::PhysPage;
 use config::PAGE_SIZE;
 use object::Object;
 use sel4::UserContext;
@@ -213,7 +213,6 @@ pub(super) fn sys_execve(
 }
 
 #[inline]
-pub(super) fn sys_sched_yield(task: &mut Sel4Task) -> SysResult {
-    task.timer = get_curr_ns() + 10;
+pub(super) fn sys_sched_yield(_task: &mut Sel4Task) -> SysResult {
     Ok(0)
 }

@@ -269,12 +269,4 @@ impl Sel4Task {
             .div_ceil(PAGE_SIZE as _) as usize
             * PAGE_SIZE;
     }
-
-    /// 设置一个新的定时器 (ns)
-    ///
-    /// - `new_ns` 唤醒时间
-    #[inline]
-    pub fn set_timer(&mut self, new_ns: usize) {
-        self.timer = new_ns;
-    }
 }

@@ -17,15 +17,24 @@ pub const GENERIC_TIMER_PCNT_IRQ: usize = 30;
 #[inline]
 pub fn get_curr_ns() -> usize {
     let cnt: usize;
-    let freq: usize;
+    let freq: usize = get_freq();
     unsafe {
         core::arch::asm!("mrs  {}, cntpct_el0", out(reg) cnt);
-        core::arch::asm!("mrs  {}, cntfrq_el0", out(reg) freq);
     }
     cnt * 1_000_000_000 / freq
 }
 
 pub const US_PER_SEC: usize = 1_000_000;
+
+/// 获取当前的时钟频率
+#[inline]
+fn get_freq() -> usize {
+    let freq: usize;
+    unsafe {
+        core::arch::asm!("mrs  {}, cntfrq_el0", out(reg) freq);
+    }
+    freq
+}
 
 /// 获取当前的时间(us)
 #[inline]
@@ -43,4 +52,29 @@ pub fn get_curr_ms() -> usize {
 #[inline]
 pub fn get_curr_sec() -> usize {
     get_curr_ns() / 1_000_000_000
+}
+
+/// 设置定时器
+#[inline]
+pub fn set_timer(next_ns: usize) {
+    let next_ticks = next_ns * get_freq() / 1_000_000_000;
+    let enable = if next_ns != 0 { 1 } else { 0 };
+    unsafe {
+        core::arch::asm!(
+            "msr cntp_cval_el0, {}",
+            "msr cntp_ctl_el0, {:x}",
+            in(reg) next_ticks,
+            in(reg) enable
+        );
+    }
+}
+
+/// 获取当前 timer 定时的时间
+#[inline]
+pub fn get_cval_ns() -> usize {
+    let cval: usize;
+    unsafe {
+        core::arch::asm!("mrs  {}, cntp_cval_el0", out(reg) cval);
+    }
+    cval * 1_000_000_000 / get_freq()
 }

@@ -27,6 +27,7 @@ pub mod exception;
 pub mod fs;
 pub mod syscall;
 pub mod task;
+pub mod timer;
 pub mod utils;
 
 sel4_runtime::entry_point!(main);
@@ -66,11 +67,14 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
+    // 初始化定时器
+    timer::init();
+
     test_task!("busybox", "sh", "/init.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     spawn_async!(pool, exception::waiting_and_handle());
-    spawn_async!(pool, exception::aux_thread());
+    spawn_async!(pool, timer::aux_thread());
     spawn_async!(pool, exception::waiting_for_end());
     loop {
         let _ = pool.run_all_until_stalled();
