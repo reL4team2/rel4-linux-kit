@@ -1,15 +1,12 @@
 use crate::{
     consts::task::DEF_STACK_TOP,
-    exception::aux_thread,
     fs::{file::File, stdio::StdConsole},
     task::Sel4Task,
-    utils,
 };
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc};
 use config::PAGE_SIZE;
 use object::{BinaryFormat, Object};
 use sel4::Result;
-use sel4_runtime::utils::create_thread;
 use spin::Mutex;
 
 /// 任务表，可以通过任务 ID 获取任务
@@ -51,21 +48,11 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
 
         // 写入寄存器信息并恢复运行
         task.tcb
-            .tcb_write_all_registers(false, &mut user_context)
+            .tcb_write_all_registers(true, &mut user_context)
             .unwrap();
     }
 
     TASK_MAP.lock().insert(task.id as _, task);
 
     Ok(())
-}
-
-/// 启动辅助任务
-pub fn create_aux_thread() {
-    let tcb = utils::obj::alloc_tcb();
-    let ipc_cap = utils::obj::alloc_page();
-    let sp_cap = utils::obj::alloc_page();
-    utils::page::map_page_self(0x6_0000_0000, ipc_cap);
-    utils::page::map_page_self(0x6_0000_1000, sp_cap);
-    create_thread(aux_thread, 0x6_0000_1000, tcb, 0x6_0000_0000, ipc_cap, &[]).unwrap();
 }

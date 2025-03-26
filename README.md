@@ -24,7 +24,7 @@ cargo install --git https://github.com/seL4/rust-sel4 --rev 1cd063a0f69b2d2045bf
 
 ```shell
 mkdir -p .env
-wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
 ```
 
 #### 下载并构建测例

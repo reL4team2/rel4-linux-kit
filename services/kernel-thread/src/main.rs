@@ -3,13 +3,19 @@
 #![no_std]
 #![no_main]
 #![deny(missing_docs)]
+#![deny(warnings)]
 #![feature(never_type)]
 #![feature(const_trait_impl)]
+
+use futures::task::LocalSpawnExt;
 
 #[macro_use]
 extern crate log;
 #[macro_use]
 extern crate alloc;
+
+#[macro_use]
+pub mod rasync;
 
 mod child_test;
 mod logging;
@@ -21,6 +27,7 @@ pub mod exception;
 pub mod fs;
 pub mod syscall;
 pub mod task;
+pub mod timer;
 pub mod utils;
 
 sel4_runtime::entry_point!(main);
@@ -60,11 +67,16 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
+    // 初始化定时器
+    timer::init();
+
     test_task!("busybox", "sh", "/init.sh");
 
-    // 启动辅助线程
-    child_test::create_aux_thread();
-
-    // 循环处理异常(含伪 syscall)
-    exception::waiting_and_handle();
+    let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
+    spawn_async!(pool, exception::waiting_and_handle());
+    spawn_async!(pool, timer::aux_thread());
+    spawn_async!(pool, exception::waiting_for_end());
+    loop {
+        let _ = pool.run_all_until_stalled();
+    }
 }

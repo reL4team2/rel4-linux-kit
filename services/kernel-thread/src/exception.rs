@@ -4,12 +4,17 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::{arch::get_curr_ns, consts::DEFAULT_SERVE_EP, page::PhysPage};
+use core::future::poll_fn;
+
+use common::{consts::DEFAULT_SERVE_EP, page::PhysPage};
 use config::PAGE_SIZE;
 use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
+use sel4_kit::ipc::poll_endpoint;
 use syscalls::Errno;
 
-use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_page};
+use crate::{
+    child_test::TASK_MAP, rasync::yield_now, syscall::handle_syscall, utils::obj::alloc_page,
+};
 
 /// 处理用户异常
 ///
@@ -86,56 +91,45 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
 }
 
 /// 循环等待并处理异常
-pub fn waiting_and_handle() -> ! {
+pub async fn waiting_and_handle() {
     loop {
-        {
-            let mut task_map = TASK_MAP.lock();
-            let next_task = task_map.values_mut().find(|x| x.exit.is_none());
-            if next_task.is_none() {
-                sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
-                common::services::root::shutdown().unwrap();
-            }
-        }
-        let (message, tid) = DEFAULT_SERVE_EP.recv(());
-        assert!(message.label() < 8, "Unexpected IPC Message");
-
-        let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-        match fault {
-            Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
-            Fault::UserException(ue) => handle_user_exception(tid, ue),
-            _ => {
-                log::error!("Unhandled fault: {:#x?}", fault);
-            }
-        }
-
+        yield_now().await;
         sel4::r#yield();
+
+        let (message, tid) = poll_fn(|cx| {
+            let res = poll_endpoint(DEFAULT_SERVE_EP);
+            if res.is_pending() {
+                cx.waker().wake_by_ref();
+            }
+            res
+        })
+        .await;
+        // let (message, tid) = DEFAULT_SERVE_EP.nb_recv(());
+        if tid != 0 {
+            assert!(message.label() < 8, "Unexpected IPC Message");
+
+            let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+            match fault {
+                Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
+                Fault::UserException(ue) => handle_user_exception(tid, ue),
+                _ => {
+                    log::error!("Unhandled fault: {:#x?}", fault);
+                }
+            }
+        }
     }
 }
 
-/// 创建一个辅助任务来处理时钟等任务
-pub fn aux_thread() -> ! {
-    sel4::debug_println!("boot aux thread");
+/// 等待所有任务结束
+pub async fn waiting_for_end() {
     loop {
+        yield_now().await;
+
         let mut task_map = TASK_MAP.lock();
-        let curr_ns = get_curr_ns();
-        task_map.values_mut().for_each(|task| {
-            if task.exit.is_none() && curr_ns > task.timer {
-                task.timer = 0;
-                task.tcb.tcb_resume().unwrap();
-            }
-        });
-        drop(task_map);
-        sel4::r#yield();
-    }
-}
-
-/// 等待其他程序发来的启动消息
-pub fn waiting_for_start() {
-    loop {
-        let (message, _) = DEFAULT_SERVE_EP.recv(());
-
-        if message.label() == 0x1234 {
-            break;
+        let next_task = task_map.values_mut().find(|x| x.exit.is_none());
+        if next_task.is_none() {
+            sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
+            common::services::root::shutdown().unwrap();
         }
     }
 }

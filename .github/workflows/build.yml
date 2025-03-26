@@ -33,6 +33,6 @@ jobs:
     - name: Download sel4
       run: |
         mkdir -p .env
-        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
     - name: Test Build 
       run: make build

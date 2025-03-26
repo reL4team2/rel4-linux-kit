@@ -1,8 +1,11 @@
-
-const CPU_OFF: u32 = 0x8400_0002;
+/// Arm Power State Coordination Interface
+///               Platform Design Document
+/// 手册: https://developer.arm.com/documentation/den0022/latest
+/// 章节: CHAPTER 5.1.9 SYSTEM_OFF
+const SYSMTEM_OFF: u32 = 0x8400_0008;
 
 /// 关机指令
-/// 
+///
 /// ```plain
 /// psci {
 ///     migrate = <0xc4000005>;
@@ -30,7 +33,7 @@ pub fn shutdown() -> ! {
     sel4::init_thread::slot::SMC
         .cap()
         .smc_call(&sel4::sys::seL4_ARM_SMCContext {
-            x0: CPU_OFF as _,
+            x0: SYSMTEM_OFF as _,
             ..Default::default()
         })
         .unwrap();
