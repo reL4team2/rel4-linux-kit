@@ -15,8 +15,8 @@ use crate::{
     utils::obj::{alloc_notification, alloc_slot},
 };
 
-static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(|| alloc_slot());
-static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| alloc_notification());
+static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
+static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(alloc_notification);
 
 /// 创建一个辅助任务来处理时钟等任务
 pub async fn aux_thread() {

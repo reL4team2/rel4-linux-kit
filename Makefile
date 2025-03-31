@@ -51,7 +51,7 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
-disk_img:
+disk_img: examples
 	mkdir -p mount
 	dd if=/dev/zero of=mount.img bs=4M count=64
 	sync
@@ -71,6 +71,7 @@ run: buld_img disk_img
 
 examples:
 	make -C examples/linux-apps all
+	./tools/modify-multi.py examples/linux-apps/build testcases
 
 busybox:
 	wget https://github.com/Azure-stars/rust-root-task-demo-mi-dev/raw/refs/heads/main/busybox

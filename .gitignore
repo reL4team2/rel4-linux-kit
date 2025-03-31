@@ -3,6 +3,7 @@
 /build/
 /patch/
 /.env/
+/.idea/
 /testcases/
 /mount/
 /aarch64-linux-musl-cross/

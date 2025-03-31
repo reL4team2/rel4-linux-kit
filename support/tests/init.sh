@@ -34,3 +34,4 @@ echo Hello World!
 ./yield
 
 echo Exec Done
+./poweroff

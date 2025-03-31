@@ -2,7 +2,11 @@
 //!
 //!
 
-use common::{arch::get_curr_ns, services::fs::TimeSpec};
+use common::{
+    arch::get_curr_ns,
+    services::{fs::TimeSpec, root::shutdown},
+};
+use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{task::Sel4Task, timer::flush_timer};
@@ -62,4 +66,18 @@ pub(super) fn sys_nanosleep(
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
     }
     Ok(0)
+}
+
+pub(super) fn sys_reboot(magic1: usize, magic2: usize, operation: usize) -> SysResult {
+    const MAGIC1: usize = 0xfee1dead;
+    const MAGIC2S: [usize; 4] = [0x28121969, 0x05121996, 0x16041998, 0x20112000];
+    const POWER_OFF: usize = 0x4321fedc;
+    if magic1 != MAGIC1 || !MAGIC2S.contains(&magic2) {
+        return Err(Errno::EINVAL);
+    }
+    // TODO: 以更加平稳的方式关机
+    if operation == POWER_OFF {
+        shutdown().map_err(|_| Errno::EPERM)?;
+    }
+    Err(Errno::EPERM)
 }
