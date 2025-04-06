@@ -4,17 +4,24 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use core::future::poll_fn;
-
 use common::{consts::DEFAULT_SERVE_EP, page::PhysPage};
 use config::PAGE_SIZE;
-use sel4::{Fault, UserException, VmFault, with_ipc_buffer};
-use sel4_kit::ipc::poll_endpoint;
+use sel4::{Fault, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer};
+use spin::Lazy;
 use syscalls::Errno;
 
 use crate::{
-    child_test::TASK_MAP, rasync::yield_now, syscall::handle_syscall, utils::obj::alloc_page,
+    child_test::TASK_MAP,
+    rasync::yield_now,
+    syscall::handle_syscall,
+    timer::handle_timer,
+    utils::obj::{alloc_notification, alloc_page},
 };
+
+/// 全局通知
+///
+/// 在各种结构上绑定的 [Notification]
+pub static GLOBAL_NOTIFY: Lazy<Notification> = Lazy::new(alloc_notification);
 
 /// 处理用户异常
 ///
@@ -94,26 +101,19 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
 pub async fn waiting_and_handle() {
     loop {
         yield_now().await;
-        sel4::r#yield();
+        let (message, tid) = DEFAULT_SERVE_EP.recv(());
+        match tid {
+            u64::MAX => handle_timer(),
+            _ => {
+                assert!(message.label() < 8, "Unexpected IPC Message");
 
-        let (message, tid) = poll_fn(|cx| {
-            let res = poll_endpoint(DEFAULT_SERVE_EP);
-            if res.is_pending() {
-                cx.waker().wake_by_ref();
-            }
-            res
-        })
-        .await;
-        // let (message, tid) = DEFAULT_SERVE_EP.nb_recv(());
-        if tid != 0 {
-            assert!(message.label() < 8, "Unexpected IPC Message");
-
-            let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-            match fault {
-                Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
-                Fault::UserException(ue) => handle_user_exception(tid, ue),
-                _ => {
-                    log::error!("Unhandled fault: {:#x?}", fault);
+                let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+                match fault {
+                    Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
+                    Fault::UserException(ue) => handle_user_exception(tid, ue),
+                    _ => {
+                        log::error!("Unhandled fault: {:#x?}", fault);
+                    }
                 }
             }
         }
@@ -124,7 +124,6 @@ pub async fn waiting_and_handle() {
 pub async fn waiting_for_end() {
     loop {
         yield_now().await;
-
         let mut task_map = TASK_MAP.lock();
         let next_task = task_map.values_mut().find(|x| x.exit.is_none());
         if next_task.is_none() {
@@ -132,4 +131,14 @@ pub async fn waiting_for_end() {
             common::services::root::shutdown().unwrap();
         }
     }
+}
+
+/// 初始化 exception
+///
+/// 将 [GLOBAL_NOTIFY] 绑定在 TCB 上
+pub fn init() {
+    init_thread::slot::TCB
+        .cap()
+        .tcb_bind_notification(*GLOBAL_NOTIFY)
+        .unwrap();
 }
