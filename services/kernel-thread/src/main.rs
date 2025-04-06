@@ -67,6 +67,9 @@ fn main() -> ! {
     // 初始化设备
     device::init();
 
+    // 初始化异常处理 Mixed IPC/Notification
+    exception::init();
+
     // 初始化定时器
     timer::init();
 
@@ -74,7 +77,6 @@ fn main() -> ! {
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     spawn_async!(pool, exception::waiting_and_handle());
-    spawn_async!(pool, timer::aux_thread());
     spawn_async!(pool, exception::waiting_for_end());
     loop {
         let _ = pool.run_all_until_stalled();

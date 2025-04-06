@@ -23,10 +23,6 @@ futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 spin = { workspace = true }
 log = "0.4"
 syscalls = { workspace = true }
-sel4-elf-header = { workspace = true }
-sel4-initialize-tls = { workspace = true }
-sel4-stack = { workspace = true }
-sel4-root-task = { workspace = true }
 bitflags = "2.6"
 memory_addr = "0.3"
 num_enum = { version = "0.7", default-features = false }
