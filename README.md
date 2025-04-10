@@ -27,23 +27,9 @@ mkdir -p .env
 wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
 ```
 
-#### 下载并构建测例
-
-```shell
-wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
-mkdir -p testcases
-
-# 如果需要使用 python venv
-python3 -m venv .env/python
-source .env/python/bin/activate
-
-pip3 install capstone lief
-
-
-./tools/modify-multi.py .env/aarch64 testcases
-```
-
 ## 运行
+
+运行时会自动下载测例，然后创建 testcases 文件夹，后续需要添加测例，可以给 testcases 文件夹中添加内容实现。
 
 ```shell
 make run
