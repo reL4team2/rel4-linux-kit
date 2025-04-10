@@ -51,7 +51,12 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
-disk_img:
+testcases:
+	wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
+	mkdir -p testcases
+	cp -r .env/aarch64/* testcases
+
+disk_img: testcases
 	mkdir -p mount
 	dd if=/dev/zero of=mount.img bs=4M count=64
 	sync

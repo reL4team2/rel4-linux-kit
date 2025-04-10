@@ -228,6 +228,26 @@ impl Sel4Task {
     /// - `elf_data` 是 elf 文件的数据
     pub fn load_elf(&mut self, file: &File<'_>) {
         // 加载程序到内存
+        file.sections()
+            .filter(|x| x.name() == Ok(".text"))
+            .for_each(|sec| {
+                #[cfg(target_arch = "aarch64")]
+                {
+                    const SVC_INST: u32 = 0xd4000001;
+                    const ERR_INST: u32 = 0xdeadbeef;
+                    let data = sec.data().unwrap();
+                    let ptr = data.as_ptr() as *mut u32;
+                    for i in 0..sec.size() as usize / size_of::<u32>() {
+                        unsafe {
+                            if ptr.add(i).read() == SVC_INST {
+                                ptr.add(i).write_volatile(ERR_INST);
+                            }
+                        }
+                    }
+                }
+                #[cfg(not(target_arch = "aarch64"))]
+                log::warn!("Modify Syscall Instruction Not Supported For This Arch.");
+            });
         file.segments().for_each(|seg| {
             let mut data = seg.data().unwrap();
             let mut vaddr = seg.address() as usize;
