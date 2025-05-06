@@ -21,7 +21,7 @@ impl KernelDevOp for Ext4Disk {
     }
 
     fn seek(dev: &mut Self::DevType, off: i64, whence: i32) -> Result<i64, i32> {
-        let size = BLK_SERVICE.capacity().unwrap() as i64;
+        let size = BLK_SERVICE.capacity() as i64;
         let new_pos = match whence as u32 {
             lwext4_rust::bindings::SEEK_SET => Some(off),
             lwext4_rust::bindings::SEEK_CUR => {
@@ -77,9 +77,7 @@ impl Ext4Disk {
         assert_eq!(self.offset, 0);
         assert!(buf.len() <= 0x4000);
         let ptr = 0x3_0000_0000 as *const u8;
-        BLK_SERVICE
-            .read_block(self.block_id, buf.len() / BLOCK_SIZE)
-            .unwrap();
+        BLK_SERVICE.read_block(self.block_id, buf.len() / BLOCK_SIZE);
         unsafe {
             ptr.copy_to_nonoverlapping(buf.as_mut_ptr(), buf.len());
         }
@@ -96,9 +94,7 @@ impl Ext4Disk {
         unsafe {
             ptr.copy_from_nonoverlapping(buf.as_ptr(), buf.len());
         }
-        BLK_SERVICE
-            .write_block(self.block_id, buf.len() / BLOCK_SIZE)
-            .unwrap();
+        BLK_SERVICE.write_block(self.block_id, buf.len() / BLOCK_SIZE);
         self.set_position(self.position() + buf.len() as u64);
         Ok(buf.len())
     }

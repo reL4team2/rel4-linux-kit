@@ -1,5 +1,6 @@
+use common_macros::generate_ipc_send;
 use num_enum::{FromPrimitive, IntoPrimitive};
-use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
+use sel4::{MessageInfo, cap::Endpoint};
 use slot_manager::LeafSlot;
 
 #[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive)]
@@ -17,15 +18,9 @@ pub enum BlockEvent {
     Unknown(u64),
 }
 
-impl BlockEvent {
-    fn msg(&self) -> MessageInfoBuilder {
-        MessageInfoBuilder::default().label((*self).into())
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct BlockService {
-    ep_cap: Endpoint,
+    ep: Endpoint,
 }
 
 impl BlockService {
@@ -33,62 +28,24 @@ impl BlockService {
         Self::new(Endpoint::from_bits(bits))
     }
 
-    pub const fn new(ep_cap: Endpoint) -> Self {
-        Self { ep_cap }
+    pub const fn new(ep: Endpoint) -> Self {
+        Self { ep }
     }
 
-    pub fn call(&self, msg: MessageInfo) -> Result<MessageInfo, ()> {
-        let msg = self.ep_cap.call(msg);
-        if msg.label() != 0 {
-            return Err(());
-        }
-        Ok(msg)
-    }
+    #[generate_ipc_send(label = BlockEvent::Ping)]
+    pub fn ping(&self) {}
 
-    pub fn ping(&self) -> Result<MessageInfo, ()> {
-        let ping_msg = BlockEvent::Ping.msg().build();
-        self.call(ping_msg)
-    }
+    #[generate_ipc_send(label = BlockEvent::Init)]
+    pub fn init(&self, channel_id: usize) {}
 
-    pub fn init(&self, channel_id: usize) -> Result<(), ()> {
-        with_ipc_buffer_mut(|ib| {
-            ib.msg_regs_mut()[0] = channel_id as _;
-        });
-        let msg = BlockEvent::Init.msg().length(1).build();
-        let ret = self.call(msg)?;
-        assert_eq!(ret.label(), 0);
+    #[generate_ipc_send(label = BlockEvent::ReadBlock)]
+    pub fn read_block(&self, block_id: usize, block_num: usize) -> MessageInfo {}
 
-        Ok(())
-    }
+    #[generate_ipc_send(label = BlockEvent::WriteBlock)]
+    pub fn write_block(&self, block_id: usize, block_num: usize) -> MessageInfo {}
 
-    pub fn read_block(&self, block_id: usize, block_num: usize) -> Result<MessageInfo, ()> {
-        with_ipc_buffer_mut(|ipc_buf| {
-            ipc_buf.msg_regs_mut()[0] = block_id as _;
-            ipc_buf.msg_regs_mut()[1] = block_num as _;
-        });
-        let msg = BlockEvent::ReadBlock.msg().length(2).build();
-        // Send and Wait a message
-        self.call(msg)
-    }
-
-    pub fn write_block(&self, block_id: usize, block_num: usize) -> Result<MessageInfo, ()> {
-        with_ipc_buffer_mut(|ipc_buf| {
-            ipc_buf.msg_regs_mut()[0] = block_id as _;
-            ipc_buf.msg_regs_mut()[1] = block_num as _;
-        });
-        let msg = BlockEvent::WriteBlock.msg().length(2).build();
-        let ret = self.call(msg)?;
-        assert_eq!(ret.label(), 0);
-        Ok(ret)
-    }
-
-    pub fn capacity(&self) -> Result<u64, ()> {
-        let msg = BlockEvent::Capacity.msg().length(1).build();
-        let ret = self.call(msg)?;
-        assert_eq!(ret.label(), 0);
-
-        Ok(with_ipc_buffer(|ib| ib.msg_regs()[0]))
-    }
+    #[generate_ipc_send(label = BlockEvent::Capacity)]
+    pub fn capacity(&self) -> u64 {}
 }
 
 impl From<LeafSlot> for BlockService {
@@ -99,6 +56,6 @@ impl From<LeafSlot> for BlockService {
 
 impl From<BlockService> for LeafSlot {
     fn from(value: BlockService) -> Self {
-        LeafSlot::from_cap(value.ep_cap)
+        LeafSlot::from_cap(value.ep)
     }
 }

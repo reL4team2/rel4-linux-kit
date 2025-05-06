@@ -40,9 +40,9 @@ fn main() -> ! {
 
     log::info!("Booting...");
 
-    BLK_SERVICE.ping().unwrap();
-    let channel_id = create_channel(0x3_0000_0000, 4).unwrap();
-    BLK_SERVICE.init(channel_id).unwrap();
+    BLK_SERVICE.ping();
+    let channel_id = create_channel(0x3_0000_0000, 4);
+    BLK_SERVICE.init(channel_id);
 
     let mut stores = FlattenObjects::<Ext4File, STORE_CAP>::new();
     let mut mapped = FlattenObjects::<(usize, usize), 32>::new();
@@ -69,7 +69,7 @@ fn handle_events(
             let ptr = alloc_free_addr(0) as *mut u8;
             assert_eq!(message.length(), 1);
             let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
-            let size = join_channel(channel_id, ptr as usize).unwrap();
+            let size = join_channel(channel_id, ptr as usize);
             mapped
                 .add_at(badge as _, (ptr as usize, channel_id))
                 .map_err(|_| ())

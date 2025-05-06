@@ -1,16 +1,20 @@
+use common_macros::generate_ipc_send;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer};
+use sel4::cap::Endpoint;
 use slot_manager::LeafSlot;
+use zerocopy::IntoBytes;
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
 pub enum UartEvent {
     Ping,
     GetChar,
+    PutChar,
+    PutString,
 }
 
 pub struct UartService {
-    ep_cap: Endpoint,
+    ep: Endpoint,
 }
 
 impl UartService {
@@ -23,36 +27,26 @@ impl UartService {
     }
 
     pub const fn leaf_slot(&self) -> LeafSlot {
-        LeafSlot::new(self.ep_cap.bits() as _)
+        LeafSlot::new(self.ep.bits() as _)
     }
 
     pub const fn new(endpoint: Endpoint) -> Self {
-        Self { ep_cap: endpoint }
+        Self { ep: endpoint }
     }
+}
 
-    pub fn call(&self, msg: MessageInfo) -> Result<MessageInfo, ()> {
-        let msg = self.ep_cap.call(msg);
-        if msg.label() != 0 {
-            return Err(());
-        }
-        Ok(msg)
-    }
+impl UartService {
+    #[generate_ipc_send(label = UartEvent::PutChar)]
+    pub fn send(&self, c: u8) {}
 
-    pub fn ping(&self) -> Result<MessageInfo, ()> {
-        let ping_msg = MessageInfoBuilder::default()
-            .label(UartEvent::Ping.into())
-            .build();
-        self.call(ping_msg)
-    }
+    #[generate_ipc_send(label = UartEvent::GetChar)]
+    pub fn getchar(&self) -> u8 {}
 
-    pub fn getchar(&self) -> Result<u8, ()> {
-        let message = MessageInfoBuilder::default()
-            .label(UartEvent::GetChar.into())
-            .build();
-        let msg = self.call(message)?;
-        assert_ne!(msg.length(), 0);
-        with_ipc_buffer(|ipc_buffer| Ok(ipc_buffer.msg_bytes()[0]))
-    }
+    #[generate_ipc_send(label = UartEvent::Ping)]
+    pub fn ping(&self) {}
+
+    #[generate_ipc_send(label = UartEvent::PutString)]
+    pub fn puts(&self, s: &[u8]) {}
 }
 
 impl From<LeafSlot> for UartService {

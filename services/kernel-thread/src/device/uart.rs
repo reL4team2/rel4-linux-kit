@@ -10,7 +10,7 @@ pub(super) fn init() {
             .expect("can't find service")
             .into()
     });
-    UART_SERVICE.get().unwrap().ping().unwrap();
+    UART_SERVICE.get().unwrap().ping();
 }
 
 /// 从 [UartService] 中读取一个字符 (u8)
@@ -18,5 +18,5 @@ pub(super) fn init() {
 /// 如果没有读取到任何的数，直接返回 [Option::None]
 #[inline]
 pub fn get_char() -> Option<u8> {
-    UART_SERVICE.get().unwrap().getchar().ok()
+    Some(UART_SERVICE.get().unwrap().getchar())
 }

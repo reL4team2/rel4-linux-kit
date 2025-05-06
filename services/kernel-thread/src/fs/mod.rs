@@ -23,8 +23,8 @@ static MOUNTED_FS: Mutex<Vec<(String, Arc<dyn FileSystem>)>> = Mutex::new(Vec::n
 pub(super) fn init() {
     // 寻找 fs_service 并尝试 ping
     let mut ipc_fs = IPCFileSystem::new("fs-thread").expect("can't find service");
-    ipc_fs.fs.ping().unwrap();
-    let channel_id = create_channel(0x3_0000_0000, 4).unwrap();
+    ipc_fs.fs.ping();
+    let channel_id = create_channel(0x3_0000_0000, 4);
     ipc_fs.fs.init(channel_id, 0x3_0000_0000, 0x4000).unwrap();
     MOUNTED_FS
         .lock()

@@ -1,6 +1,7 @@
 use core::cmp;
 
 use super::IpcBufferRW;
+use common_macros::generate_ipc_send;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{MessageInfo, MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
 use slot_manager::LeafSlot;
@@ -121,7 +122,7 @@ pub struct Stat {
 
 #[derive(Clone, Debug)]
 pub struct FileSerivce {
-    ep_cap: Endpoint,
+    ep: Endpoint,
     share_addr: usize,
     share_size: usize,
 }
@@ -136,12 +137,12 @@ impl FileSerivce {
     }
 
     pub const fn leaf_slot(&self) -> LeafSlot {
-        LeafSlot::new(self.ep_cap.bits() as _)
+        LeafSlot::new(self.ep.bits() as _)
     }
 
     pub const fn new(endpoint: Endpoint) -> Self {
         Self {
-            ep_cap: endpoint,
+            ep: endpoint,
             share_addr: 0,
             share_size: 0,
         }
@@ -149,15 +150,11 @@ impl FileSerivce {
 
     #[inline]
     pub fn call(&self, msg: MessageInfo) -> MessageInfo {
-        self.ep_cap.call(msg)
+        self.ep.call(msg)
     }
 
-    pub fn ping(&self) -> Result<MessageInfo, ()> {
-        let ping_msg = MessageInfoBuilder::default()
-            .label(FileEvent::Ping.into())
-            .build();
-        Ok(self.call(ping_msg))
-    }
+    #[generate_ipc_send(label = FileEvent::Ping)]
+    pub fn ping(&self) {}
 
     pub fn init(&mut self, channel_id: usize, addr: usize, size: usize) -> Result<MessageInfo, ()> {
         self.share_addr = addr;
@@ -255,16 +252,8 @@ impl FileSerivce {
         Ok(())
     }
 
-    pub fn close(&self, inode: usize) -> Result<(), ()> {
-        with_ipc_buffer_mut(|ib| inode.write_buffer(ib, &mut 0));
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::Close.into())
-            .length(1)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        Ok(())
-    }
+    #[generate_ipc_send(label = FileEvent::Close)]
+    pub fn close(&self, inode: usize) {}
 
     pub fn stat(&self, inode: usize) -> Result<Stat, ()> {
         with_ipc_buffer_mut(|ib| inode.write_buffer(ib, &mut 0));

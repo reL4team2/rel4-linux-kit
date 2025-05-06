@@ -1,7 +1,7 @@
-use common_macros::ipc_msg;
+use common_macros::generate_ipc_send;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use sel4::{
-    CapRights, MessageInfo, MessageInfoBuilder,
+    CapRights, MessageInfoBuilder,
     cap::{Endpoint, Null},
     init_thread, with_ipc_buffer, with_ipc_buffer_mut,
 };
@@ -9,7 +9,6 @@ use slot_manager::LeafSlot;
 
 use crate::{consts::DEFAULT_PARENT_EP, services::IpcBufferRW, slot::alloc_slot};
 
-#[ipc_msg]
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
 pub enum RootEvent {
@@ -28,14 +27,13 @@ pub enum RootEvent {
 
 const ROOT_EP: Endpoint = DEFAULT_PARENT_EP;
 
-fn call(msg: MessageInfo) -> Result<MessageInfo, ()> {
-    let msg = ROOT_EP.call(msg);
-    if msg.label() != 0 {
-        return Err(());
-    }
-    Ok(msg)
+macro_rules! call_ep {
+    ($msg:expr) => {
+        ROOT_EP.call($msg)
+    };
 }
 
+#[generate_ipc_send(label = RootEvent::Ping)]
 pub fn ping() -> Result<(), ()> {
     call(MessageInfo::new(RootEvent::Ping.into(), 0, 0, 0))?;
     Ok(())
@@ -49,7 +47,7 @@ pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
         .length(off)
         .build();
 
-    let msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
+    let msg = ROOT_EP.call(msg);
     if msg.extra_caps() == 0 {
         return Err(sel4::Error::FailedLookup);
     }
@@ -58,23 +56,10 @@ pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
     Ok(dst_slot)
 }
 
-pub fn translate_addr(vaddr: usize) -> Result<usize, ()> {
-    // construct the ipc message
-    with_ipc_buffer_mut(|ipc_buf| ipc_buf.msg_regs_mut()[0] = vaddr as _);
+#[generate_ipc_send(label = RootEvent::TranslateAddr)]
+pub fn translate_addr(vaddr: usize) -> usize {}
 
-    // Send a ipc message
-    let msg = MessageInfoBuilder::default()
-        .label(RootEvent::TranslateAddr.into())
-        .length(1)
-        .build();
-    call(msg)?;
-
-    // Get the physical address
-    let paddr = with_ipc_buffer(|ipc_buffer| ipc_buffer.msg_regs()[0]);
-    Ok(paddr as _)
-}
-
-pub fn register_irq(irq: usize, target_slot: LeafSlot) -> Result<(), sel4::Error> {
+pub fn register_irq(irq: usize, target_slot: LeafSlot) {
     // construct the IPC message
     let origin_slot = with_ipc_buffer_mut(|ipc_buffer| {
         ipc_buffer.set_recv_slot(&target_slot.abs_cptr());
@@ -91,12 +76,10 @@ pub fn register_irq(irq: usize, target_slot: LeafSlot) -> Result<(), sel4::Error
         .length(1)
         .build();
 
-    let recv_msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
+    let recv_msg = ROOT_EP.call(msg);
     assert!(recv_msg.extra_caps() == 1);
 
     with_ipc_buffer_mut(|ipc_buffer| ipc_buffer.set_recv_slot(&origin_slot));
-
-    Ok(())
 }
 
 pub fn register_notify(target_slot: LeafSlot, badge: usize) -> Result<(), sel4::Error> {
@@ -107,7 +90,7 @@ pub fn register_notify(target_slot: LeafSlot, badge: usize) -> Result<(), sel4::
         .label(RootEvent::AllocNotification.into())
         .build();
 
-    let recv_msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
+    let recv_msg = ROOT_EP.call(msg);
     assert!(recv_msg.extra_caps() == 1);
     recv_slot.mint_to(target_slot, CapRights::all(), badge)?;
     recv_slot.delete()?;
@@ -126,52 +109,19 @@ pub fn alloc_page(target_slot: LeafSlot, addr: usize) -> Result<LeafSlot, sel4::
         .label(RootEvent::AllocPage.into())
         .build();
 
-    let recv_msg = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
+    let recv_msg = ROOT_EP.call(msg);
     assert!(recv_msg.extra_caps() == 1);
     recv_slot.move_to(target_slot)?;
 
     Ok(target_slot)
 }
 
-pub fn create_channel(addr: usize, page_count: usize) -> Result<usize, sel4::Error> {
-    with_ipc_buffer_mut(|ib| {
-        ib.msg_regs_mut()[0] = addr as u64;
-        ib.msg_regs_mut()[1] = page_count as u64;
-    });
+#[generate_ipc_send(label = RootEvent::CreateChannel)]
+pub fn create_channel(addr: usize, page_count: usize) -> usize {}
 
-    let msg = MessageInfoBuilder::default()
-        .length(2)
-        .label(RootEvent::CreateChannel.into())
-        .build();
-
-    let ret = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
-    assert_eq!(ret.label(), 0);
-    with_ipc_buffer(|ib| Ok(ib.msg_regs()[0] as _))
-}
-
-pub fn join_channel(channel_id: usize, addr: usize) -> Result<usize, sel4::Error> {
-    with_ipc_buffer_mut(|ib| {
-        ib.msg_regs_mut()[0] = channel_id as u64;
-        ib.msg_regs_mut()[1] = addr as u64;
-    });
-
-    let msg = MessageInfoBuilder::default()
-        .length(2)
-        .label(RootEvent::JoinChannel.into())
-        .build();
-
-    let ret = call(msg).map_err(|_| sel4::Error::IllegalOperation)?;
-    assert_eq!(ret.label(), 0);
-    with_ipc_buffer(|ib| Ok(ib.msg_regs()[0] as _))
-}
+#[generate_ipc_send(label = RootEvent::JoinChannel)]
+pub fn join_channel(channel_id: usize, addr: usize) -> usize {}
 
 /// 向 ROOT_EP 发送关机
-pub fn shutdown() -> Result<(), sel4::Error> {
-    call(
-        MessageInfoBuilder::default()
-            .label(RootEvent::Shutdown.into())
-            .build(),
-    )
-    .map_err(|_| sel4::Error::IllegalOperation)?;
-    Ok(())
-}
+#[generate_ipc_send(label = RootEvent::Shutdown)]
+pub fn shutdown() -> ! {}

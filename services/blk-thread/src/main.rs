@@ -44,7 +44,7 @@ fn main() -> ! {
 
     // 向 root-task 申请一个中断
     let irq_handler = IrqHandler::from_bits(DEFAULT_CUSTOM_SLOT + 1);
-    register_irq(VIRTIO_NET_IRQ as _, irq_handler.into()).expect("Can't register irq handler");
+    register_irq(VIRTIO_NET_IRQ as _, irq_handler.into());
 
     // 向 root-task 申请一个通知
     let ntfn = Notification::from_bits(DEFAULT_CUSTOM_SLOT);
@@ -56,7 +56,6 @@ fn main() -> ! {
 
     let mut request = BlkReq::default();
     let mut resp = BlkResp::default();
-    // let mut buffer = [0u8; 0x1000];
 
     let mut stores = FlattenObjects::<(usize, usize), 32>::new();
     let rev_msg = MessageInfoBuilder::default();
@@ -70,7 +69,7 @@ fn main() -> ! {
                     let ptr = alloc_free_addr(0) as *mut u8;
                     assert_eq!(message.length(), 1);
                     let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
-                    let size = join_channel(channel_id, ptr as usize).unwrap();
+                    let size = join_channel(channel_id, ptr as usize);
                     stores
                         .add_at(badge as _, (ptr as usize, channel_id))
                         .map_err(|_| ())

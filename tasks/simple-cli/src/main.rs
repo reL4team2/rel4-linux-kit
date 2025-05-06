@@ -1,16 +1,16 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+extern crate uart_thread;
+
 use alloc::{string::String, vec::Vec};
-use common::services::{fs::FileSerivce, root::find_service, uart::UartService};
-use sel4::{MessageInfoBuilder, cap::Endpoint, debug_print, debug_println};
+use common::services::{root::find_service, uart::UartService};
+use sel4::{debug_print, debug_println};
 use spin::Lazy;
 
-extern crate alloc;
-
-static FS_SERVICE: Lazy<FileSerivce> = Lazy::new(|| find_service("fs-thread").unwrap().into());
 static UART_SERVICE: Lazy<UartService> = Lazy::new(|| find_service("uart-thread").unwrap().into());
-static KERNEL_SERVICE: Lazy<Endpoint> = Lazy::new(|| find_service("kernel-thread").unwrap().into());
+// static KERNEL_SERVICE: Lazy<Endpoint> = Lazy::new(|| find_service("kernel-thread").unwrap().into());
 
 sel4_runtime::entry_point!(main);
 
@@ -25,10 +25,10 @@ fn command(cmd: &str) {
         "ls" => {
             unimplemented!("read_dir is unimplemented")
         }
-        "start-kernel" => {
-            // 和 kernel-thread 的 exception::waiting_for_start 结合
-            KERNEL_SERVICE.send(MessageInfoBuilder::default().label(0x1234).build());
-        }
+        // "start-kernel" => {
+        //     // 和 kernel-thread 的 exception::waiting_for_start 结合
+        //     KERNEL_SERVICE.send(MessageInfoBuilder::default().label(0x1234).build());
+        // }
         "" => {}
         cmd => {
             debug_println!("Can't find command {}", cmd);
@@ -42,14 +42,13 @@ fn main() -> ! {
 
     log::debug!("Starting...");
 
-    FS_SERVICE.ping().unwrap();
-    UART_SERVICE.ping().unwrap();
-
+    // FS_SERVICE.ping().unwrap();
+    UART_SERVICE.ping();
     loop {
         debug_print!("> ");
         let mut str = Vec::new();
         loop {
-            let char = UART_SERVICE.getchar().unwrap();
+            let char = UART_SERVICE.getchar();
             debug_print!("{}", char::from_u32(char as _).unwrap());
 
             match char {

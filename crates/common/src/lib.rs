@@ -14,6 +14,7 @@ pub mod page;
 pub mod services;
 pub mod slot;
 
+pub use common_macros::*;
 pub use obj_allocator::*;
 pub use utils::*;
 

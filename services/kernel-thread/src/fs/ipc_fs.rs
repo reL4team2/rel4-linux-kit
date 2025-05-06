@@ -102,6 +102,6 @@ impl FileInterface for IPCFile {
 
 impl Drop for IPCFile {
     fn drop(&mut self) {
-        self.fs.close(self.inode as _).unwrap();
+        self.fs.close(self.inode as _);
     }
 }

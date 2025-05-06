@@ -71,5 +71,6 @@ pub const TASK_FILES: &[KernelServices] = &[
     // service! {
     //     name: "simple-cli",
     //     file: "simple-cli.elf",
+    //     // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
     // },
 ];
