@@ -1092,7 +1092,9 @@ dependencies = [
  "common",
  "linkme",
  "num_enum",
+ "sel4",
  "spin",
+ "zerocopy 0.8.25",
 ]
 
 [[package]]

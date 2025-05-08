@@ -141,6 +141,7 @@ pub fn generate_ipc_send(args: TokenStream, input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #(#attrs)*
         #vis #sig {
+            use zerocopy::IntoBytes;
             let mut reg_len: usize = 0;
 
             sel4::with_ipc_buffer_mut(|ib| {
