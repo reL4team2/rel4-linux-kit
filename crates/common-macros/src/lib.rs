@@ -2,8 +2,8 @@ extern crate syn;
 
 use darling::{Error, FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{ItemFn, PatType, Path, ReturnType, Type};
+use quote::{format_ident, quote};
+use syn::{Ident, ItemFn, ItemTrait, PatType, Path, ReturnType, Type};
 
 #[derive(Debug, FromMeta)]
 struct MacroArgs {
@@ -97,15 +97,11 @@ fn parse_return(ret_ty: &ReturnType) -> proc_macro2::TokenStream {
 pub fn generate_ipc_send(args: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = match NestedMeta::parse_meta_list(args.into()) {
         Ok(v) => v,
-        Err(e) => {
-            return TokenStream::from(Error::from(e).write_errors());
-        }
+        Err(e) => return TokenStream::from(Error::from(e).write_errors()),
     };
     let args = match MacroArgs::from_list(&attr_args) {
         Ok(v) => v,
-        Err(e) => {
-            return TokenStream::from(e.write_errors());
-        }
+        Err(e) => return TokenStream::from(e.write_errors()),
     };
     let label = args.label.clone();
     // Parse the trait information and generate the corresponding code
@@ -153,6 +149,43 @@ pub fn generate_ipc_send(args: TokenStream, input: TokenStream) -> TokenStream {
             let ret = #call_stat;
             #output
         }
+    };
+    TokenStream::from(expanded)
+}
+
+#[proc_macro_attribute]
+pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
+    // let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+    //     Ok(v) => v,
+    //     Err(e) => return TokenStream::from(Error::from(e).write_errors()),
+    // };
+    // let args = match MacroArgs::from_list(&attr_args) {
+    //     Ok(v) => v,
+    //     Err(e) => return TokenStream::from(e.write_errors()),
+    // };
+    // Parse the trait information and generate the corresponding code
+    // 匹配 Trait 并生成对应的代码
+    // let input: ItemFnDeclare = syn::parse_macro_input!(input as ItemFnDeclare);
+    let input: ItemTrait = syn::parse_macro_input!(input as ItemTrait);
+    let enum_ident = format_ident!("{}Event", &input.ident);
+    let labels: Vec<Ident> = input
+        .items
+        .iter()
+        .filter_map(|x| match x {
+            syn::TraitItem::Fn(trait_item_fn) => Some(trait_item_fn.sig.ident.clone()),
+            _ => None,
+        })
+        .collect();
+
+    // The code after expandsion
+    // 展开后的代码
+    let expanded = quote! {
+        #[allow(non_camel_case_types)]
+        pub enum #enum_ident {
+            #(#labels),*
+        }
+
+        #input
     };
     TokenStream::from(expanded)
 }

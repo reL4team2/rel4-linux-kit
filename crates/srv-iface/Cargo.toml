@@ -1,0 +1,8 @@
+[package]
+name = "srv-iface"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+common = { workspace = true }
+linkme = { workspace = true }
