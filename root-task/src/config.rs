@@ -39,31 +39,31 @@ macro_rules! service {
 
 /// 任务列表，下列任务会在启动的时候被 root-task 加载到内存并分配指定的资源。
 pub const TASK_FILES: &[KernelServices] = &[
-    service! {
-        name: "block-thread",
-        file: "blk-thread.elf",
-        mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
-        dma: &[(DMA_ADDR_START, 0x2000)]
-        // 可以添加 Shared 字段来提前设置预共享的页面
-        // shared: &[(start, sharedid, usize)]
-    },
-    service! {
-        name: "uart-thread",
-        file: "uart-thread.elf",
-        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
-    },
+    // service! {
+    //     name: "block-thread",
+    //     file: "blk-thread.elf",
+    //     mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
+    //     dma: &[(DMA_ADDR_START, 0x2000)]
+    //     // 可以添加 Shared 字段来提前设置预共享的页面
+    //     // shared: &[(start, sharedid, usize)]
+    // },
+    // service! {
+    //     name: "uart-thread",
+    //     file: "uart-thread.elf",
+    //     mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+    // },
     // service! {
     //     name: "fs-thread",
     //     file: "ext4-thread.elf",
     // },
-    service! {
-        name: "kernel-thread",
-        file: "kernel-thread.elf"
-    },
-    service! {
-        name: "fs-thread",
-        file: "lwext4-thread.elf",
-    },
+    // service! {
+    //     name: "kernel-thread",
+    //     file: "kernel-thread.elf"
+    // },
+    // service! {
+    //     name: "fs-thread",
+    //     file: "lwext4-thread.elf",
+    // },
     // service! {
     //     name: "fs-thread",
     //     file: "fat-thread.elf",
@@ -73,4 +73,9 @@ pub const TASK_FILES: &[KernelServices] = &[
     //     file: "simple-cli.elf",
     //     // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
     // },
+    service! {
+        name: "test-demo",
+        file: "test-demo.elf",
+        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+    },
 ];

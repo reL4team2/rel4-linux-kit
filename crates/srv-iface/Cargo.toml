@@ -6,3 +6,5 @@ edition.workspace = true
 [dependencies]
 common = { workspace = true }
 linkme = { workspace = true }
+spin = { workspace = true }
+num_enum = { version = "0.7.3", default-features = false }

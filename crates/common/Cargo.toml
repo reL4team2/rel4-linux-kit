@@ -16,4 +16,4 @@ num_enum = { version = "0.7.3", default-features = false }
 log = "0.4"
 spin = { workspace = true }
 syscalls = { workspace = true }
-zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
+zerocopy = { workspace = true }

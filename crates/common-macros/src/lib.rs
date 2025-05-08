@@ -3,7 +3,9 @@ extern crate syn;
 use darling::{Error, FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Ident, ItemFn, ItemTrait, PatType, Path, ReturnType, Type};
+use syn::{
+    Attribute, Ident, ItemFn, ItemImpl, ItemTrait, PatType, Path, ReturnType, Type, parse_quote,
+};
 
 #[derive(Debug, FromMeta)]
 struct MacroArgs {
@@ -181,10 +183,59 @@ pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
     // 展开后的代码
     let expanded = quote! {
         #[allow(non_camel_case_types)]
+        #[derive(num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
+        #[repr(u64)]
         pub enum #enum_ident {
             #(#labels),*
         }
 
+        #input
+    };
+    TokenStream::from(expanded)
+}
+
+#[proc_macro_attribute]
+pub fn ipc_trait_impl(args: TokenStream, input: TokenStream) -> TokenStream {
+    // let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+    //     Ok(v) => v,
+    //     Err(e) => return TokenStream::from(Error::from(e).write_errors()),
+    // };
+    // let args = match MacroArgs::from_list(&attr_args) {
+    //     Ok(v) => v,
+    //     Err(e) => return TokenStream::from(e.write_errors()),
+    // };
+    // let label = args.label.clone();
+    // Parse the trait information and generate the corresponding code
+    // 匹配 Trait 并生成对应的代码
+    // let input: ItemFnDeclare = syn::parse_macro_input!(input as ItemFnDeclare);
+    let mut input: ItemImpl = syn::parse_macro_input!(input as ItemImpl);
+    let trait_path = match input.trait_ {
+        Some((_, ref path, _)) => path.clone(),
+        None => return TokenStream::from(Error::custom("Need to on a item trait").write_errors()),
+    };
+    input.items.iter_mut().for_each(|item| match item {
+        syn::ImplItem::Fn(impl_item_fn) => {
+            impl_item_fn.attrs.push(parse_quote!(#[inline]));
+        }
+        _ => {}
+    });
+    // The code after expandsion
+    // 展开后的代码
+    // let expanded = quote! {
+    //     #(#attrs)*
+    //     #vis #sig {
+    //         let mut reg_len: usize = 0;
+
+    //         sel4::with_ipc_buffer_mut(|ib| {
+    //             #(#args)*
+    //         });
+
+    //         let msg = sel4::MessageInfo::new(#label.into(), 0, 0, reg_len);
+    //         let ret = #call_stat;
+    //         #output
+    //     }
+    // };
+    let expanded = quote! {
         #input
     };
     TokenStream::from(expanded)

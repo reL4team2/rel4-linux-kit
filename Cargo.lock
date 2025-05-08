@@ -1091,6 +1091,8 @@ version = "0.1.0"
 dependencies = [
  "common",
  "linkme",
+ "num_enum",
+ "spin",
 ]
 
 [[package]]
@@ -1128,6 +1130,23 @@ dependencies = [
  "slot-manager",
  "spin",
  "xmas-elf",
+]
+
+[[package]]
+name = "test-demo"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "config",
+ "linkme",
+ "log",
+ "sel4",
+ "sel4-logging",
+ "sel4-runtime",
+ "spin",
+ "srv-iface",
+ "uart-thread",
+ "zerocopy 0.8.25",
 ]
 
 [[package]]
@@ -1204,6 +1223,7 @@ dependencies = [
  "common",
  "config",
  "futures",
+ "linkme",
  "log",
  "sel4",
  "sel4-async-single-threaded-executor",
@@ -1212,6 +1232,7 @@ dependencies = [
  "sel4-runtime",
  "slot-manager",
  "spin",
+ "srv-iface",
 ]
 
 [[package]]

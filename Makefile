@@ -30,7 +30,8 @@ CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 	--release
 
 build: 
-	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
+#	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
+	cargo build $(CARGO_BUILD_ARGS) -p uart-thread -p test-demo
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 
 image := $(BUILD_DIR)/image.elf
