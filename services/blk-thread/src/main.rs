@@ -31,9 +31,6 @@ mod virtio;
 sel4_runtime::entry_point!(main);
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Debug);
-    common::init_recv_slot();
-
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
         MmioTransport::new(NonNull::new(VIRTIO_MMIO_BLK_VIRT_ADDR as *mut VirtIOHeader).unwrap())
             .unwrap()

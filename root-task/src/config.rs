@@ -47,11 +47,11 @@ pub const TASK_FILES: &[KernelServices] = &[
     //     // 可以添加 Shared 字段来提前设置预共享的页面
     //     // shared: &[(start, sharedid, usize)]
     // },
-    service! {
-        name: "uart-thread",
-        file: "uart-thread.elf",
-        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
-    },
+    // service! {
+    //     name: "uart-thread",
+    //     file: "uart-thread.elf",
+    //     mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+    // },
     // service! {
     //     name: "fs-thread",
     //     file: "ext4-thread.elf",
@@ -76,6 +76,6 @@ pub const TASK_FILES: &[KernelServices] = &[
     service! {
         name: "test-demo",
         file: "test-demo.elf",
-        // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+        mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
     },
 ];

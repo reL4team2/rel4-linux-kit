@@ -3,6 +3,9 @@ name = "sel4-runtime"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+root-task = []
+
 [dependencies]
 sel4 = { workspace = true }
 sel4-ctors-dtors = { workspace = true }
@@ -17,3 +20,4 @@ config = { workspace = true }
 common = { workspace = true }
 slot-manager = { workspace = true }
 sel4-kit = { workspace = true }
+log = "0.4"

@@ -35,7 +35,7 @@ pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAlloc
 fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // 设置调试信息
     slot::TCB.cap().debug_name(b"root");
-    init_log!(log::LevelFilter::Debug);
+    sel4_runtime::init_log!(log::LevelFilter::Debug);
 
     // 初始化 untyped object
     let dev_untyped_start = bootinfo.untyped().start();

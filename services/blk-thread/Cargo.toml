@@ -4,9 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# sel4 = { workspace = true }
 sel4 = { workspace = true, default-features = false }
-sel4-logging = { workspace = true }
 sel4-runtime = { workspace = true }
 slot-manager = { workspace = true }
 spin = { workspace = true }

@@ -5,6 +5,12 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+#[cfg(not(feature = "root-task"))]
 pub mod entry;
+#[cfg(not(feature = "root-task"))]
 pub mod heap;
+pub mod logging;
+pub mod macros;
 pub mod utils;
+
+pub use sel4_logging::{Logger, LoggerBuilder};

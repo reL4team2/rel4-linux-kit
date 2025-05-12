@@ -52,9 +52,6 @@ macro_rules! test_task {
 }
 
 fn main() -> ! {
-    // 初始化接收 IPC 传递的 Capability 的 Slot
-    common::init_recv_slot();
-
     // 初始化 LOG
     logging::init();
 

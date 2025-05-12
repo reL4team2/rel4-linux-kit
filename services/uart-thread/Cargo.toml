@@ -5,10 +5,7 @@ edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
-sel4-logging = { workspace = true }
-sel4-kit = { workspace = true }
 sel4-runtime = { workspace = true }
-sel4-async-single-threaded-executor = { workspace = true }
 
 spin = { workspace = true }
 log = "0.4"

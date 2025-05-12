@@ -35,9 +35,6 @@ const STORE_CAP: usize = 500;
 static BLK_SERVICE: Lazy<BlockService> = Lazy::new(|| find_service("block-thread").unwrap().into());
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Error);
-    common::init_recv_slot();
-
     log::info!("Booting...");
 
     BLK_SERVICE.ping();

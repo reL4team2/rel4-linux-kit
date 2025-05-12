@@ -2,7 +2,6 @@ use common_macros::generate_ipc_send;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sel4::cap::Endpoint;
 use slot_manager::LeafSlot;
-use zerocopy::IntoBytes;
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]

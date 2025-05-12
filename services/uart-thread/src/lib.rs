@@ -14,7 +14,7 @@ use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
 use sel4::{
     Cap, MessageInfoBuilder,
     cap_type::{IrqHandler, Notification},
-    debug_println, init_thread, with_ipc_buffer_mut,
+    debug_println,
 };
 use slot_manager::LeafSlot;
 use spin::{Lazy, Mutex};

@@ -37,9 +37,6 @@ fn command(cmd: &str) {
 }
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
-    common::init_recv_slot();
-
     log::debug!("Starting...");
 
     // FS_SERVICE.ping().unwrap();

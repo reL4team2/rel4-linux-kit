@@ -11,9 +11,6 @@ use srv_iface::println;
 sel4_runtime::entry_point!(main);
 
 fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
-    common::init_recv_slot();
-
     println!("Hello World!");
     loop {}
 }

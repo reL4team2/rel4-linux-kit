@@ -11,6 +11,7 @@ sel4-elf-header = { workspace = true }
 sel4-logging = { workspace = true }
 sel4-initialize-tls = { workspace = true }
 sel4-stack = { workspace = true }
+sel4-runtime = { workspace = true, features = ["root-task"] }
 
 sel4-kit = { workspace = true }
 # 自定义依赖
