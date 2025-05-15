@@ -18,6 +18,25 @@ members = [
   "services/kernel-thread",
   "tasks/simple-cli",
   "tasks/test-demo",
+
+  # 普通模块
+  "ByteOS/crates/devices",
+  "ByteOS/crates/executor",
+  "ByteOS/crates/runtime",
+  "ByteOS/crates/signal",
+  "ByteOS/crates/sync",
+  "ByteOS/crates/addr",
+  "ByteOS/crates/sel4-hal",
+
+  # 文件系统
+  "ByteOS/filesystem/devfs",
+  "ByteOS/filesystem/fs",
+  "ByteOS/filesystem/procfs",
+  "ByteOS/filesystem/ramfs",
+  "ByteOS/filesystem/vfscore",
+
+  #内核
+  "ByteOS/kernel",
 ]
 
 [workspace.package]
@@ -63,6 +82,23 @@ spin = "0.9.8"
 syscalls = { version = "0.6", default-features = false }
 hashbrown = "0.15"
 linkme = { version = "0.3.32", features = ["used_linker"] }
+
+# ByteOS Deps
+addr = { path = "ByteOS/crates/addr" }
+fs = { path = "ByteOS/filesystem/fs" }
+devfs = { path = "ByteOS/filesystem/devfs" }
+procfs = { path = "ByteOS/filesystem/procfs" }
+vfscore = { path = "ByteOS/filesystem/vfscore" }
+ramfs = { path = "ByteOS/filesystem/ramfs" }
+sel4-hal = { path = "ByteOS/crates/sel4-hal" }
+
+devices = { path = "ByteOS/crates/devices" }
+executor = { path = "ByteOS/crates/executor" }
+runtime = { path = "ByteOS/crates/runtime" }
+logging = { path = "ByteOS/crates/logging" }
+signal = { path = "ByteOS/crates/signal" }
+sync = { path = "ByteOS/crates/sync" }
+fdt-parser = { version = "0.4.12" }
 
 [patch."https://github.com/seL4/rust-sel4"]
 sel4 = { git = "https://github.com/yfblock/rust-sel4", rev = "1280281" }
