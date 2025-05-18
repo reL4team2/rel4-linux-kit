@@ -71,7 +71,7 @@ disk_img: testcases
 	sudo umount mount
 	sync
 
-run: buld_img disk_img
+run: buld_img
 	$(qemu_cmd)
 	@rm $(image)
 

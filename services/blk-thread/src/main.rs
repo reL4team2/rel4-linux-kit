@@ -19,7 +19,7 @@ use sel4::{
     cap::{IrqHandler, Notification},
     with_ipc_buffer_mut,
 };
-use sel4_runtime::utils::alloc_free_addr;
+use sel4_runtime::{main, utils::alloc_free_addr};
 use virtio::HalImpl;
 use virtio_drivers::{
     device::blk::{BlkReq, BlkResp, VirtIOBlk},
@@ -28,9 +28,8 @@ use virtio_drivers::{
 
 mod virtio;
 
-sel4_runtime::entry_point!(main);
-
-fn main() -> ! {
+#[main]
+fn main() {
     let mut virtio_blk = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
         MmioTransport::new(NonNull::new(VIRTIO_MMIO_BLK_VIRT_ADDR as *mut VirtIOHeader).unwrap())
             .unwrap()

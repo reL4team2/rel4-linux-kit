@@ -28,13 +28,12 @@ use sel4_runtime::utils::alloc_free_addr;
 use spin::Lazy;
 use syscalls::Errno;
 
-sel4_runtime::entry_point!(main);
-
 const O_DIRECTORY: u32 = 0o40000;
 const STORE_CAP: usize = 500;
 static BLK_SERVICE: Lazy<BlockService> = Lazy::new(|| find_service("block-thread").unwrap().into());
 
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
 
     BLK_SERVICE.ping();

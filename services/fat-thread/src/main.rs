@@ -13,9 +13,8 @@ use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 
 mod cursor;
 
-sel4_runtime::entry_point!(main);
-
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
 
     let blk_ep =

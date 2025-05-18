@@ -18,6 +18,7 @@ sel4-runtime-common = { workspace = true, features = ["tls", "start"] }
 
 config = { workspace = true }
 common = { workspace = true }
+common-macros = { workspace = true }
 slot-manager = { workspace = true }
 sel4-kit = { workspace = true }
 log = "0.4"

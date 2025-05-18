@@ -241,3 +241,17 @@ pub fn ipc_trait_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     };
     TokenStream::from(expanded)
 }
+
+#[proc_macro_attribute]
+pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut input: ItemFn = syn::parse_macro_input!(input as ItemFn);
+    input.sig.unsafety = Some(syn::token::Unsafe {
+        span: input.sig.fn_token.span,
+    });
+    quote! {
+        #[unsafe(export_name = "_impl_main")]
+        #input
+
+    }
+    .into()
+}

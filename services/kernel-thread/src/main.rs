@@ -30,8 +30,6 @@ pub mod task;
 pub mod timer;
 pub mod utils;
 
-sel4_runtime::entry_point!(main);
-
 // macro_rules! test_task {
 //     ($file:expr $(,$args:expr)*) => {{
 //         const CHILD_ELF: &[u8] = include_bytes_aligned::include_bytes_aligned!(
@@ -51,7 +49,8 @@ macro_rules! test_task {
     }};
 }
 
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     // 初始化 LOG
     logging::init();
 

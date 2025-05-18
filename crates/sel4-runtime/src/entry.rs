@@ -19,7 +19,7 @@ sel4_panicking_env::register_debug_put_char!(sel4::sys::seL4_DebugPutChar);
 #[unsafe(export_name = "sel4_runtime_rust_entry")]
 unsafe extern "C" fn main_entry() -> ! {
     unsafe extern "Rust" {
-        fn _impl_main() -> !;
+        fn _impl_main();
     }
     let cont_fn = |_| {
         init_ipc_buffer();
@@ -30,7 +30,10 @@ unsafe extern "C" fn main_entry() -> ! {
         crate::init_log!(log::LevelFilter::Debug);
         common::init_recv_slot();
 
-        match catch_unwind(|| unsafe { _impl_main() }) {
+        match catch_unwind(|| unsafe {
+            _impl_main();
+            loop {}
+        }) {
             Ok(never) => never,
             Err(_) => {
                 abort!("[BlockThread] main() panicked")

@@ -7,9 +7,8 @@ extern crate alloc;
 extern crate uart_thread;
 
 use srv_gate::println;
-sel4_runtime::entry_point!(main);
 
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     println!("Hello World!");
-    loop {}
 }

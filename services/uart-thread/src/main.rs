@@ -9,8 +9,6 @@ use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use srv_gate::uart::UartIfaceEvent;
 use uart_thread::PL011DRV;
 
-sel4_runtime::entry_point!(main);
-
 // Questions:
 // 1. 修改了调用逻辑，让本来不需要 Mutex 的都需要全局加锁
 // 2. 可能存在 Endpoint 和 Notification 复用一个通道的情况，这时候该如何分发
@@ -19,7 +17,8 @@ sel4_runtime::entry_point!(main);
 //    所以不能使用 IPC 共享函数
 // 4. 利用 rust 的 trait object 来实现 IPC 的分发
 
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
     // let mut pl011 = Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR);
     let mut pl011 = PL011DRV.lock();

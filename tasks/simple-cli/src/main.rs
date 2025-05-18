@@ -12,8 +12,6 @@ use spin::Lazy;
 static UART_SERVICE: Lazy<UartService> = Lazy::new(|| find_service("uart-thread").unwrap().into());
 // static KERNEL_SERVICE: Lazy<Endpoint> = Lazy::new(|| find_service("kernel-thread").unwrap().into());
 
-sel4_runtime::entry_point!(main);
-
 fn command(cmd: &str) {
     match cmd {
         "help" => {
@@ -36,7 +34,8 @@ fn command(cmd: &str) {
     }
 }
 
-fn main() -> ! {
+#[sel4_runtime::main]
+fn main() {
     log::debug!("Starting...");
 
     // FS_SERVICE.ping().unwrap();

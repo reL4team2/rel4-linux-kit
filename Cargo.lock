@@ -925,6 +925,7 @@ name = "sel4-runtime"
 version = "0.1.0"
 dependencies = [
  "common",
+ "common-macros",
  "config",
  "log",
  "sel4",
