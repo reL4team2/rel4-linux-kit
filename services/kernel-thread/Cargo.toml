@@ -38,3 +38,5 @@ flatten_objects = "0.2.2"
 
 hashbrown = { workspace = true }
 srv-gate = { workspace = true }
+
+uart-thread = { workspace = true }

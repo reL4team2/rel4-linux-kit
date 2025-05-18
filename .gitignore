@@ -6,6 +6,7 @@
 /testcases/
 /mount/
 /aarch64-linux-musl-cross/
+/tools/autoconfig.mk
 
 # 忽略 log 文件和临时文件
 *.log

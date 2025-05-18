@@ -77,6 +77,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             task.name,
             task.file,
         )?);
+        debug_println!("task {:#x?}", task)
     }
 
     // 处理所有定义的任务

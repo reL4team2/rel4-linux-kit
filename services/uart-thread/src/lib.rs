@@ -65,10 +65,10 @@ impl Pl011UartIfaceImpl {
         irq_handler.irq_handler_ack().unwrap();
 
         // 将 Notification 绑定在 TCB 上,以便在接受 IPC 的时候也可以接受 notify
-        sel4::init_thread::slot::TCB
-            .cap()
-            .tcb_bind_notification(notify)
-            .unwrap();
+        // sel4::init_thread::slot::TCB
+        //     .cap()
+        //     .tcb_bind_notification(notify)
+        //     .unwrap();
 
         Self {
             buffer: VecDeque::new(),

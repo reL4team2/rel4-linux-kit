@@ -13,6 +13,8 @@ use futures::task::LocalSpawnExt;
 extern crate log;
 #[macro_use]
 extern crate alloc;
+#[cfg(not(uart_ipc))]
+extern crate uart_thread;
 
 #[macro_use]
 pub mod rasync;

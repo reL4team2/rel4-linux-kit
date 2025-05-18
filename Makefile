@@ -1,5 +1,9 @@
 # export RUSTFLAGS = --cfg=uart_ipc --cfg=blk_ipc
-export RUSTFLAGS = --cfg=uart_ipc
+# export RUSTFLAGS = --cfg=uart_ipc
+export RUSTFLAGS := 
+
+include tools/autoconfig.mk
+
 BUILD_DIR := target
 TARGET := aarch64-sel4
 QEMU_LOG ?= n

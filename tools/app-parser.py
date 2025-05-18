@@ -1,4 +1,6 @@
-import os, sys
+#!/usr/bin/env python3
+from os import path
+import sys
 import tomllib
 from typing import List
 
@@ -9,13 +11,19 @@ from typing import List
 #   例：test-demo 依赖了 uart-thread，如果需要使用 ipc 通信 ，那么在
 #      编译 test-demo 时添加 uart-ipc，也许可以使用 cfg
 
+FILE_DIR = path.dirname(path.realpath(__file__))
+
 
 class Task:
-    def __init__(self, name: str, file: str, mem: list, deplist: list):
+    def __init__(
+        self, name: str, file: str, mem: list, dma: list, deplist: list, cfglist: list
+    ):
         self.name = name
         self.file = file
         self.mem = mem
+        self.dma = dma
         self.deplist = deplist
+        self.cfglist = cfglist
         self.deptask = []
         self.in_degree = 0
 
@@ -23,7 +31,8 @@ class Task:
         ret = "Task {\n"
         ret += f"\tname = {self.name}\n"
         ret += f"\tfile = {self.file}\n"
-        ret += f"\tmem = {self.mem}\n"
+        ret += f"\tmem = {self.get_mems()}\n"
+        ret += f"\tdma = {self.get_dmas()}\n"
         ret += f"\tdeps = {self.deplist}\n"
         ret += "}"
         return ret
@@ -35,18 +44,30 @@ class Task:
 
     def select(self):
         self.in_degree += 1
+        if self.in_degree > 1:
+            return
         for task in self.deptask:
             task.select()
 
-    # todo: 根据依赖关系和入度出度，判断是否
-    def all_mems(self):
-        print(f"task: {self.name}: ")
-        print(self.mem)
+    def get_mems(self):
+        print(f"task {self.name} get memory")
+        ret = []
+        ret.extend(self.mem)
         for task in self.deptask:
             if task.in_degree > 1:
                 continue
-            print(task.mem)
-        print()
+            ret.extend(task.get_mems())
+        return ret
+
+    def get_dmas(self):
+        print(f"task {self.name} get memory")
+        ret = []
+        ret.extend(self.dma)
+        for task in self.deptask:
+            if task.in_degree > 1:
+                continue
+            ret.extend(task.get_dmas())
+        return ret
 
 
 tasks: List[Task] = {}
@@ -66,22 +87,68 @@ def get_all_standalone_tasks():
 def parse_config(config):
     for task in config["tasks"]:
         task_obj = Task(
-            task["name"], task["file"], task.get("mem", []), task.get("deps", [])
+            task["name"],
+            task["file"],
+            task.get("mem", []),
+            task.get("dma", []),
+            task.get("deps", []),
+            task.get("cfg", []),
         )
         tasks[task["name"]] = task_obj
     for task in tasks.values():
         task.init()
-        task.all_mems()
+
+
+def write_to_file(file):
+    print(file)
+    # 输出到 root-task 的配置文件
+    output = "pub const TASK_FILES: &[KernelServices] = &[ \n"
+    for task in get_all_standalone_tasks():
+        output += "service! { \n"
+        output += 'name: "%s", \n' % (task.name)
+        output += 'file: "%s.elf", \n' % (task.file)
+        mem_list = [
+            "(%s, %s, %s)" % (mem[0], mem[1], mem[2]) for mem in task.get_mems()
+        ]
+        output += "mem: &[%s],\n" % (",\n".join(mem_list))
+
+        dma_list = ["(%s, %s)" % (dma[0], dma[1]) for dma in task.get_dmas()]
+        output += "dma: &[%s],\n" % (",\n".join(dma_list))
+
+        output += "},"
+
+    output += "];"
+    with open(file, "w") as f:
+        f.write(output)
+        f.close()
+
+    # 输出到 Makefile 的配置文件
+    configs = []
+    for task in get_all_standalone_tasks():
+        configs.extend(task.cfglist)
+    configs = list(map(lambda x: "--cfg=" + x, configs))
+    output = "RUSTFLAGS += " + " ".join(configs)
+
+    mk_conf_file = path.join(FILE_DIR, "autoconfig.mk")
+    with open(mk_conf_file, "w") as f:
+        f.write(output)
+        f.close()
 
 
 if __name__ == "__main__":
     file = open("apps.toml", "rb")
     data = tomllib.load(file)
     parse_config(data)
-    print(tasks)
-    for selected in ["test-demo"]:
-        tasks[selected].in_degree += 1
+    targets = sys.argv[1:]
+    if len(targets) == 0:
+        print("need at least one target to handle")
+        exit(0)
+    for selected in targets:
         tasks[selected].select()
+        if tasks[selected].in_degree <= 1:
+            tasks[selected].in_degree += 1
     print(get_all_standalone_tasks())
+    write_to_file(path.join(FILE_DIR, "../root-task/src/autoconfig.rs"))
+
     # for task in data["tasks"]:
     #     print(task)

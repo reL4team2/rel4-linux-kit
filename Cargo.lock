@@ -420,6 +420,7 @@ dependencies = [
  "spin",
  "srv-gate",
  "syscalls",
+ "uart-thread",
  "zerocopy 0.8.25",
 ]
 
