@@ -12,13 +12,13 @@ use common::{
 };
 use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
 use sel4::{
-    Cap, MessageInfoBuilder,
+    Cap, MessageInfo, MessageInfoBuilder,
     cap_type::{IrqHandler, Notification},
     debug_println,
 };
 use slot_manager::LeafSlot;
 use spin::{Lazy, Mutex};
-use srv_iface::uart::UartIface;
+use srv_gate::{def_event_handler, def_uart_impl, uart::UartIface};
 
 static REV_MSG: Lazy<MessageInfoBuilder> = Lazy::new(MessageInfoBuilder::default);
 static IPC_SAVER: Mutex<IpcSaver> = Mutex::new(IpcSaver::new());
@@ -39,9 +39,12 @@ static IPC_SAVER: Mutex<IpcSaver> = Mutex::new(IpcSaver::new());
 //     }
 // }
 
-#[linkme::distributed_slice(srv_iface::UART_IMPLS)]
-pub static PL011DRV: Lazy<Arc<Mutex<dyn UartIface>>> =
-    Lazy::new(|| Arc::new(Mutex::new(Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR))));
+def_uart_impl!(PL011DRV, Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR));
+def_event_handler!(PL011_IRQ, usize::MAX, irq_handler);
+
+fn irq_handler(msg: &MessageInfo, badge: u64) {
+    log::debug!("receive {} from {}", msg.label(), badge);
+}
 
 pub struct Pl011UartIfaceImpl {
     buffer: VecDeque<u8>,
@@ -71,10 +74,10 @@ impl Pl011UartIfaceImpl {
         irq_handler.irq_handler_ack().unwrap();
 
         // 将 Notification 绑定在 TCB 上,以便在接受 IPC 的时候也可以接受 notify
-        // init_thread::slot::TCB
-        //     .cap()
-        //     .tcb_bind_notification(notify)
-        //     .unwrap();
+        sel4::init_thread::slot::TCB
+            .cap()
+            .tcb_bind_notification(notify)
+            .unwrap();
 
         Self {
             buffer: VecDeque::new(),

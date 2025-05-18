@@ -3,7 +3,11 @@
 
 extern crate alloc;
 
+pub mod event;
 pub mod uart;
+
+pub use linkme;
+pub use paste::paste;
 
 use core::fmt::Write;
 
@@ -14,6 +18,18 @@ use uart::UartIface;
 
 #[distributed_slice]
 pub static UART_IMPLS: [Lazy<Arc<Mutex<dyn UartIface>>>];
+
+/// 定义一个事件处理器，利用 paste! 将 中断处理号加入到名称中用于做标识，防止 irq 冲突
+#[macro_export]
+macro_rules! def_uart_impl {
+    ($name:ident, $f:expr) => {
+        #[$crate::linkme::distributed_slice($crate::UART_IMPLS)]
+        #[linkme(crate = $crate::linkme)]
+        #[unsafe(no_mangle)]
+        pub static $name: spin::Lazy<alloc::sync::Arc<spin::Mutex<dyn UartIface>>> =
+            spin::Lazy::new(|| alloc::sync::Arc::new(spin::Mutex::new($f)));
+    };
+}
 
 pub struct Console;
 

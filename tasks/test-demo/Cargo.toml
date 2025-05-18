@@ -4,16 +4,16 @@ version = "0.1.0"
 edition.workspace = true
 
 [features]
-uart-ipc = ["srv-iface/uart-ipc"]
+uart-ipc = ["srv-gate/uart-ipc"]
 
-# default = ["uart-ipc"]
+default = ["uart-ipc"]
 
 [dependencies]
 log = "0.4"
 config = { workspace = true }
 sel4 = { workspace = true }
 common = { workspace = true }
-srv-iface = { workspace = true }
+srv-gate = { workspace = true }
 sel4-runtime = { workspace = true }
 uart-thread = { workspace = true }
 zerocopy = { workspace = true }

@@ -6,8 +6,7 @@ extern crate alloc;
 #[cfg(not(feature = "uart-ipc"))]
 extern crate uart_thread;
 
-use srv_iface::println;
-
+use srv_gate::println;
 sel4_runtime::entry_point!(main);
 
 fn main() -> ! {
