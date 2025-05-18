@@ -75,6 +75,7 @@ dependencies = [
  "sel4-runtime",
  "slot-manager",
  "spin",
+ "srv-gate",
  "virtio-drivers",
 ]
 
@@ -417,6 +418,7 @@ dependencies = [
  "sel4-runtime",
  "slot-manager",
  "spin",
+ "srv-gate",
  "syscalls",
  "zerocopy 0.8.25",
 ]
@@ -483,6 +485,7 @@ checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 name = "lwext4-thread"
 version = "0.1.0"
 dependencies = [
+ "blk-thread",
  "common",
  "flatten_objects",
  "hashbrown",
@@ -492,6 +495,7 @@ dependencies = [
  "sel4-runtime",
  "slot-manager",
  "spin",
+ "srv-gate",
  "syscalls",
 ]
 
@@ -1071,6 +1075,7 @@ dependencies = [
  "sel4-sync",
  "slot-manager",
  "spin",
+ "srv-gate",
  "uart-thread",
  "zerocopy 0.8.25",
 ]

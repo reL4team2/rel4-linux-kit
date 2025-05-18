@@ -5,12 +5,8 @@ extern crate alloc;
 extern crate uart_thread;
 
 use alloc::{string::String, vec::Vec};
-use common::services::{root::find_service, uart::UartService};
 use sel4::{debug_print, debug_println};
-use spin::Lazy;
-
-static UART_SERVICE: Lazy<UartService> = Lazy::new(|| find_service("uart-thread").unwrap().into());
-// static KERNEL_SERVICE: Lazy<Endpoint> = Lazy::new(|| find_service("kernel-thread").unwrap().into());
+use srv_gate::UART_IMPLS;
 
 fn command(cmd: &str) {
     match cmd {
@@ -39,12 +35,12 @@ fn main() {
     log::debug!("Starting...");
 
     // FS_SERVICE.ping().unwrap();
-    UART_SERVICE.ping();
+    UART_IMPLS[0].lock().init();
     loop {
         debug_print!("> ");
         let mut str = Vec::new();
         loop {
-            let char = UART_SERVICE.getchar();
+            let char = UART_IMPLS[0].lock().getchar();
             debug_print!("{}", char::from_u32(char as _).unwrap());
 
             match char {

@@ -27,7 +27,7 @@ unsafe extern "C" fn main_entry() -> ! {
 
         // 初始化 slot-manager
         common::slot::init(DEFAULT_EMPTY_SLOT_INDEX..usize::MAX, None);
-        crate::init_log!(log::LevelFilter::Debug);
+        // crate::init_log!(log::LevelFilter::Debug);
         common::init_recv_slot();
 
         match catch_unwind(|| unsafe {

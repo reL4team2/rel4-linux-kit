@@ -4,9 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [features]
-uart-ipc = ["srv-gate/uart-ipc"]
 
-default = ["uart-ipc"]
 
 [dependencies]
 log = "0.4"

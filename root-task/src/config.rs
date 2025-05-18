@@ -1,4 +1,4 @@
-use config::{PL011_ADDR, VIRTIO_MMIO_VIRT_ADDR};
+use config::{DMA_ADDR_START, PL011_ADDR, VIRTIO_MMIO_ADDR, VIRTIO_MMIO_VIRT_ADDR};
 
 use crate::include_bytes_aligned;
 
@@ -56,14 +56,16 @@ pub const TASK_FILES: &[KernelServices] = &[
     //     name: "fs-thread",
     //     file: "ext4-thread.elf",
     // },
-    // service! {
-    //     name: "kernel-thread",
-    //     file: "kernel-thread.elf"
-    // },
-    // service! {
-    //     name: "fs-thread",
-    //     file: "lwext4-thread.elf",
-    // },
+    service! {
+        name: "kernel-thread",
+        file: "kernel-thread.elf"
+    },
+    service! {
+        name: "fs-thread",
+        file: "lwext4-thread.elf",
+        mem: &[(VIRTIO_MMIO_VIRT_ADDR, VIRTIO_MMIO_ADDR, 0x1000)],
+        dma: &[(DMA_ADDR_START, 0x2000)]
+    },
     // service! {
     //     name: "fs-thread",
     //     file: "fat-thread.elf",
@@ -73,9 +75,9 @@ pub const TASK_FILES: &[KernelServices] = &[
     //     file: "simple-cli.elf",
     //     // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
     // },
-    service! {
-        name: "test-demo",
-        file: "test-demo.elf",
-        // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
-    },
+    // service! {
+    //     name: "test-demo",
+    //     file: "test-demo.elf",
+    //     // mem: &[(VIRTIO_MMIO_VIRT_ADDR, PL011_ADDR, 0x1000)],
+    // },
 ];

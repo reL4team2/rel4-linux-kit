@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+#[cfg(not(blk_ipc))]
+extern crate blk_thread;
+
 extern crate alloc;
 
 mod imp;
@@ -12,9 +15,8 @@ use common::{
     consts::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
     services::{
         IpcBufferRW,
-        block::BlockService,
         fs::{Dirent64, FileEvent, Stat, StatMode},
-        root::{create_channel, find_service, join_channel},
+        root::{create_channel, join_channel},
     },
 };
 use flatten_objects::FlattenObjects;
@@ -25,20 +27,18 @@ use lwext4_rust::{
 };
 use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::utils::alloc_free_addr;
-use spin::Lazy;
+use srv_gate::BLK_IMPLS;
 use syscalls::Errno;
 
 const O_DIRECTORY: u32 = 0o40000;
 const STORE_CAP: usize = 500;
-static BLK_SERVICE: Lazy<BlockService> = Lazy::new(|| find_service("block-thread").unwrap().into());
 
 #[sel4_runtime::main]
 fn main() {
     log::info!("Booting...");
 
-    BLK_SERVICE.ping();
     let channel_id = create_channel(0x3_0000_0000, 4);
-    BLK_SERVICE.init(channel_id);
+    BLK_IMPLS[0].lock().init(channel_id);
 
     let mut stores = FlattenObjects::<Ext4File, STORE_CAP>::new();
     let mut mapped = FlattenObjects::<(usize, usize), 32>::new();

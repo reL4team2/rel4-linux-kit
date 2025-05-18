@@ -1,6 +1,7 @@
+use crate::__prelude::*;
 use common::ipc_trait;
 
-#[ipc_trait]
+#[ipc_trait(event = UART_EVENT)]
 pub trait UartIface: Sync + Send {
     fn init(&mut self);
     fn putchar(&mut self, c: u8);
@@ -8,27 +9,26 @@ pub trait UartIface: Sync + Send {
     fn puts(&mut self, bytes: &[u8]);
 }
 
-#[cfg(feature = "uart-ipc")]
+#[cfg(uart_ipc)]
 mod _impl {
-    use alloc::sync::Arc;
+
     use common::{generate_ipc_send, services::root::find_service};
     use sel4::cap::Endpoint;
-    use spin::{Lazy, Mutex};
+
+    use crate::def_uart_impl;
 
     use super::{UartIface, UartIfaceEvent};
 
-    #[linkme::distributed_slice(super::super::UART_IMPLS)]
-    static PL011DRV: Lazy<Arc<Mutex<dyn super::UartIface>>> = Lazy::new(|| {
-        Arc::new(Mutex::new(UartIfaceTest {
-            ep: find_service("uart-thread").unwrap().into(),
-        }))
+    def_uart_impl!(UART_IPC, UartIfaceIPCImpl {
+        ep: find_service("uart-thread").unwrap().into(),
     });
 
-    pub struct UartIfaceTest {
+    pub struct UartIfaceIPCImpl {
         ep: Endpoint,
     }
 
-    impl UartIface for UartIfaceTest {
+    // #[ipc_trait_impl]
+    impl UartIface for UartIfaceIPCImpl {
         #[generate_ipc_send(label = UartIfaceEvent::init)]
         fn init(&mut self) {
             todo!()

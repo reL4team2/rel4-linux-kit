@@ -18,3 +18,4 @@ slot-manager = { workspace = true }
 
 uart-thread = { path = "../../services/uart-thread" }
 zerocopy = "0.8.25"
+srv-gate = { workspace = true }

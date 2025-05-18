@@ -3,7 +3,7 @@
 #![feature(used_with_arg)]
 
 extern crate alloc;
-#[cfg(not(feature = "uart-ipc"))]
+#[cfg(not(uart_ipc))]
 extern crate uart_thread;
 
 use srv_gate::println;

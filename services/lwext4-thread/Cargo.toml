@@ -18,3 +18,5 @@ lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-
 
 flatten_objects = { workspace = true }
 syscalls = { workspace = true }
+srv-gate = { workspace = true }
+blk-thread = { path = "../blk-thread" }

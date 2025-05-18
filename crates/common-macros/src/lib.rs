@@ -1,15 +1,24 @@
 extern crate syn;
 
+mod entry;
+mod ipc;
+mod utils;
+
 use darling::{Error, FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{
-    Attribute, Ident, ItemFn, ItemImpl, ItemTrait, PatType, Path, ReturnType, Type, parse_quote,
-};
+use syn::{Expr, Ident, ItemFn, ItemImpl, ItemTrait, Path, parse_quote};
+use utils::{parse_arg, parse_return};
 
 #[derive(Debug, FromMeta)]
 struct MacroArgs {
-    label: Path,
+    event: Option<Expr>,
+    label: Expr,
+}
+
+#[derive(Debug, FromMeta)]
+struct IPCTraitArgs {
+    event: Expr,
 }
 
 // struct ItemFnDeclare {
@@ -30,71 +39,6 @@ struct MacroArgs {
 //     }
 // }
 
-#[repr(usize)]
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum ReturnTypeEnum {
-    Number,
-    MessageInfo,
-    Others,
-}
-
-fn get_type(ty: &Box<Type>) -> ReturnTypeEnum {
-    match &**ty {
-        Type::Path(type_path) => {
-            if let Some(ident) = type_path.path.get_ident() {
-                let is_num = matches!(
-                    ident.to_string().as_str(),
-                    "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "usize" | "isize"
-                );
-                if is_num {
-                    ReturnTypeEnum::Number
-                } else if matches!(ident.to_string().as_str(), "MessageInfo") {
-                    ReturnTypeEnum::MessageInfo
-                } else {
-                    ReturnTypeEnum::Others
-                }
-            } else {
-                ReturnTypeEnum::Others
-            }
-        }
-        _ => ReturnTypeEnum::Others,
-    }
-}
-
-fn parse_arg(pat: &PatType) -> proc_macro2::TokenStream {
-    let name = pat.pat.clone();
-    let pat_ty = get_type(&pat.ty.clone());
-    match pat_ty {
-        ReturnTypeEnum::Number => quote! {
-            ib.msg_regs_mut()[reg_len] = #name as u64;
-            reg_len += 1;
-        },
-        _ => quote! {
-            let bytes = #name.as_bytes();
-            ib.msg_regs_mut()[reg_len] = bytes.len() as u64;
-            let offset = (reg_len + 1) * size_of::<sel4::Word>();
-            ib.msg_bytes_mut()[offset..offset + bytes.len()].copy_from_slice(bytes);
-            reg_len += bytes.len().div_ceil(size_of::<sel4::Word>()) + 1;
-        },
-    }
-}
-
-fn parse_return(ret_ty: &ReturnType) -> proc_macro2::TokenStream {
-    match ret_ty {
-        syn::ReturnType::Default => quote! {},
-        syn::ReturnType::Type(_, ty) => {
-            let ty = get_type(ty);
-            match ty {
-                ReturnTypeEnum::Number => quote! {
-                    sel4::with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _)
-                },
-                ReturnTypeEnum::MessageInfo => quote! {ret},
-                ReturnTypeEnum::Others => quote! { todo!("Not support non-numeric return type") },
-            }
-        }
-    }
-}
-
 #[proc_macro_attribute]
 pub fn generate_ipc_send(args: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = match NestedMeta::parse_meta_list(args.into()) {
@@ -106,71 +50,31 @@ pub fn generate_ipc_send(args: TokenStream, input: TokenStream) -> TokenStream {
         Err(e) => return TokenStream::from(e.write_errors()),
     };
     let label = args.label.clone();
+    let event = args.event.clone();
     // Parse the trait information and generate the corresponding code
     // 匹配 Trait 并生成对应的代码
     // let input: ItemFnDeclare = syn::parse_macro_input!(input as ItemFnDeclare);
     let input: ItemFn = syn::parse_macro_input!(input as ItemFn);
-    let mut is_impl = false;
-    let args: Vec<proc_macro2::TokenStream> = input
-        .sig
-        .inputs
-        .clone()
-        .iter()
-        .filter_map(|arg| match arg {
-            syn::FnArg::Typed(pat) => Some(parse_arg(pat)),
-            _ => {
-                is_impl = true;
-                None
-            }
-        })
-        .collect();
-    let output = parse_return(&input.sig.output);
-
-    let attrs = input.attrs;
-    let vis = input.vis;
-    let sig = input.sig;
-
-    let call_stat = if is_impl {
-        quote!(self.ep.call(msg))
-    } else {
-        quote!(call_ep!(msg))
-    };
-
-    // The code after expandsion
-    // 展开后的代码
-    let expanded = quote! {
-        #(#attrs)*
-        #vis #sig {
-            use zerocopy::IntoBytes;
-            let mut reg_len: usize = 0;
-
-            sel4::with_ipc_buffer_mut(|ib| {
-                #(#args)*
-            });
-
-            let msg = sel4::MessageInfo::new(#label.into(), 0, 0, reg_len);
-            let ret = #call_stat;
-            #output
-        }
-    };
-    TokenStream::from(expanded)
+    ipc::generate_send(input, event, label)
 }
 
 #[proc_macro_attribute]
 pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
-    // let attr_args = match NestedMeta::parse_meta_list(args.into()) {
-    //     Ok(v) => v,
-    //     Err(e) => return TokenStream::from(Error::from(e).write_errors()),
-    // };
-    // let args = match MacroArgs::from_list(&attr_args) {
-    //     Ok(v) => v,
-    //     Err(e) => return TokenStream::from(e.write_errors()),
-    // };
+    let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(Error::from(e).write_errors()),
+    };
+    let args = match IPCTraitArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(e.write_errors()),
+    };
+    let event_id = args.event.clone();
     // Parse the trait information and generate the corresponding code
     // 匹配 Trait 并生成对应的代码
     // let input: ItemFnDeclare = syn::parse_macro_input!(input as ItemFnDeclare);
     let input: ItemTrait = syn::parse_macro_input!(input as ItemTrait);
     let enum_ident = format_ident!("{}Event", &input.ident);
+    let enum_event_id = format_ident!("_{}_eventid", enum_ident);
     let labels: Vec<Ident> = input
         .items
         .iter()
@@ -183,6 +87,8 @@ pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
     // The code after expandsion
     // 展开后的代码
     let expanded = quote! {
+        #[allow(non_upper_case_globals)]
+        pub const #enum_event_id: u64 = #event_id;
         #[allow(non_camel_case_types)]
         #[derive(num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
         #[repr(u64)]
@@ -196,19 +102,7 @@ pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn ipc_trait_impl(args: TokenStream, input: TokenStream) -> TokenStream {
-    // let attr_args = match NestedMeta::parse_meta_list(args.into()) {
-    //     Ok(v) => v,
-    //     Err(e) => return TokenStream::from(Error::from(e).write_errors()),
-    // };
-    // let args = match MacroArgs::from_list(&attr_args) {
-    //     Ok(v) => v,
-    //     Err(e) => return TokenStream::from(e.write_errors()),
-    // };
-    // let label = args.label.clone();
-    // Parse the trait information and generate the corresponding code
-    // 匹配 Trait 并生成对应的代码
-    // let input: ItemFnDeclare = syn::parse_macro_input!(input as ItemFnDeclare);
+pub fn ipc_trait_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input: ItemImpl = syn::parse_macro_input!(input as ItemImpl);
     let trait_path = match input.trait_ {
         Some((_, ref path, _)) => path.clone(),
@@ -216,7 +110,10 @@ pub fn ipc_trait_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     };
     input.items.iter_mut().for_each(|item| match item {
         syn::ImplItem::Fn(impl_item_fn) => {
-            impl_item_fn.attrs.push(parse_quote!(#[inline]));
+            let fname = impl_item_fn.sig.ident.clone();
+            impl_item_fn.attrs.push(parse_quote!(
+                #[generate_ipc_send(label = #trait_path::#fname)]
+            ));
         }
         _ => {}
     });
@@ -245,9 +142,8 @@ pub fn ipc_trait_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input: ItemFn = syn::parse_macro_input!(input as ItemFn);
-    input.sig.unsafety = Some(syn::token::Unsafe {
-        span: input.sig.fn_token.span,
-    });
+    let span = input.sig.fn_token.span.clone();
+    input.sig.unsafety = Some(syn::token::Unsafe { span });
     quote! {
         #[unsafe(export_name = "_impl_main")]
         #input

@@ -3,47 +3,38 @@
 
 extern crate alloc;
 
-use alloc::{collections::vec_deque::VecDeque, sync::Arc};
+use alloc::collections::vec_deque::VecDeque;
 use arm_pl011::pl011::Pl011Uart;
 use common::{
-    ipc::ipc_saver::IpcSaver,
     services::root::{register_irq, register_notify},
     slot::alloc_slot,
 };
 use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
 use sel4::{
-    Cap, MessageInfo, MessageInfoBuilder,
+    Cap, MessageInfo,
     cap_type::{IrqHandler, Notification},
     debug_println,
 };
 use slot_manager::LeafSlot;
-use spin::{Lazy, Mutex};
 use srv_gate::{def_event_handler, def_uart_impl, uart::UartIface};
-
-static REV_MSG: Lazy<MessageInfoBuilder> = Lazy::new(MessageInfoBuilder::default);
-static IPC_SAVER: Mutex<IpcSaver> = Mutex::new(IpcSaver::new());
-
-// pub fn irq_callback() {
-//     let char = PL011.lock().getchar().unwrap();
-//     PL011.lock().ack_interrupts();
-//     IRQ_HANDLER.irq_handler_ack().unwrap();
-
-//     let mut ipc_saver = IPC_SAVER.lock();
-//     if ipc_saver.queue_len() > 0 {
-//         with_ipc_buffer_mut(|ib| {
-//             ib.msg_bytes_mut()[0] = char;
-//             ipc_saver.reply_one(REV_MSG.length(1).build()).unwrap();
-//         });
-//     } else {
-//         BUFFER.lock().push_back(char);
-//     }
-// }
 
 def_uart_impl!(PL011DRV, Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR));
 def_event_handler!(PL011_IRQ, usize::MAX, irq_handler);
 
 fn irq_handler(msg: &MessageInfo, badge: u64) {
     log::debug!("receive {} from {}", msg.label(), badge);
+    // let char = PL011.lock().getchar().unwrap();
+    // PL011.lock().ack_interrupts();
+    // IRQ_HANDLER.irq_handler_ack().unwrap();
+    // let mut ipc_saver = IPC_SAVER.lock();
+    // if ipc_saver.queue_len() > 0 {
+    //     with_ipc_buffer_mut(|ib| {
+    //         ib.msg_bytes_mut()[0] = char;
+    //         ipc_saver.reply_one(REV_MSG.length(1).build()).unwrap();
+    //     });
+    // } else {
+    //     BUFFER.lock().push_back(char);
+    // }
 }
 
 pub struct Pl011UartIfaceImpl {
