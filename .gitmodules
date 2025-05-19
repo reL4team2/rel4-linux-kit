@@ -1,0 +1,4 @@
+[submodule "ByteOS"]
+	path = ByteOS
+	url = git@github.com:Byte-OS/ByteOS.git
+	branch = sel4-based
