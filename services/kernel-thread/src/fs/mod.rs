@@ -16,16 +16,19 @@ use alloc::{
 use common::services::root::create_channel;
 use ipc_fs::IPCFileSystem;
 use spin::Mutex;
+use srv_gate::FS_IMPLS;
 use vfs::{FileResult, FileSystem};
 
 static MOUNTED_FS: Mutex<Vec<(String, Arc<dyn FileSystem>)>> = Mutex::new(Vec::new());
 
 pub(super) fn init() {
     // 寻找 fs_service 并尝试 ping
-    let mut ipc_fs = IPCFileSystem::new("fs-thread").expect("can't find service");
-    ipc_fs.fs.ping();
+    let ipc_fs = IPCFileSystem::new("ipc-fs-thread", 0).expect("can't find service");
+
     let channel_id = create_channel(0x3_0000_0000, 4);
-    ipc_fs.fs.init(channel_id, 0x3_0000_0000, 0x4000).unwrap();
+    FS_IMPLS[ipc_fs.fs]
+        .lock()
+        .init(channel_id, 0x3_0000_0000, 0x4000);
     MOUNTED_FS
         .lock()
         .push((String::from("/"), Arc::new(ipc_fs)));

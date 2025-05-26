@@ -40,3 +40,4 @@ hashbrown = { workspace = true }
 srv-gate = { workspace = true }
 
 uart-thread = { workspace = true }
+lwext4-thread = { workspace = true }

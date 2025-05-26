@@ -408,6 +408,7 @@ dependencies = [
  "hashbrown",
  "include_bytes_aligned",
  "log",
+ "lwext4-thread",
  "memory_addr",
  "num_enum",
  "object",
@@ -1108,6 +1109,7 @@ dependencies = [
  "paste",
  "sel4",
  "spin",
+ "syscalls",
  "zerocopy 0.8.25",
 ]
 

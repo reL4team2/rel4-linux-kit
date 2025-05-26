@@ -120,184 +120,184 @@ pub struct Stat {
     pub ctime: TimeSpec, // 最后创建时间
 }
 
-#[derive(Clone, Debug)]
-pub struct FileSerivce {
-    ep: Endpoint,
-    share_addr: usize,
-    share_size: usize,
-}
+// #[derive(Clone, Debug)]
+// pub struct FileSerivce {
+//     ep: Endpoint,
+//     share_addr: usize,
+//     share_size: usize,
+// }
 
-impl FileSerivce {
-    pub const fn from_bits(bits: u64) -> Self {
-        Self::new(Endpoint::from_bits(bits))
-    }
+// impl FileSerivce {
+//     pub const fn from_bits(bits: u64) -> Self {
+//         Self::new(Endpoint::from_bits(bits))
+//     }
 
-    pub const fn from_leaf_slot(ls: LeafSlot) -> Self {
-        Self::from_bits(ls.raw() as _)
-    }
+//     pub const fn from_leaf_slot(ls: LeafSlot) -> Self {
+//         Self::from_bits(ls.raw() as _)
+//     }
 
-    pub const fn leaf_slot(&self) -> LeafSlot {
-        LeafSlot::new(self.ep.bits() as _)
-    }
+//     pub const fn leaf_slot(&self) -> LeafSlot {
+//         LeafSlot::new(self.ep.bits() as _)
+//     }
 
-    pub const fn new(endpoint: Endpoint) -> Self {
-        Self {
-            ep: endpoint,
-            share_addr: 0,
-            share_size: 0,
-        }
-    }
+//     pub const fn new(endpoint: Endpoint) -> Self {
+//         Self {
+//             ep: endpoint,
+//             share_addr: 0,
+//             share_size: 0,
+//         }
+//     }
 
-    #[inline]
-    pub fn call(&self, msg: MessageInfo) -> MessageInfo {
-        self.ep.call(msg)
-    }
+//     #[inline]
+//     pub fn call(&self, msg: MessageInfo) -> MessageInfo {
+//         self.ep.call(msg)
+//     }
 
-    #[generate_ipc_send(label = FileEvent::Ping)]
-    pub fn ping(&self) {}
+//     #[generate_ipc_send(label = FileEvent::Ping)]
+//     pub fn ping(&self) {}
 
-    pub fn init(&mut self, channel_id: usize, addr: usize, size: usize) -> Result<MessageInfo, ()> {
-        self.share_addr = addr;
-        self.share_size = size;
-        with_ipc_buffer_mut(|ib| ib.msg_regs_mut()[0] = channel_id as _);
-        let ping_msg = MessageInfoBuilder::default()
-            .label(FileEvent::Init.into())
-            .length(1)
-            .build();
-        Ok(self.call(ping_msg))
-    }
+//     pub fn init(&mut self, channel_id: usize, addr: usize, size: usize) -> Result<MessageInfo, ()> {
+//         self.share_addr = addr;
+//         self.share_size = size;
+//         with_ipc_buffer_mut(|ib| ib.msg_regs_mut()[0] = channel_id as _);
+//         let ping_msg = MessageInfoBuilder::default()
+//             .label(FileEvent::Init.into())
+//             .length(1)
+//             .build();
+//         Ok(self.call(ping_msg))
+//     }
 
-    #[inline]
-    pub fn read_at(&self, inode: u64, offset: usize, buf: &mut [u8]) -> Result<usize, ()> {
-        let trans_len = cmp::min(buf.len(), self.share_size);
-        with_ipc_buffer_mut(|ib| {
-            let regs = ib.msg_regs_mut();
-            regs[0] = inode;
-            regs[1] = offset as _;
-            regs[2] = trans_len as u64;
-        });
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::ReadAt.into())
-            .length(3)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        let rlen = with_ipc_buffer(|ib| ib.msg_regs()[0] as usize);
-        let ptr = self.share_addr as *mut u8;
-        unsafe {
-            ptr.copy_to_nonoverlapping(buf.as_mut_ptr(), rlen);
-        }
-        Ok(rlen)
-    }
+//     #[inline]
+//     pub fn read_at(&self, inode: u64, offset: usize, buf: &mut [u8]) -> Result<usize, ()> {
+//         let trans_len = cmp::min(buf.len(), self.share_size);
+//         with_ipc_buffer_mut(|ib| {
+//             let regs = ib.msg_regs_mut();
+//             regs[0] = inode;
+//             regs[1] = offset as _;
+//             regs[2] = trans_len as u64;
+//         });
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::ReadAt.into())
+//             .length(3)
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         let rlen = with_ipc_buffer(|ib| ib.msg_regs()[0] as usize);
+//         let ptr = self.share_addr as *mut u8;
+//         unsafe {
+//             ptr.copy_to_nonoverlapping(buf.as_mut_ptr(), rlen);
+//         }
+//         Ok(rlen)
+//     }
 
-    #[inline]
-    pub fn write_at(&self, inode: u64, offset: usize, data: &[u8]) -> Result<usize, ()> {
-        let trans_len = cmp::min(data.len(), IPC_DATA_LEN - 3 * REG_LEN);
-        with_ipc_buffer_mut(|ib| {
-            let regs = ib.msg_regs_mut();
-            regs[0] = inode;
-            regs[1] = offset as _;
-            regs[2] = data.len() as _;
-            ib.msg_bytes_mut()[3 * REG_LEN..3 * REG_LEN + trans_len]
-                .copy_from_slice(&data[..trans_len]);
-        });
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::WriteAt.into())
-            .length(3 + data.len().div_ceil(REG_LEN))
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        with_ipc_buffer(|ib| Ok(ib.msg_regs()[0] as usize))
-    }
+//     #[inline]
+//     pub fn write_at(&self, inode: u64, offset: usize, data: &[u8]) -> Result<usize, ()> {
+//         let trans_len = cmp::min(data.len(), IPC_DATA_LEN - 3 * REG_LEN);
+//         with_ipc_buffer_mut(|ib| {
+//             let regs = ib.msg_regs_mut();
+//             regs[0] = inode;
+//             regs[1] = offset as _;
+//             regs[2] = data.len() as _;
+//             ib.msg_bytes_mut()[3 * REG_LEN..3 * REG_LEN + trans_len]
+//                 .copy_from_slice(&data[..trans_len]);
+//         });
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::WriteAt.into())
+//             .length(3 + data.len().div_ceil(REG_LEN))
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         with_ipc_buffer(|ib| Ok(ib.msg_regs()[0] as usize))
+//     }
 
-    pub fn open(&self, path: &str, flags: u64) -> Result<(usize, usize), Errno> {
-        let mut len = 0;
-        with_ipc_buffer_mut(|ib| {
-            flags.write_buffer(ib, &mut len);
-            path.write_buffer(ib, &mut len);
-        });
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::Open.into())
-            .length(len)
-            .build();
-        let ret = self.call(msg);
-        if ret.label() == 0 {
-            with_ipc_buffer(|ib| Ok((ib.msg_regs()[0] as _, ib.msg_regs()[1] as _)))
-        } else {
-            Err(Errno::new(ret.label() as _))
-        }
-    }
+//     pub fn open(&self, path: &str, flags: u64) -> Result<(usize, usize), Errno> {
+//         let mut len = 0;
+//         with_ipc_buffer_mut(|ib| {
+//             flags.write_buffer(ib, &mut len);
+//             path.write_buffer(ib, &mut len);
+//         });
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::Open.into())
+//             .length(len)
+//             .build();
+//         let ret = self.call(msg);
+//         if ret.label() == 0 {
+//             with_ipc_buffer(|ib| Ok((ib.msg_regs()[0] as _, ib.msg_regs()[1] as _)))
+//         } else {
+//             Err(Errno::new(ret.label() as _))
+//         }
+//     }
 
-    pub fn mkdir(&self, path: &str) -> Result<(), ()> {
-        let mut len = 0;
-        with_ipc_buffer_mut(|ib| path.write_buffer(ib, &mut len));
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::Mkdir.into())
-            .length(len)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        Ok(())
-    }
+//     pub fn mkdir(&self, path: &str) -> Result<(), ()> {
+//         let mut len = 0;
+//         with_ipc_buffer_mut(|ib| path.write_buffer(ib, &mut len));
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::Mkdir.into())
+//             .length(len)
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         Ok(())
+//     }
 
-    pub fn unlink(&self, path: &str) -> Result<(), ()> {
-        let mut len = 0;
-        with_ipc_buffer_mut(|ib| path.write_buffer(ib, &mut len));
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::Unlink.into())
-            .length(len)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        Ok(())
-    }
+//     pub fn unlink(&self, path: &str) -> Result<(), ()> {
+//         let mut len = 0;
+//         with_ipc_buffer_mut(|ib| path.write_buffer(ib, &mut len));
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::Unlink.into())
+//             .length(len)
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         Ok(())
+//     }
 
-    #[generate_ipc_send(label = FileEvent::Close)]
-    pub fn close(&self, inode: usize) {}
+//     #[generate_ipc_send(label = FileEvent::Close)]
+//     pub fn close(&self, inode: usize) {}
 
-    pub fn stat(&self, inode: usize) -> Result<Stat, ()> {
-        with_ipc_buffer_mut(|ib| inode.write_buffer(ib, &mut 0));
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::Stat.into())
-            .length(1)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        let stat = with_ipc_buffer(|ib| {
-            let ptr = ib.msg_bytes().as_ptr() as *const Stat;
-            unsafe { ptr.as_ref().unwrap().clone() }
-        });
-        Ok(stat)
-    }
+//     pub fn stat(&self, inode: usize) -> Result<Stat, ()> {
+//         with_ipc_buffer_mut(|ib| inode.write_buffer(ib, &mut 0));
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::Stat.into())
+//             .length(1)
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         let stat = with_ipc_buffer(|ib| {
+//             let ptr = ib.msg_bytes().as_ptr() as *const Stat;
+//             unsafe { ptr.as_ref().unwrap().clone() }
+//         });
+//         Ok(stat)
+//     }
 
-    pub fn getdents64(
-        &self,
-        inode: u64,
-        offset: usize,
-        buf: &mut [u8],
-    ) -> Result<(usize, usize), Errno> {
-        with_ipc_buffer_mut(|ib| {
-            inode.write_buffer(ib, &mut 0);
-            offset.write_buffer(ib, &mut 1);
-            buf.len().write_buffer(ib, &mut 2);
-        });
-        let msg = MessageInfoBuilder::default()
-            .label(FileEvent::GetDents64.into())
-            .length(3)
-            .build();
-        let ret = self.call(msg);
-        assert_eq!(ret.label(), 0);
-        with_ipc_buffer(|ib| {
-            let rlen = ib.msg_regs()[0] as usize;
-            let num = ib.msg_regs()[1] as usize;
-            buf[..rlen].copy_from_slice(&ib.msg_bytes()[2 * REG_LEN..2 * REG_LEN + rlen]);
-            Ok((rlen, num))
-        })
-    }
-}
+//     pub fn getdents64(
+//         &self,
+//         inode: u64,
+//         offset: usize,
+//         buf: &mut [u8],
+//     ) -> Result<(usize, usize), Errno> {
+//         with_ipc_buffer_mut(|ib| {
+//             inode.write_buffer(ib, &mut 0);
+//             offset.write_buffer(ib, &mut 1);
+//             buf.len().write_buffer(ib, &mut 2);
+//         });
+//         let msg = MessageInfoBuilder::default()
+//             .label(FileEvent::GetDents64.into())
+//             .length(3)
+//             .build();
+//         let ret = self.call(msg);
+//         assert_eq!(ret.label(), 0);
+//         with_ipc_buffer(|ib| {
+//             let rlen = ib.msg_regs()[0] as usize;
+//             let num = ib.msg_regs()[1] as usize;
+//             buf[..rlen].copy_from_slice(&ib.msg_bytes()[2 * REG_LEN..2 * REG_LEN + rlen]);
+//             Ok((rlen, num))
+//         })
+//     }
+// }
 
-impl From<LeafSlot> for FileSerivce {
-    fn from(value: LeafSlot) -> Self {
-        Self::from_leaf_slot(value)
-    }
-}
+// impl From<LeafSlot> for FileSerivce {
+//     fn from(value: LeafSlot) -> Self {
+//         Self::from_leaf_slot(value)
+//     }
+// }

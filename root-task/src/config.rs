@@ -1,6 +1,8 @@
 use core::fmt::Debug;
 
-use config::{DMA_ADDR_START, PL011_ADDR, VIRTIO_MMIO_ADDR, VIRTIO_MMIO_VIRT_ADDR};
+use config::{
+    DMA_ADDR_START, PL011_ADDR, VIRT_PL011_ADDR, VIRTIO_MMIO_ADDR, VIRTIO_MMIO_VIRT_ADDR,
+};
 
 use crate::include_bytes_aligned;
 

@@ -9,7 +9,7 @@ use common::{
     services::root::{register_irq, register_notify},
     slot::alloc_slot,
 };
-use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
+use config::{SERIAL_DEVICE_IRQ, VIRT_PL011_ADDR};
 use sel4::{
     Cap, MessageInfo,
     cap_type::{IrqHandler, Notification},
@@ -18,7 +18,7 @@ use sel4::{
 use slot_manager::LeafSlot;
 use srv_gate::{def_event_handler, def_uart_impl, uart::UartIface};
 
-def_uart_impl!(PL011DRV, Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR));
+def_uart_impl!(PL011DRV, Pl011UartIfaceImpl::new(VIRT_PL011_ADDR));
 def_event_handler!(PL011_IRQ, usize::MAX, irq_handler);
 
 fn irq_handler(msg: &MessageInfo, badge: u64) {

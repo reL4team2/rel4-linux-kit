@@ -7,17 +7,13 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
-    consts::DEFAULT_SERVE_EP,
     services::root::{join_channel, register_irq, register_notify},
+    slot::alloc_slot,
 };
 use config::{DEFAULT_CUSTOM_SLOT, VIRTIO_MMIO_BLK_VIRT_ADDR, VIRTIO_NET_IRQ};
 use flatten_objects::FlattenObjects;
-use sel4::{
-    Cap, MessageInfoBuilder,
-    cap::{IrqHandler, Notification},
-    with_ipc_buffer_mut,
-};
-use sel4_runtime::{main, utils::alloc_free_addr};
+use sel4::cap::{IrqHandler, Notification};
+use sel4_runtime::utils::alloc_free_addr;
 use srv_gate::{blk::BlockIface, def_blk_impl};
 use virtio::HalImpl;
 use virtio_drivers::{
@@ -42,18 +38,18 @@ unsafe impl Send for VirtIOBlkImpl {}
 impl VirtIOBlkImpl {
     pub fn new(addr: usize) -> Self {
         let ptr = addr as *mut VirtIOHeader;
-        let mut stores = FlattenObjects::<(usize, usize), 32>::new();
+        let stores = FlattenObjects::<(usize, usize), 32>::new();
         let device = VirtIOBlk::<HalImpl, MmioTransport>::new(unsafe {
             MmioTransport::new(NonNull::new(ptr).unwrap()).unwrap()
         })
         .unwrap();
 
         // 向 root-task 申请一个中断
-        let irq_handler = IrqHandler::from_bits(DEFAULT_CUSTOM_SLOT + 1);
+        let irq_handler = alloc_slot().cap();
         register_irq(VIRTIO_NET_IRQ as _, irq_handler.into());
 
         // 向 root-task 申请一个通知
-        let ntfn = Notification::from_bits(DEFAULT_CUSTOM_SLOT);
+        let ntfn = alloc_slot().cap();
         register_notify(ntfn.into(), 1).expect("Can't register notification");
 
         // 设置中断信息

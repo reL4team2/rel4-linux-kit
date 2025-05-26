@@ -19,6 +19,8 @@ pub const VIRTIO_MMIO_ADDR: usize = 0xa003e00;
 
 /// PL011 设备使用过的地址
 pub const PL011_ADDR: usize = 0x0900_0000;
+/// PL011 对应的虚拟地址
+pub const VIRT_PL011_ADDR: usize = 0x1_2020_0000;
 
 /// 将要被映射的偏移地址，设备虚拟地址 = VIRT_ADDR + 设备物理地址
 pub const VIRTIO_MMIO_VIRT_ADDR: usize = 0x1_2000_0000;

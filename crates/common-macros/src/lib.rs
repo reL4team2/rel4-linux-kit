@@ -92,6 +92,7 @@ pub fn ipc_trait(args: TokenStream, input: TokenStream) -> TokenStream {
         #[allow(non_camel_case_types)]
         #[derive(num_enum::TryFromPrimitive, num_enum::IntoPrimitive)]
         #[repr(u64)]
+        #[derive(Debug)]
         pub enum #enum_ident {
             #(#labels),*
         }

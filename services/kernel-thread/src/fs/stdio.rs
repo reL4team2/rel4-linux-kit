@@ -2,6 +2,7 @@
 //!
 //! 目前标准输入输出等都使用一个结构体，通过设置不同的位置来确保只读，只写
 
+use srv_gate::fs::Stat;
 use syscalls::Errno;
 
 use crate::device::uart::get_char;
@@ -49,7 +50,7 @@ impl FileInterface for StdConsole {
         todo!()
     }
 
-    fn stat(&self) -> super::vfs::FileResult<common::services::fs::Stat> {
+    fn stat(&self) -> super::vfs::FileResult<Stat> {
         todo!()
     }
 }

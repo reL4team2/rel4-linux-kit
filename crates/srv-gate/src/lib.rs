@@ -7,9 +7,11 @@ pub mod __prelude;
 pub mod blk;
 pub mod consts;
 pub mod event;
+pub mod fs;
 pub mod uart;
 
 use blk::BlockIface;
+use fs::FSIface;
 pub use linkme;
 pub use paste::paste;
 
@@ -24,6 +26,8 @@ use uart::UartIface;
 pub static UART_IMPLS: [Lazy<Arc<Mutex<dyn UartIface>>>];
 #[distributed_slice]
 pub static BLK_IMPLS: [Lazy<Arc<Mutex<dyn BlockIface>>>];
+#[distributed_slice]
+pub static FS_IMPLS: [Lazy<Arc<Mutex<dyn FSIface>>>];
 
 /// 定义一个事件处理器，利用 paste! 将 中断处理号加入到名称中用于做标识，防止 irq 冲突
 #[macro_export]
@@ -45,6 +49,18 @@ macro_rules! def_blk_impl {
         #[linkme(crate = $crate::linkme)]
         #[unsafe(no_mangle)]
         pub static $name: spin::Lazy<alloc::sync::Arc<spin::Mutex<dyn $crate::blk::BlockIface>>> =
+            spin::Lazy::new(|| alloc::sync::Arc::new(spin::Mutex::new($f)));
+    };
+}
+
+/// 定义一个事件处理器，利用 paste! 将 中断处理号加入到名称中用于做标识，防止 irq 冲突
+#[macro_export]
+macro_rules! def_fs_impl {
+    ($name:ident, $f:expr) => {
+        #[$crate::linkme::distributed_slice($crate::FS_IMPLS)]
+        #[linkme(crate = $crate::linkme)]
+        #[unsafe(no_mangle)]
+        pub static $name: spin::Lazy<alloc::sync::Arc<spin::Mutex<dyn $crate::fs::FSIface>>> =
             spin::Lazy::new(|| alloc::sync::Arc::new(spin::Mutex::new($f)));
     };
 }

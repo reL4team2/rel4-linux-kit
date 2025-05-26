@@ -14,3 +14,4 @@ num_enum = { version = "0.7.3", default-features = false }
 zerocopy = { workspace = true }
 log = "0.4"
 paste = "1.0"
+syscalls = { workspace = true }

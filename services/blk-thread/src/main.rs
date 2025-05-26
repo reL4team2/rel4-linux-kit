@@ -9,7 +9,6 @@ use common::consts::DEFAULT_SERVE_EP;
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::main;
 use srv_gate::blk::BlockIfaceEvent;
-use virtio_drivers::device::blk::{BlkReq, BlkResp};
 
 #[main]
 fn main() {

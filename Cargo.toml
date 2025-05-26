@@ -47,6 +47,7 @@ sel4-kit = { path = "crates/sel4-kit" }
 
 # 服务库
 uart-thread = { path = "services/uart-thread" }
+lwext4-thread = { path = "services/lwext4-thread" }
 
 # 一些公共包
 config = { path = "config" }
