@@ -1,5 +1,4 @@
 use lwext4_rust::KernelDevOp;
-use sel4::debug_println;
 use srv_gate::BLK_IMPLS;
 
 const BLOCK_SIZE: usize = 0x200;

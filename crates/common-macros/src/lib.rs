@@ -7,8 +7,7 @@ mod utils;
 use darling::{Error, FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Expr, Ident, ItemFn, ItemImpl, ItemTrait, Path, parse_quote};
-use utils::{parse_arg, parse_return};
+use syn::{Expr, Ident, ItemFn, ItemImpl, ItemTrait, parse_quote};
 
 #[derive(Debug, FromMeta)]
 struct MacroArgs {
@@ -109,14 +108,13 @@ pub fn ipc_trait_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
         Some((_, ref path, _)) => path.clone(),
         None => return TokenStream::from(Error::custom("Need to on a item trait").write_errors()),
     };
-    input.items.iter_mut().for_each(|item| match item {
-        syn::ImplItem::Fn(impl_item_fn) => {
+    input.items.iter_mut().for_each(|item| {
+        if let syn::ImplItem::Fn(impl_item_fn) = item {
             let fname = impl_item_fn.sig.ident.clone();
             impl_item_fn.attrs.push(parse_quote!(
                 #[generate_ipc_send(label = #trait_path::#fname)]
             ));
         }
-        _ => {}
     });
     // The code after expandsion
     // 展开后的代码
@@ -143,7 +141,7 @@ pub fn ipc_trait_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut input: ItemFn = syn::parse_macro_input!(input as ItemFn);
-    let span = input.sig.fn_token.span.clone();
+    let span = input.sig.fn_token.span;
     input.sig.unsafety = Some(syn::token::Unsafe { span });
     quote! {
         #[unsafe(export_name = "_impl_main")]

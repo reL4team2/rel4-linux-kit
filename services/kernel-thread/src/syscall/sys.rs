@@ -2,7 +2,8 @@
 //!
 //!
 
-use common::{arch::get_curr_ns, services::fs::TimeSpec};
+use common::arch::get_curr_ns;
+use srv_gate::fs::TimeSpec;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{task::Sel4Task, timer::flush_timer};

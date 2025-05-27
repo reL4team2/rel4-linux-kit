@@ -6,18 +6,12 @@ extern crate lwext4_thread;
 
 use common::{
     consts::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
-    services::{
-        IpcBufferRW,
-        root::{create_channel, join_channel},
-    },
+    services::{IpcBufferRW, root::join_channel},
 };
 use flatten_objects::FlattenObjects;
 use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::utils::alloc_free_addr;
-use srv_gate::{
-    BLK_IMPLS,
-    fs::{FSIface, FSIfaceEvent, Stat},
-};
+use srv_gate::fs::{FSIface, FSIfaceEvent, Stat};
 
 #[sel4_runtime::main]
 fn main() {

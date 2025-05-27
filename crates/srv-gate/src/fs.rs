@@ -1,6 +1,5 @@
 use crate::__prelude::*;
 use common::ipc_trait;
-use sel4::MessageInfo;
 use syscalls::Errno;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 

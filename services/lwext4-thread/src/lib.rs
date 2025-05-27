@@ -8,10 +8,7 @@ extern crate blk_thread;
 
 mod imp;
 
-use core::{
-    iter::zip,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use core::iter::zip;
 
 use alloc::string::String;
 use common::services::{
@@ -53,6 +50,12 @@ impl EXT4FSImpl {
         }
     }
 }
+
+impl Default for EXT4FSImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl FSIface for EXT4FSImpl {
     fn init(&mut self, channel_id: usize, addr: usize, size: usize) {}
 
@@ -68,7 +71,7 @@ impl FSIface for EXT4FSImpl {
     fn write_at(&mut self, inode: u64, offset: usize, data: &[u8]) -> usize {
         if let Some(ext4_file) = self.stores.get_mut(inode as _) {
             ext4_file.file_seek(offset as _, 0).unwrap();
-            ext4_file.file_write(&data).unwrap()
+            ext4_file.file_write(data).unwrap()
         } else {
             panic!("Can't Find File")
         }
@@ -78,17 +81,17 @@ impl FSIface for EXT4FSImpl {
         let mut ext4_file = Ext4File::new("/", lwext4_rust::InodeTypes::EXT4_DE_DIR);
         if flags & O_CREAT == O_CREAT {
             if flags & O_DIRECTORY != O_DIRECTORY {
-                ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
+                ext4_file = Ext4File::new(path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
                 // FIXME: clean this O_TRUNC
-                ext4_file.file_open(&path, flags | O_TRUNC).unwrap();
+                ext4_file.file_open(path, flags | O_TRUNC).unwrap();
             } else {
                 panic!("Just support create regular file");
             }
-        } else if ext4_file.check_inode_exist(&path, InodeTypes::EXT4_DE_DIR) {
-            ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-        } else if ext4_file.check_inode_exist(&path, InodeTypes::EXT4_DE_REG_FILE) {
-            ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
-            ext4_file.file_open(&path, flags).unwrap();
+        } else if ext4_file.check_inode_exist(path, InodeTypes::EXT4_DE_DIR) {
+            ext4_file = Ext4File::new(path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
+        } else if ext4_file.check_inode_exist(path, InodeTypes::EXT4_DE_REG_FILE) {
+            ext4_file = Ext4File::new(path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
+            ext4_file.file_open(path, flags).unwrap();
         } else {
             // sel4::reply(ib, rev_msg.label(Errno::EACCES.into_raw() as _).build());
             return Err(Errno::EACCES);
@@ -103,13 +106,13 @@ impl FSIface for EXT4FSImpl {
     }
 
     fn mkdir(&self, path: &str) {
-        let mut ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-        ext4_file.dir_mk(&path).unwrap();
+        let mut ext4_file = Ext4File::new(path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
+        ext4_file.dir_mk(path).unwrap();
     }
 
     fn unlink(&self, path: &str) {
-        let mut ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-        ext4_file.file_remove(&path).unwrap();
+        let mut ext4_file = Ext4File::new(path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
+        ext4_file.file_remove(path).unwrap();
     }
 
     fn close(&mut self, inode: usize) {

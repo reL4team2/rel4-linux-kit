@@ -9,8 +9,8 @@ pub enum ReturnTypeEnum {
     Others,
 }
 
-pub fn get_type(ty: &Box<Type>) -> ReturnTypeEnum {
-    match &**ty {
+pub fn get_type(ty: &Type) -> ReturnTypeEnum {
+    match ty {
         Type::Path(type_path) => {
             if let Some(ident) = type_path.path.get_ident() {
                 let is_num = matches!(
