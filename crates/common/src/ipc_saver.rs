@@ -5,7 +5,7 @@
 
 use alloc::{collections::vec_deque::VecDeque, vec::Vec};
 use sel4::{MessageInfo, cap::Endpoint};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 use crate::slot::alloc_slot;
 

@@ -50,7 +50,7 @@ impl FileSystem for IPCFileSystem {
             path: String::from(path),
             inode: inode as _,
             fsize: fsize as _,
-            fs: self.fs.clone(),
+            fs: self.fs,
         }))
     }
 

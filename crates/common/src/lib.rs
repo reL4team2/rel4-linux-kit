@@ -8,7 +8,7 @@ mod utils;
 
 pub mod arch;
 pub mod consts;
-pub mod ipc;
+pub mod ipc_saver;
 pub mod log_impl;
 pub mod page;
 pub mod services;

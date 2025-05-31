@@ -4,7 +4,7 @@
 extern crate sel4_panicking;
 
 use config::DEFAULT_EMPTY_SLOT_INDEX;
-use core::ptr;
+use core::{hint::spin_loop, ptr};
 use sel4_ctors_dtors::run_ctors;
 use sel4_kit::ipc_buffer::init_ipc_buffer;
 use sel4_panicking::catch_unwind;
@@ -32,7 +32,9 @@ unsafe extern "C" fn main_entry() -> ! {
 
         match catch_unwind(|| unsafe {
             _impl_main();
-            loop {}
+            loop {
+                spin_loop();
+            }
         }) {
             Ok(never) => never,
             Err(_) => {

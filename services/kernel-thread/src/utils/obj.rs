@@ -5,7 +5,7 @@ use sel4::{
     Cap,
     cap::{CNode, Granule, Notification, PT, Tcb, VSpace},
 };
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 use spin::Mutex;
 
 /// The object allocator for the kernel thread.

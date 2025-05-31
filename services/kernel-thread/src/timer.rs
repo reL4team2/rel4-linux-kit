@@ -4,12 +4,12 @@
 
 use common::arch::{get_curr_ns, get_cval_ns};
 use sel4::{CapRights, cap::Notification};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 use spin::Lazy;
 
 use crate::{child_test::TASK_MAP, exception::GLOBAL_NOTIFY, utils::obj::alloc_slot};
 
-static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(|| alloc_slot());
+static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
 static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
     // 从 Global_Notify 复制一个具有 badge 的Notification
     let slot = alloc_slot();

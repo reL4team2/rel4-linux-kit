@@ -10,3 +10,4 @@
 pub mod arch;
 pub mod ipc;
 pub mod ipc_buffer;
+pub mod slot_manager;

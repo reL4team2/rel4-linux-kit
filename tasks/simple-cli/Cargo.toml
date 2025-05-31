@@ -14,7 +14,7 @@ sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-slot-manager = { workspace = true }
+sel4-kit = { workspace = true }
 
 uart-thread = { path = "../../services/uart-thread" }
 zerocopy = "0.8.25"

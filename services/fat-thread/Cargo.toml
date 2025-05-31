@@ -9,7 +9,7 @@ sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-slot-manager = { workspace = true }
+sel4-kit = { workspace = true }
 
 [dependencies.fatfs]
 git = "https://github.com/rafalh/rust-fatfs.git"

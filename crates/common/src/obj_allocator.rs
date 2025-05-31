@@ -5,7 +5,7 @@ use sel4::{
     cap_type,
     init_thread::slot,
 };
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 pub struct ObjectAllocator {
     ut: Untyped,

@@ -72,8 +72,8 @@ dependencies = [
  "flatten_objects",
  "log",
  "sel4",
+ "sel4-kit",
  "sel4-runtime",
- "slot-manager",
  "spin",
  "srv-gate",
  "virtio-drivers",
@@ -131,7 +131,7 @@ dependencies = [
  "num_enum",
  "object",
  "sel4",
- "slot-manager",
+ "sel4-kit",
  "spin",
  "syscalls",
  "zerocopy 0.8.25",
@@ -417,7 +417,6 @@ dependencies = [
  "sel4-kit",
  "sel4-logging",
  "sel4-runtime",
- "slot-manager",
  "spin",
  "srv-gate",
  "syscalls",
@@ -494,8 +493,8 @@ dependencies = [
  "log",
  "lwext4_rust",
  "sel4",
+ "sel4-kit",
  "sel4-runtime",
- "slot-manager",
  "spin",
  "srv-gate",
  "syscalls",
@@ -707,12 +706,10 @@ dependencies = [
  "sel4-kit",
  "sel4-logging",
  "sel4-root-task",
- "sel4-runtime",
  "sel4-stack",
+ "sel4-sync",
  "serde",
- "slot-manager",
  "spin",
- "task-helper",
  "toml",
  "xmas-elf",
 ]
@@ -943,7 +940,6 @@ dependencies = [
  "sel4-panicking-env",
  "sel4-runtime-common",
  "sel4-sync",
- "slot-manager",
 ]
 
 [[package]]
@@ -1071,22 +1067,15 @@ dependencies = [
  "sel4",
  "sel4-ctors-dtors",
  "sel4-dlmalloc",
+ "sel4-kit",
  "sel4-panicking",
  "sel4-panicking-env",
  "sel4-runtime",
  "sel4-sync",
- "slot-manager",
  "spin",
  "srv-gate",
  "uart-thread",
  "zerocopy 0.8.25",
-]
-
-[[package]]
-name = "slot-manager"
-version = "0.1.0"
-dependencies = [
- "sel4",
 ]
 
 [[package]]
@@ -1135,20 +1124,6 @@ name = "syscalls"
 version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43d0e35dc7d73976a53c7e6d7d177ef804a0c0ee774ec77bcc520c2216fd7cbe"
-
-[[package]]
-name = "task-helper"
-version = "0.1.0"
-dependencies = [
- "common",
- "config",
- "log",
- "sel4",
- "sel4-sync",
- "slot-manager",
- "spin",
- "xmas-elf",
-]
 
 [[package]]
 name = "test-demo"
@@ -1243,8 +1218,8 @@ dependencies = [
  "linkme",
  "log",
  "sel4",
+ "sel4-kit",
  "sel4-runtime",
- "slot-manager",
  "spin",
  "srv-gate",
 ]

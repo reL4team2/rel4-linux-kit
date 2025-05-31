@@ -3,7 +3,6 @@
 
 extern crate alloc;
 
-use alloc::collections::vec_deque::VecDeque;
 use arm_pl011::pl011::Pl011Uart;
 use common::{
     services::root::{register_irq, register_notify},
@@ -15,7 +14,7 @@ use sel4::{
     cap_type::{IrqHandler, Notification},
     debug_println,
 };
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 use srv_gate::{def_event_handler, def_uart_impl, uart::UartIface};
 
 def_uart_impl!(PL011DRV, Pl011UartIfaceImpl::new(VIRT_PL011_ADDR));
@@ -38,7 +37,6 @@ fn irq_handler(msg: &MessageInfo, badge: u64) {
 }
 
 pub struct Pl011UartIfaceImpl {
-    buffer: VecDeque<u8>,
     device: Pl011Uart,
     notify: Cap<Notification>,
     irq_handler: Cap<IrqHandler>,
@@ -71,7 +69,6 @@ impl Pl011UartIfaceImpl {
         //     .unwrap();
 
         Self {
-            buffer: VecDeque::new(),
             device,
             notify,
             irq_handler,
@@ -90,7 +87,6 @@ impl UartIface for Pl011UartIfaceImpl {
     }
 
     fn getchar(&mut self) -> u8 {
-        // self.buffer.pop_front().unwrap()
         self.notify.wait();
         let char = self.device.getchar().unwrap();
         self.device.ack_interrupts();

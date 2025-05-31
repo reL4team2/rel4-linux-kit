@@ -5,7 +5,7 @@ use sel4::{
     cap::{Endpoint, Null},
     init_thread, with_ipc_buffer, with_ipc_buffer_mut,
 };
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 use crate::{consts::DEFAULT_PARENT_EP, services::IpcBufferRW, slot::alloc_slot};
 

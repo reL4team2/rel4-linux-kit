@@ -1,6 +1,6 @@
 # export RUSTFLAGS = --cfg=uart_ipc --cfg=blk_ipc
 # export RUSTFLAGS = --cfg=uart_ipc
-export RUSTFLAGS := 
+export RUSTFLAGS := --check-cfg=cfg(uart_ipc) --check-cfg=cfg(blk_ipc) --check-cfg=cfg(fs_ipc) 
 
 include tools/autoconfig.mk
 
@@ -90,6 +90,9 @@ busybox:
 clean:
 	rm -rf $(BUILD_DIR)
 	make -C examples/linux-apps clean
+
+clippy:
+	cargo clippy
 
 cloc:
 	cloc . --not-match-d=.env --not-match-d=target/

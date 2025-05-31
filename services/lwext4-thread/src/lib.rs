@@ -33,7 +33,7 @@ const STORE_CAP: usize = 500;
 def_fs_impl!(EXT4FS, EXT4FSImpl::new());
 
 pub struct EXT4FSImpl {
-    fs: Ext4BlockWrapper<Ext4Disk>,
+    _fs: Ext4BlockWrapper<Ext4Disk>,
     stores: FlattenObjects<Ext4File, STORE_CAP>,
 }
 
@@ -45,7 +45,7 @@ impl EXT4FSImpl {
         let channel_id = create_channel(0x3_0000_0000, 4);
         BLK_IMPLS[0].lock().init(channel_id);
         EXT4FSImpl {
-            fs: Ext4BlockWrapper::new(Ext4Disk::new()).expect("Failed to create Ext4BlockWrapper"),
+            _fs: Ext4BlockWrapper::new(Ext4Disk::new()).expect("Failed to create Ext4BlockWrapper"),
             stores: FlattenObjects::new(),
         }
     }
@@ -57,7 +57,7 @@ impl Default for EXT4FSImpl {
     }
 }
 impl FSIface for EXT4FSImpl {
-    fn init(&mut self, channel_id: usize, addr: usize, size: usize) {}
+    fn init(&mut self, _channel_id: usize, _addr: usize, _size: usize) {}
 
     fn read_at(&mut self, inode: u64, offset: usize, buf: &mut [u8]) -> usize {
         if let Some(ext4_file) = self.stores.get_mut(inode as _) {

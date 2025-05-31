@@ -17,39 +17,30 @@ fn main() {
 
     with_ipc_buffer_mut(|ib| {
         loop {
-            let (msg, badge) = DEFAULT_SERVE_EP.recv(());
-            log::warn!("recv msg: {:?}", msg);
-            match badge {
-                // u64::MAX => irq_callback(),
-                _ => {
-                    let msg_label = match UartIfaceEvent::try_from(msg.label()) {
-                        Ok(label) => label,
-                        Err(_) => continue,
-                    };
-                    match msg_label {
-                        UartIfaceEvent::init => {
-                            sel4::reply(ib, MessageInfoBuilder::default().build());
-                        }
-                        UartIfaceEvent::getchar => {
-                            let c = pl011.getchar();
-                            ib.msg_regs_mut()[0] = c as _;
-                            sel4::reply(ib, MessageInfoBuilder::default().length(1).build());
-                        }
-                        UartIfaceEvent::putchar => {
-                            pl011.putchar(ib.msg_bytes()[0]);
-                            sel4::reply(ib, MessageInfoBuilder::default().build());
-                        }
-                        UartIfaceEvent::puts => {
-                            log::debug!("putstring");
-                            let len = ib.msg_regs()[0] as usize;
-                            pl011.puts(&ib.msg_bytes()[REG_LEN..len + REG_LEN]);
-                            sel4::reply(ib, MessageInfoBuilder::default().build());
-                        }
-                    }
+            // TODO: 根据 badge 保存 IPC reply，并在需要的时候发回
+            let (msg, _) = DEFAULT_SERVE_EP.recv(());
+            let msg_label = match UartIfaceEvent::try_from(msg.label()) {
+                Ok(label) => label,
+                Err(_) => continue,
+            };
+            match msg_label {
+                UartIfaceEvent::init => sel4::reply(ib, MessageInfoBuilder::default().build()),
+                UartIfaceEvent::getchar => {
+                    let c = pl011.getchar();
+                    ib.msg_regs_mut()[0] = c as _;
+                    sel4::reply(ib, MessageInfoBuilder::default().length(1).build());
+                }
+                UartIfaceEvent::putchar => {
+                    pl011.putchar(ib.msg_bytes()[0]);
+                    sel4::reply(ib, MessageInfoBuilder::default().build());
+                }
+                UartIfaceEvent::puts => {
+                    log::debug!("putstring");
+                    let len = ib.msg_regs()[0] as usize;
+                    pl011.puts(&ib.msg_bytes()[REG_LEN..len + REG_LEN]);
+                    sel4::reply(ib, MessageInfoBuilder::default().build());
                 }
             }
         }
     });
-    // srv_gate::event::handle_events();
-    loop {}
 }

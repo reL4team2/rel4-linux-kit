@@ -3,7 +3,7 @@
 //! 提供一个基础的 [SlotManager]，方便任务进行 [LeafSlot] 的申请和释放
 use core::ops::Range;
 
-use slot_manager::{LeafSlot, SlotManager};
+use sel4_kit::slot_manager::{LeafSlot, SlotManager};
 use spin::{Mutex, once::Once};
 
 static SLOT_MANAGER: Mutex<SlotManager> = Mutex::new(SlotManager::empty());

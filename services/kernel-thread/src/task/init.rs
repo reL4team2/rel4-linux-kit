@@ -3,7 +3,7 @@ use common::consts::DEFAULT_PARENT_EP;
 use config::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::task::DEF_STACK_TOP;
 

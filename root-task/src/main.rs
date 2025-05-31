@@ -5,6 +5,7 @@
 extern crate alloc;
 
 mod config;
+mod cspace;
 mod handler;
 mod task;
 mod utils;
@@ -23,8 +24,8 @@ use sel4::{
     init_thread::slot,
     with_ipc_buffer_mut,
 };
+use sel4_kit::slot_manager::LeafSlot;
 use sel4_root_task::{Never, root_task};
-use slot_manager::LeafSlot;
 use spin::Mutex;
 use task::*;
 
@@ -35,7 +36,7 @@ pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAlloc
 fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // 设置调试信息
     slot::TCB.cap().debug_name(b"root");
-    sel4_runtime::init_log!(log::LevelFilter::Debug);
+    common::init_log!(log::LevelFilter::Debug);
 
     // 初始化 untyped object
     let dev_untyped_start = bootinfo.untyped().start();
@@ -63,7 +64,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     OBJ_ALLOCATOR.lock().init(mem_untypes.pop().unwrap().0);
 
     // 重建 Capability 空间，构建为多级 CSpace
-    rebuild_cspace();
+    cspace::rebuild_cspace();
 
     // Used for fault and normal IPC ( Reuse )
     let fault_ep = OBJ_ALLOCATOR.lock().alloc_endpoint();

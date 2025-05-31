@@ -16,7 +16,7 @@ default = []
 sel4 = { workspace = true }
 sel4-logging = { workspace = true }
 sel4-kit = { workspace = true }
-sel4-runtime = { path = "../../crates/sel4-runtime", default-features = false }
+sel4-runtime = { path = "../../crates/sel4-runtime" }
 sel4-async-single-threaded-executor = { workspace = true }
 futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 
@@ -30,7 +30,6 @@ object = { version = "0.36.1", default-features = false, features = ["read"] }
 
 config = { workspace = true }
 common = { workspace = true }
-slot-manager = { workspace = true }
 
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
 include_bytes_aligned = "0.1.3"
