@@ -1,0 +1,33 @@
+name: Download musl toolchain
+
+
+runs:
+  using: "composite"
+  steps:
+  - name: Cache musl
+    id: cache-musl
+    uses: actions/cache/restore@v4
+    with:
+      path: aarch64-linux-musl-cross
+      key: aarch64-linux-musl-cross
+  - name: Download musl toolchain
+    if: steps.cache-musl.outputs.cache-hit != 'true'
+    shell: bash
+    run: |
+      MUSL_PATH=aarch64-linux-musl-cross
+      wget https://musl.cc/${MUSL_PATH}.tgz
+      tar -xf ${MUSL_PATH}.tgz
+  - uses: actions/cache/save@v4
+    if: steps.cache-musl.outputs.cache-hit != 'true'
+    with:
+      path: aarch64-linux-musl-cross
+      key: aarch64-linux-musl-cross
+
+  - name: Add to PATH environment variable
+    shell: bash
+    run: |
+      echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+  - name: Verify installation
+    shell: bash
+    run: |
+      aarch64-linux-musl-gcc --version
