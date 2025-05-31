@@ -1,0 +1,43 @@
+name: Qemu Test
+
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  test-build:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: nightly-2024-12-25
+        components: rust-src, clippy, rustfmt
+    - name: Install cargo-binutils from crates.io
+      uses: baptiste0928/cargo-install@v3
+      with:
+        crate: cargo-binutils
+    - name: Cache Musl GCC
+      id: cache-musl
+      uses: actions/cache@v4
+      with:
+        path: aarch64-linux-musl-cross
+        key: aarch64-linux-musl-cross
+    - uses: insightsengineering/pip-action@v2
+      with:
+        packages: |
+          lief
+          capstone
+    - name: Download Musl Toolchain
+      if: steps.cache-musl.outputs.cache-hit != 'true'
+      run: |
+        wget https://musl.cc/aarch64-linux-musl-cross.tgz
+        tar -xf aarch64-linux-musl-cross.tgz
+    - name: Add toolchain to PATH
+      run: echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+    - run: aarch64-linux-musl-gcc --version
+    - name: Build Environment
+      run: |
+        mkdir -p .env
+        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+    - name: Check Clippy
+      run: make clippy
