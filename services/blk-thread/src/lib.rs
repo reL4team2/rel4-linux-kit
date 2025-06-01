@@ -8,7 +8,7 @@ use core::ptr::NonNull;
 
 use common::{
     config::{VIRTIO_MMIO_BLK_VIRT_ADDR, VIRTIO_NET_IRQ},
-    services::root::{join_channel, register_irq, register_notify},
+    root::{join_channel, register_irq, register_notify},
     slot::alloc_slot,
 };
 use flatten_objects::FlattenObjects;

@@ -13,7 +13,7 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use common::services::root::create_channel;
+use common::root::create_channel;
 use ipc_fs::IPCFileSystem;
 use spin::Mutex;
 use srv_gate::FS_IMPLS;

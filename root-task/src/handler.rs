@@ -1,6 +1,6 @@
 use core::sync::atomic::AtomicUsize;
 
-use common::{config::PAGE_SIZE, ipcrw::IpcBufferRW, page::PhysPage, services::root::RootEvent};
+use common::{config::PAGE_SIZE, ipcrw::IpcBufferRW, page::PhysPage, root::RootEvent};
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use sel4_kit::slot_manager::LeafSlot;
 
@@ -35,7 +35,6 @@ impl RootTaskHandler {
             };
 
             match msg_label {
-                RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
                 RootEvent::CreateChannel => {
                     static CHANNEL_ID: AtomicUsize = AtomicUsize::new(1);
                     let addr = ib.msg_regs()[0] as usize;

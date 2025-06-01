@@ -7,7 +7,7 @@ extern crate lwext4_thread;
 use common::{
     config::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
     ipcrw::IpcBufferRW,
-    services::root::join_channel,
+    root::join_channel,
 };
 use flatten_objects::FlattenObjects;
 use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};

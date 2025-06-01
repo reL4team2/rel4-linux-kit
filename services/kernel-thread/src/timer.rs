@@ -26,7 +26,7 @@ static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
 /// 初始化定时器相关的任务
 pub fn init() {
     // 注册 Timer IRQ
-    common::services::root::register_irq(GENERIC_TIMER_PCNT_IRQ, *TIMER_IRQ_SLOT);
+    common::root::register_irq(GENERIC_TIMER_PCNT_IRQ, *TIMER_IRQ_SLOT);
     TIMER_IRQ_SLOT
         .cap::<sel4::cap_type::IrqHandler>()
         .irq_handler_set_notification(*TIMER_IRQ_NOTIFY)
