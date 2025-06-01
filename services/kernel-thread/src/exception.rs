@@ -70,7 +70,7 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .unwrap();
 
         // 如果没有定时器
-        if task.timer == 0 {
+        if task.timer.is_zero() {
             // 检查信号
             task.check_signal(&mut user_ctx);
             // 恢复任务运行状态

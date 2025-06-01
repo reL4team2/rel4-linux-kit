@@ -2,20 +2,8 @@
 //!
 //!
 
-use num_enum::TryFromPrimitive;
+use libc_types::types::SigMaskHow;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
-
-/// 信号屏蔽位处理
-#[derive(Debug, Clone, Copy, TryFromPrimitive)]
-#[repr(usize)]
-pub enum SigMaskHow {
-    /// 屏蔽一个信号
-    Block = 0,
-    /// 放开一个信号
-    Unblock,
-    /// 设置整个屏蔽位
-    Setmask,
-}
 
 /// 信号屏蔽位
 #[repr(C)]
@@ -34,7 +22,7 @@ impl SigProcMask {
         self.0 = match how {
             SigMaskHow::Block => self.0 | mask.0,
             SigMaskHow::Unblock => self.0 & (!mask.0),
-            SigMaskHow::Setmask => mask.0,
+            SigMaskHow::SetMask => mask.0,
         }
     }
 

@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use crate::__prelude::*;
 use common::ipc_trait;
 use syscalls::Errno;
@@ -8,6 +10,12 @@ use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 pub struct TimeSpec {
     pub sec: usize,  // 秒
     pub nsec: usize, // 纳秒, 范围在0~999999999
+}
+
+impl From<TimeSpec> for Duration {
+    fn from(value: TimeSpec) -> Self {
+        Self::new(value.sec as _, value.nsec as _)
+    }
 }
 
 #[repr(C)]

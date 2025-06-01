@@ -5,7 +5,6 @@ extern crate alloc;
 
 mod obj_allocator;
 
-pub mod arch;
 pub mod config;
 pub mod ipc_saver;
 pub mod ipcrw;

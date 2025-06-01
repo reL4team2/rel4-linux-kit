@@ -2,7 +2,7 @@
 //!
 //!
 
-use common::arch::{US_PER_SEC, get_curr_us};
+use sel4_kit::arch::current_time;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 /// 系统信息
@@ -35,10 +35,10 @@ pub struct TimeVal {
 impl TimeVal {
     /// 获取当前的时间
     pub fn now() -> Self {
-        let us = get_curr_us();
+        let time = current_time();
         Self {
-            sec: us / US_PER_SEC,
-            usec: us % US_PER_SEC,
+            sec: time.as_secs() as _,
+            usec: time.subsec_micros() as _,
         }
     }
 }

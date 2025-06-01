@@ -1,3 +1,7 @@
+mod timer;
+
+pub use timer::{GENERIC_TIMER_PCNT_IRQ, current_time, get_cval, set_timer};
+
 use sel4::sys::seL4_MessageInfo;
 
 /// Arm Power State Coordination Interface

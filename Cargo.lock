@@ -400,6 +400,7 @@ dependencies = [
  "futures",
  "hashbrown",
  "include_bytes_aligned",
+ "libc-types",
  "log",
  "lwext4-thread",
  "memory_addr",
