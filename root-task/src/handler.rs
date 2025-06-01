@@ -1,10 +1,6 @@
 use core::sync::atomic::AtomicUsize;
 
-use common::{
-    config::PAGE_SIZE,
-    page::PhysPage,
-    services::{IpcBufferRW, root::RootEvent},
-};
+use common::{config::PAGE_SIZE, ipcrw::IpcBufferRW, page::PhysPage, services::root::RootEvent};
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use sel4_kit::slot_manager::LeafSlot;
 

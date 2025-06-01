@@ -51,7 +51,7 @@ mod _impl {
     use super::{FSIface, FSIfaceEvent, Stat};
     use crate::def_fs_impl;
     use common::{
-        consts::{IPC_DATA_LEN, REG_LEN},
+        config::{IPC_DATA_LEN, REG_LEN},
         generate_ipc_send,
         services::root::find_service,
     };

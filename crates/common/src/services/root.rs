@@ -8,7 +8,7 @@ use sel4::{
 use sel4_kit::slot_manager::LeafSlot;
 
 use crate::{
-    consts::{DEFAULT_PARENT_EP, REG_LEN},
+    config::{DEFAULT_PARENT_EP, REG_LEN},
     slot::alloc_slot,
 };
 

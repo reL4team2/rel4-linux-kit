@@ -10,8 +10,7 @@ mod signal;
 
 use alloc::sync::Arc;
 use common::{
-    config::{CNODE_RADIX_BITS, PAGE_SIZE},
-    consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP},
+    config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE},
     page::PhysPage,
 };
 use core::{

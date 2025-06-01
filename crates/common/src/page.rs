@@ -16,8 +16,7 @@ use core::{
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::config::PAGE_SIZE;
-use crate::consts::DEFAULT_PAGE_PLACEHOLDER;
+use crate::config::{DEFAULT_PAGE_PLACEHOLDER, PAGE_SIZE};
 
 /// 空白页占位结构，保证数据 4k 对齐
 #[repr(C, align(4096))]

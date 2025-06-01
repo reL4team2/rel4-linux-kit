@@ -1,4 +1,4 @@
-use common::consts::DEFAULT_SERVE_EP;
+use common::config::DEFAULT_SERVE_EP;
 use linkme::distributed_slice;
 use sel4::MessageInfo;
 

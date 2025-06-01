@@ -6,7 +6,7 @@ use core::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use common::{config::SHARE_PAGE_START, consts::DEFAULT_PARENT_EP};
+use common::config::{DEFAULT_PARENT_EP, SHARE_PAGE_START};
 use sel4::{
     CNodeCapData, IpcBuffer, UserContext,
     cap::{SmallPage, Tcb},

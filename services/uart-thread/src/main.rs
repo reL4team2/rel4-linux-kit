@@ -4,7 +4,7 @@
 extern crate alloc;
 extern crate uart_thread;
 
-use common::consts::{DEFAULT_SERVE_EP, REG_LEN};
+use common::config::{DEFAULT_SERVE_EP, REG_LEN};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use srv_gate::uart::UartIfaceEvent;
 use uart_thread::PL011DRV;
@@ -12,7 +12,6 @@ use uart_thread::PL011DRV;
 #[sel4_runtime::main]
 fn main() {
     log::info!("Booting...");
-    // let mut pl011 = Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR);
     let mut pl011 = PL011DRV.lock();
 
     with_ipc_buffer_mut(|ib| {

@@ -20,10 +20,9 @@ pub struct KernelServices {
 
 impl Debug for KernelServices {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("KernelServices")
-            .field("name", &self.name)
-            .field("mem", &self.mem)
-            .field("dma", &self.dma)
+        f.debug_struct(self.name)
+            .field("mem", &format_args!("{:X?}", self.mem))
+            .field("dma", &format_args!("{:X?}", self.dma))
             .finish()
     }
 }
