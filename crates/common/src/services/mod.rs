@@ -1,10 +1,9 @@
+pub mod root;
+
 use alloc::string::{String, ToString};
-use sel4::{IpcBuffer, MessageInfo, with_ipc_buffer_mut};
+use sel4::IpcBuffer;
 
 use crate::consts::REG_LEN;
-
-pub mod fs;
-pub mod root;
 
 // TODO: 设置一个新的 ipc_buffer 因为 ipc_buffer 是线程独占的，所以可以不加锁
 // 使用 with_ipc_buffer 的形式很难受
@@ -60,10 +59,4 @@ impl IpcBufferRW for &str {
             .copy_from_slice(self.as_bytes());
         *off += 1 + len.div_ceil(REG_LEN);
     }
-}
-
-/// 回复一个 IPC 消息
-#[inline]
-pub fn sel4_reply(msg: MessageInfo) {
-    with_ipc_buffer_mut(|ib| sel4::reply(ib, msg))
 }

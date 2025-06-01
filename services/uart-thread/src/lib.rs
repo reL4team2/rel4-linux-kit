@@ -5,10 +5,10 @@ extern crate alloc;
 
 use arm_pl011::pl011::Pl011Uart;
 use common::{
+    config::{SERIAL_DEVICE_IRQ, VIRT_PL011_ADDR},
     services::root::{register_irq, register_notify},
     slot::alloc_slot,
 };
-use config::{SERIAL_DEVICE_IRQ, VIRT_PL011_ADDR};
 use sel4::{
     Cap, MessageInfo,
     cap_type::{IrqHandler, Notification},

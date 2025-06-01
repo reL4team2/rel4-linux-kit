@@ -1,12 +1,9 @@
 //! 进程内存相关的模块
 //!
 //!
-
-use core::cmp;
-
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::page::PhysPage;
-use config::PAGE_SIZE;
+use common::{config::PAGE_SIZE, page::PhysPage};
+use core::cmp;
 
 use crate::{consts::task::DEF_HEAP_ADDR, utils::obj::alloc_page};
 

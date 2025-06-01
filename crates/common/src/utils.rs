@@ -1,6 +1,11 @@
 extern crate alloc;
+use crate::{
+    ObjectAllocator,
+    config::PAGE_SIZE,
+    consts::{IPC_DATA_LEN, REG_LEN},
+    page::PhysPage,
+};
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use config::PAGE_SIZE;
 use core::{cmp, ops::Range};
 use object::{
     Object, ObjectSegment, SegmentFlags,
@@ -8,12 +13,6 @@ use object::{
 };
 use sel4::{
     MessageInfoBuilder, cap::Endpoint, init_thread::slot, with_ipc_buffer, with_ipc_buffer_mut,
-};
-
-use crate::{
-    ObjectAllocator,
-    consts::{IPC_DATA_LEN, REG_LEN},
-    page::PhysPage,
 };
 // 计算 elf image 的虚地址空间范围
 pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {

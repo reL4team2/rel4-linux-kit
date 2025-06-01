@@ -10,10 +10,10 @@ mod signal;
 
 use alloc::sync::Arc;
 use common::{
+    config::{CNODE_RADIX_BITS, PAGE_SIZE},
     consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP},
     page::PhysPage,
 };
-use config::{CNODE_RADIX_BITS, PAGE_SIZE};
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},

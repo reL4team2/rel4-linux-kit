@@ -15,6 +15,7 @@ hashbrown = { workspace = true }
 
 # ext4 依赖
 lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false, rev = "ee5131c" }
+libc-types = { git = "https://github.com/Byte-OS/ByteOS", rev = "0617152" }
 
 flatten_objects = { workspace = true }
 syscalls = { workspace = true }

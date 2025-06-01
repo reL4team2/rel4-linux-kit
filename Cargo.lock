@@ -68,7 +68,6 @@ name = "blk-thread"
 version = "0.1.0"
 dependencies = [
  "common",
- "config",
  "flatten_objects",
  "log",
  "sel4",
@@ -126,7 +125,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "common-macros",
- "config",
  "log",
  "num_enum",
  "object",
@@ -146,10 +144,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "config"
-version = "0.1.0"
 
 [[package]]
 name = "cpufeatures"
@@ -402,7 +396,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "common",
- "config",
  "flatten_objects",
  "futures",
  "hashbrown",
@@ -435,6 +428,15 @@ name = "libc"
 version = "0.2.164"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
+
+[[package]]
+name = "libc-types"
+version = "0.1.0"
+source = "git+https://github.com/Byte-OS/ByteOS?rev=0617152#06171525001d73f8660c9fb23b11690b32cefe3d"
+dependencies = [
+ "bitflags",
+ "num_enum",
+]
 
 [[package]]
 name = "libloading"
@@ -490,6 +492,7 @@ dependencies = [
  "common",
  "flatten_objects",
  "hashbrown",
+ "libc-types",
  "log",
  "lwext4_rust",
  "sel4",
@@ -696,7 +699,6 @@ name = "root-task"
 version = "0.1.0"
 dependencies = [
  "common",
- "config",
  "include_bytes_aligned",
  "log",
  "object",
@@ -929,7 +931,6 @@ version = "0.1.0"
 dependencies = [
  "common",
  "common-macros",
- "config",
  "log",
  "sel4",
  "sel4-ctors-dtors",
@@ -1130,12 +1131,9 @@ name = "test-demo"
 version = "0.1.0"
 dependencies = [
  "common",
- "config",
- "linkme",
  "log",
  "sel4",
  "sel4-runtime",
- "spin",
  "srv-gate",
  "uart-thread",
  "zerocopy 0.8.25",
@@ -1213,7 +1211,6 @@ version = "0.1.0"
 dependencies = [
  "arm_pl011",
  "common",
- "config",
  "futures",
  "linkme",
  "log",

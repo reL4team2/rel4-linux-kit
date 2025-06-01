@@ -2,16 +2,13 @@
 //!
 //!
 
-use common::page::PhysPage;
-use config::PAGE_SIZE;
-use syscalls::Errno;
-
+use super::SysResult;
 use crate::{
     consts::task::DEF_HEAP_ADDR, syscall::types::mm::MapFlags, task::Sel4Task,
     utils::obj::alloc_page,
 };
-
-use super::SysResult;
+use common::{config::PAGE_SIZE, page::PhysPage};
+use syscalls::Errno;
 
 #[inline]
 pub(super) fn sys_brk(task: &mut Sel4Task, heap: usize) -> SysResult {

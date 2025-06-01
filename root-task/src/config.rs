@@ -2,7 +2,7 @@
 
 use core::fmt::Debug;
 
-use config::*;
+use common::config::*;
 
 use crate::include_bytes_aligned;
 

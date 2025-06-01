@@ -3,7 +3,6 @@
 resolver = "2"
 
 members = [
-  "config",
   "root-task",
   "crates/common",
   "crates/common-macros",
@@ -48,7 +47,6 @@ uart-thread = { path = "services/uart-thread" }
 lwext4-thread = { path = "services/lwext4-thread" }
 
 # 一些公共包
-config = { path = "config" }
 common = { path = "crates/common" }
 common-macros = { path = "crates/common-macros" }
 srv-gate = { path = "crates/srv-gate" }

@@ -7,7 +7,10 @@ use sel4::{
 };
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::{consts::DEFAULT_PARENT_EP, services::IpcBufferRW, slot::alloc_slot};
+use crate::{
+    consts::{DEFAULT_PARENT_EP, REG_LEN},
+    slot::alloc_slot,
+};
 
 #[derive(Debug, IntoPrimitive, FromPrimitive)]
 #[repr(u64)]
@@ -40,11 +43,14 @@ pub fn ping() -> Result<(), ()> {
 }
 
 pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
-    let mut off = 0;
-    with_ipc_buffer_mut(|ipc_buf| name.write_buffer(ipc_buf, &mut off));
+    with_ipc_buffer_mut(|ib| {
+        let len = name.len();
+        ib.msg_regs_mut()[0] = len as _;
+        ib.msg_bytes_mut()[REG_LEN..][..len].copy_from_slice(name.as_bytes());
+    });
     let msg = MessageInfoBuilder::default()
         .label(RootEvent::FindService.into())
-        .length(off)
+        .length(1 + name.len().div_ceil(REG_LEN))
         .build();
 
     let msg = ROOT_EP.call(msg);

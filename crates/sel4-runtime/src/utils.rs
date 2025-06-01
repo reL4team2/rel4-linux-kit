@@ -6,7 +6,7 @@ use core::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use common::consts::DEFAULT_PARENT_EP;
+use common::{config::SHARE_PAGE_START, consts::DEFAULT_PARENT_EP};
 use sel4::{
     CNodeCapData, IpcBuffer, UserContext,
     cap::{SmallPage, Tcb},
@@ -87,6 +87,6 @@ pub unsafe extern "C" fn secondary_entry(
 ///
 /// - `size` 需要申请的地址块的大小
 pub fn alloc_free_addr(size: usize) -> usize {
-    static FREE_SIZE: AtomicUsize = AtomicUsize::new(config::SHARE_PAGE_START);
+    static FREE_SIZE: AtomicUsize = AtomicUsize::new(SHARE_PAGE_START);
     FREE_SIZE.fetch_add(size, Ordering::SeqCst)
 }

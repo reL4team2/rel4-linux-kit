@@ -15,7 +15,6 @@ sel4-sync = { workspace = true }
 
 sel4-kit = { workspace = true }
 # 自定义依赖
-config = { workspace = true }
 common = { workspace = true }
 
 # 其他依赖

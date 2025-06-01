@@ -11,12 +11,10 @@ mod imp;
 use core::iter::zip;
 
 use alloc::string::String;
-use common::services::{
-    fs::{Dirent64, StatMode},
-    root::create_channel,
-};
+use common::services::root::create_channel;
 use flatten_objects::FlattenObjects;
 use imp::Ext4Disk;
+use libc_types::types::{Dirent64, StatMode};
 use lwext4_rust::{
     Ext4BlockWrapper, Ext4File, InodeTypes,
     bindings::{O_CREAT, O_TRUNC},

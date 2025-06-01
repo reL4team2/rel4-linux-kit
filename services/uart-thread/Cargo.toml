@@ -9,7 +9,6 @@ sel4-runtime = { workspace = true }
 
 spin = { workspace = true }
 log = "0.4"
-config = { workspace = true }
 common = { workspace = true }
 sel4-kit = { workspace = true }
 arm_pl011 = { git = "https://github.com/Byte-OS/arm_pl011.git", rev = "8a66e24" }

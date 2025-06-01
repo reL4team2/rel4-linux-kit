@@ -6,18 +6,17 @@
 #![deny(missing_docs)]
 #![allow(static_mut_refs)]
 
+use core::slice;
 use core::{
     fmt::Debug,
     hint::spin_loop,
     ops::{Deref, DerefMut},
     sync::atomic::{AtomicBool, Ordering},
 };
-
-use config::PAGE_SIZE;
-use core::slice;
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 
+use crate::config::PAGE_SIZE;
 use crate::consts::DEFAULT_PAGE_PLACEHOLDER;
 
 /// 空白页占位结构，保证数据 4k 对齐

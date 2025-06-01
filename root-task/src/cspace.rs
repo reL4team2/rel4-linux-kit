@@ -1,4 +1,4 @@
-use config::CNODE_RADIX_BITS;
+use common::config::CNODE_RADIX_BITS;
 use sel4::{CNodeCapData, CapRights, cap::Null, cap_type, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 

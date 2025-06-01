@@ -6,11 +6,11 @@ use alloc::{
     vec::Vec,
 };
 use common::{
+    config::{self, CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE},
     consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION},
     footprint, map_image, map_intermediate_translation_tables,
     page::PhysPage,
 };
-use config::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use core::ops::DerefMut;
 use object::{File, Object};
 use sel4::{

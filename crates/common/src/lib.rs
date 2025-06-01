@@ -7,6 +7,7 @@ mod obj_allocator;
 mod utils;
 
 pub mod arch;
+pub mod config;
 pub mod consts;
 pub mod ipc_saver;
 pub mod log_impl;

@@ -13,7 +13,6 @@ sel4-dlmalloc = { workspace = true }
 sel4-sync = { workspace = true }
 sel4-runtime-common = { workspace = true, features = ["tls", "start"] }
 
-config = { workspace = true }
 common = { workspace = true }
 common-macros = { workspace = true }
 sel4-kit = { workspace = true }

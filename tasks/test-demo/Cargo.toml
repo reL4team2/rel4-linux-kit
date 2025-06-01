@@ -8,12 +8,9 @@ edition.workspace = true
 
 [dependencies]
 log = "0.4"
-config = { workspace = true }
 sel4 = { workspace = true }
 common = { workspace = true }
 srv-gate = { workspace = true }
 sel4-runtime = { workspace = true }
 uart-thread = { workspace = true }
 zerocopy = { workspace = true }
-linkme = { workspace = true }
-spin = { workspace = true }

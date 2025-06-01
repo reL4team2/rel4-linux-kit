@@ -3,7 +3,7 @@
 //!
 extern crate sel4_panicking;
 
-use config::DEFAULT_EMPTY_SLOT_INDEX;
+use common::config::DEFAULT_EMPTY_SLOT_INDEX;
 use core::{hint::spin_loop, ptr};
 use sel4_ctors_dtors::run_ctors;
 use sel4_kit::ipc_buffer::init_ipc_buffer;

@@ -25,16 +25,6 @@ mod _impl {
         ep: Endpoint,
     }
 
-    impl BlockIfaceIPCImpl {
-        pub const fn from_bits(bits: u64) -> Self {
-            Self::new(Endpoint::from_bits(bits))
-        }
-
-        pub const fn new(ep: Endpoint) -> Self {
-            Self { ep }
-        }
-    }
-
     impl BlockIface for BlockIfaceIPCImpl {
         #[generate_ipc_send(label = BlockIfaceEvent::init)]
         fn init(&mut self, channel_id: usize) {

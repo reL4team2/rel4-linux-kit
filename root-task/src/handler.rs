@@ -1,10 +1,10 @@
 use core::sync::atomic::AtomicUsize;
 
 use common::{
+    config::PAGE_SIZE,
     page::PhysPage,
     services::{IpcBufferRW, root::RootEvent},
 };
-use config::PAGE_SIZE;
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use sel4_kit::slot_manager::LeafSlot;
 
@@ -75,8 +75,7 @@ impl RootTaskHandler {
                     }
                 }
                 RootEvent::TranslateAddr => {
-                    let mut off = 0;
-                    let addr = usize::read_buffer(ib, &mut off);
+                    let addr = ib.msg_regs()[0] as usize;
 
                     let phys_addr = self.tasks[badge as usize]
                         .mapped_page
@@ -85,7 +84,7 @@ impl RootTaskHandler {
                         .unwrap();
 
                     ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-                    sel4::reply(ib, rev_msg.length(off).build());
+                    sel4::reply(ib, rev_msg.length(1).build());
                 }
                 RootEvent::FindService => {
                     let name = <&str>::read_buffer(ib, &mut 0);

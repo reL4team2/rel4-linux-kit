@@ -1,9 +1,6 @@
 //! rel4-linux-kit 配置 crate
 //!
 //! 这个 crate 中包含了整个系统的配置，需要在多个 crarte 中共享的配置信息。
-#![no_std]
-#![deny(missing_docs)]
-#![deny(warnings)]
 
 /// 服务任务在启动的时候使用的栈的地址。
 pub const SERVICE_BOOT_STACK_TOP: usize = 0x1_0000_0000;
