@@ -61,7 +61,7 @@ mod _impl {
     use common::{
         config::{IPC_DATA_LEN, REG_LEN},
         generate_ipc_send,
-        services::root::find_service,
+        root::find_service,
     };
     use sel4::{MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
     use syscalls::Errno;

@@ -5,7 +5,7 @@ extern crate alloc;
 extern crate blk_thread;
 
 use blk_thread::VIRTIOBLK;
-use common::config::DEFAULT_SERVE_EP;
+use common::{config::DEFAULT_SERVE_EP, read_types};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::main;
 use srv_gate::blk::BlockIfaceEvent;
@@ -33,14 +33,13 @@ fn main() {
                     sel4::reply(ib, rev_msg.build());
                 }
                 BlockIfaceEvent::read_block => {
-                    let block_id = ib.msg_regs()[0] as _;
-                    let block_num = ib.msg_regs()[1] as usize;
+                    let (block_id, block_num) = read_types!(ib, usize, usize);
                     virtio_blk.read_block(block_id, block_num);
 
                     sel4::reply(ib, rev_msg.build());
                 }
                 BlockIfaceEvent::write_block => {
-                    let (block_id, block_num) = (ib.msg_regs()[0] as _, ib.msg_regs()[1] as usize);
+                    let (block_id, block_num) = read_types!(ib, usize, usize);
                     virtio_blk.write_block(block_id, block_num);
                     sel4::reply(ib, rev_msg.build());
                 }

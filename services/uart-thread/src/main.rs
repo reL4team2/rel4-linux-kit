@@ -4,7 +4,10 @@
 extern crate alloc;
 extern crate uart_thread;
 
-use common::config::{DEFAULT_SERVE_EP, REG_LEN};
+use common::{
+    config::{DEFAULT_SERVE_EP, REG_LEN},
+    read_types,
+};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use srv_gate::uart::UartIfaceEvent;
 use uart_thread::PL011DRV;
@@ -30,13 +33,11 @@ fn main() {
                     sel4::reply(ib, MessageInfoBuilder::default().length(1).build());
                 }
                 UartIfaceEvent::putchar => {
-                    pl011.putchar(ib.msg_bytes()[0]);
+                    pl011.putchar(read_types!(u8));
                     sel4::reply(ib, MessageInfoBuilder::default().build());
                 }
                 UartIfaceEvent::puts => {
-                    log::debug!("putstring");
-                    let len = ib.msg_regs()[0] as usize;
-                    pl011.puts(&ib.msg_bytes()[REG_LEN..len + REG_LEN]);
+                    pl011.puts(&read_types!(&[u8]));
                     sel4::reply(ib, MessageInfoBuilder::default().build());
                 }
             }

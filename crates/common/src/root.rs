@@ -6,7 +6,7 @@ use sel4::{
 };
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::{ipcrw::IpcBufferRW, slot::alloc_slot};
+use crate::{ipcrw::IpcTypeWriter, slot::alloc_slot};
 
 #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
@@ -50,7 +50,7 @@ pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
 pub fn translate_addr(vaddr: usize) -> usize {}
 
 pub fn register_irq(irq: usize, target_slot: LeafSlot) {
-    let msg = &mut MessageInfo::new(RootEvent::RegisterIRQ.into(), 0, 0, 0);
+    let msg = &mut MessageInfo::new(RootEvent::RegisterIRQ.into(), 0, 0, 1);
 
     // construct the IPC message
     let origin_slot = with_ipc_buffer_mut(|ipc_buffer| {

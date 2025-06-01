@@ -13,7 +13,7 @@ pub trait BlockIface: Sync + Send {
 mod _impl {
     use super::{BlockIface, BlockIfaceEvent};
     use crate::def_blk_impl;
-    use common::{generate_ipc_send, services::root::find_service};
+    use common::{generate_ipc_send, root::find_service};
     use sel4::cap::Endpoint;
 
     def_blk_impl!(BLK_IPC, BlockIfaceIPCImpl {

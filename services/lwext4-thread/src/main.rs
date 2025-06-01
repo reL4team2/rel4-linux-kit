@@ -5,8 +5,8 @@ extern crate alloc;
 extern crate lwext4_thread;
 
 use common::{
-    config::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
-    ipcrw::IpcBufferRW,
+    config::{DEFAULT_SERVE_EP, REG_LEN},
+    read_types,
     root::join_channel,
 };
 use flatten_objects::FlattenObjects;
@@ -41,7 +41,8 @@ fn handle_events(
     log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
     match msg_label {
         FSIfaceEvent::init => {
-            let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
+            let channel_id = read_types!(usize);
+
             let ptr = alloc_free_addr(0) as *mut u8;
             let size = join_channel(channel_id, ptr as usize);
             alloc_free_addr(size);
@@ -53,10 +54,7 @@ fn handle_events(
             sel4::reply(ib, rev_msg.build());
         }
         FSIfaceEvent::open => {
-            // TODO: Open Directory
-            let mut offset = 0;
-            let flags = u32::read_buffer(ib, &mut offset);
-            let path = <&str>::read_buffer(ib, &mut offset);
+            let (flags, path) = read_types!(ib, u32, &str);
             match fs.open(&path, flags) {
                 Ok((index, size)) => {
                     ib.msg_regs_mut()[0] = index as _;
@@ -70,8 +68,8 @@ fn handle_events(
             }
         }
         FSIfaceEvent::read_at => {
-            let (inode, offset) = (ib.msg_regs()[0], ib.msg_regs()[1] as _);
-            let buf_len = ib.msg_regs()[2] as usize;
+            let (inode, offset, buf_len) = read_types!(ib, u64, usize, usize);
+
             let addr = mapped.get(badge as usize).unwrap().0;
 
             let buffer = unsafe { core::slice::from_raw_parts_mut(addr as _, buf_len) };
@@ -80,30 +78,28 @@ fn handle_events(
             sel4::reply(ib, rev_msg.length(1).build());
         }
         FSIfaceEvent::write_at => {
-            let (inode, offset) = (ib.msg_regs()[0], ib.msg_regs()[1] as _);
-            let data_len = ib.msg_regs()[2] as usize;
-            let data = ib.msg_bytes()[3 * REG_LEN..3 * REG_LEN + data_len].to_vec();
-
+            let (inode, offset, data) = read_types!(ib, u64, usize, &[u8]);
             ib.msg_regs_mut()[0] = fs.write_at(inode, offset, &data) as _;
             sel4::reply(ib, rev_msg.length(1).build());
         }
         FSIfaceEvent::mkdir => {
-            let path = <&str>::read_buffer(ib, &mut 0);
+            let path = read_types!(ib, &str);
             fs.mkdir(&path);
             sel4::reply(ib, rev_msg.build());
         }
         FSIfaceEvent::unlink => {
-            let path = <&str>::read_buffer(ib, &mut 0);
+            let path = read_types!(ib, &str);
             fs.unlink(&path);
             sel4::reply(ib, rev_msg.build());
         }
         FSIfaceEvent::close => {
-            let index = ib.msg_regs()[0] as usize;
+            let index = read_types!(ib, usize);
             fs.close(index);
             sel4::reply(ib, rev_msg.build());
         }
         FSIfaceEvent::stat => {
-            let inode = ib.msg_regs()[0] as usize;
+            let inode = read_types!(ib, usize);
+
             let stat = fs.stat(inode);
             let len = size_of::<Stat>() / REG_LEN;
             unsafe {
@@ -112,12 +108,9 @@ fn handle_events(
             sel4::reply(ib, rev_msg.length(len).build());
         }
         FSIfaceEvent::getdents64 => {
-            let inode = ib.msg_regs()[0];
-            let offset = ib.msg_regs()[1] as usize;
-            let rlen = (ib.msg_regs()[2] as usize).min(IPC_DATA_LEN - 2 * REG_LEN);
-            let buf = &mut ib.msg_bytes_mut()[2 * REG_LEN..][..rlen];
+            let (inode, offset, mut buf) = read_types!(ib, u64, usize, &[u8]);
 
-            let (real_rlen, offset) = fs.getdents64(inode, offset, buf);
+            let (real_rlen, offset) = fs.getdents64(inode, offset, buf.as_mut_slice());
             ib.msg_regs_mut()[0] = real_rlen as _;
             ib.msg_regs_mut()[1] = offset as _;
             sel4::reply(ib, rev_msg.length(2 + real_rlen.div_ceil(REG_LEN)).build());
