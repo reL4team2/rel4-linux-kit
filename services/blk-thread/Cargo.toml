@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 sel4 = { workspace = true, default-features = false }
 sel4-runtime = { workspace = true }
-sel4-kit = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
