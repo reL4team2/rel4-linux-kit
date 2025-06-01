@@ -1,5 +1,5 @@
 use common_macros::generate_ipc_send;
-use num_enum::{FromPrimitive, IntoPrimitive};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use sel4::{
     CapRights, MessageInfoBuilder,
     cap::{Endpoint, Null},
@@ -12,7 +12,7 @@ use crate::{
     slot::alloc_slot,
 };
 
-#[derive(Debug, IntoPrimitive, FromPrimitive)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u64)]
 pub enum RootEvent {
     Ping = 0x200,
@@ -24,8 +24,6 @@ pub enum RootEvent {
     TranslateAddr,
     CreateChannel,
     JoinChannel,
-    #[num_enum(catch_all)]
-    Unknown(u64),
 }
 
 const ROOT_EP: Endpoint = DEFAULT_PARENT_EP;

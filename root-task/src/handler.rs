@@ -22,7 +22,17 @@ impl RootTaskHandler {
         loop {
             let (message, badge) = self.fault_ep.recv(());
             self.badge = badge;
-            let msg_label = RootEvent::from(message.label());
+            let msg_label = match RootEvent::try_from(message.label()) {
+                Ok(x) => x,
+                Err(_) => {
+                    if message.label() >= 8 {
+                        log::error!("Unknown root messaage label: {}", message.label())
+                    }
+                    let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+                    self.handle_fault(fault);
+                    continue;
+                }
+            };
 
             match msg_label {
                 RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
@@ -139,13 +149,6 @@ impl RootTaskHandler {
                     LeafSlot::new(0).delete().unwrap();
                 }
                 RootEvent::Shutdown => sel4_kit::arch::shutdown(),
-                RootEvent::Unknown(label) => {
-                    if label >= 8 {
-                        log::error!("Unknown root messaage label: {label}")
-                    }
-                    let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-                    self.handle_fault(fault);
-                }
             }
         }
     }
