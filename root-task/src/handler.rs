@@ -1,6 +1,6 @@
 use core::sync::atomic::AtomicUsize;
 
-use common::{config::PAGE_SIZE, page::PhysPage, read_types, root::RootEvent};
+use common::{config::PAGE_SIZE, page::PhysPage, read_types, reply_with, root::RootEvent};
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use sel4_kit::slot_manager::LeafSlot;
 
@@ -55,8 +55,8 @@ impl RootTaskHandler {
                         });
                     let channel_id = CHANNEL_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
                     self.channels.push((channel_id, pages));
-                    ib.msg_regs_mut()[0] = channel_id as u64;
-                    sel4::reply(ib, rev_msg.length(1).build());
+
+                    reply_with!(ib, channel_id);
                 }
                 RootEvent::JoinChannel => {
                     let (channel_id, addr) = read_types!(ib, usize, usize);
@@ -74,8 +74,7 @@ impl RootTaskHandler {
                                 self.tasks[badge as usize]
                                     .map_page(addr + idx * PAGE_SIZE, PhysPage::new(x.cap()));
                             });
-                        ib.msg_regs_mut()[0] = (pages.len() * PAGE_SIZE) as u64;
-                        sel4::reply(ib, rev_msg.length(1).build());
+                        reply_with!(ib, pages.len() * PAGE_SIZE);
                     }
                 }
                 RootEvent::TranslateAddr => {
@@ -87,8 +86,7 @@ impl RootTaskHandler {
                         .map(|x| x.addr())
                         .unwrap();
 
-                    ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-                    sel4::reply(ib, rev_msg.length(1).build());
+                    reply_with!(ib, phys_addr + addr % 0x1000);
                 }
                 RootEvent::FindService => {
                     let name = read_types!(ib, &str);

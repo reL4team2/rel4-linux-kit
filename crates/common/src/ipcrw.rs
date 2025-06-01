@@ -99,3 +99,24 @@ macro_rules! read_types {
         })
     }};
 }
+
+#[macro_export]
+macro_rules! write_values {
+    ($ib:expr, $($v:expr),*) => {
+        {
+            let off = &mut 0;
+            $(
+                $crate::ipcrw::IpcTypeWriter::write_buffer($v, $ib, off);
+            )*
+            off.div_ceil($crate::config::REG_LEN)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! reply_with {
+    ($ib:expr, $($v:expr),*) => {{
+        let wlen = $crate::write_values!($ib, $($v),*);
+        sel4::reply($ib, sel4::MessageInfoBuilder::default().length(wlen).build());
+    }};
+}

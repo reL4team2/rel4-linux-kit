@@ -6,7 +6,7 @@ extern crate lwext4_thread;
 
 use common::{
     config::{DEFAULT_SERVE_EP, REG_LEN},
-    read_types,
+    read_types, reply_with,
     root::join_channel,
 };
 use flatten_objects::FlattenObjects;
@@ -74,13 +74,12 @@ fn handle_events(
 
             let buffer = unsafe { core::slice::from_raw_parts_mut(addr as _, buf_len) };
 
-            ib.msg_regs_mut()[0] = fs.read_at(inode, offset, buffer) as _;
-            sel4::reply(ib, rev_msg.length(1).build());
+            reply_with!(ib, fs.read_at(inode, offset, buffer));
         }
         FSIfaceEvent::write_at => {
             let (inode, offset, data) = read_types!(ib, u64, usize, &[u8]);
-            ib.msg_regs_mut()[0] = fs.write_at(inode, offset, &data) as _;
-            sel4::reply(ib, rev_msg.length(1).build());
+
+            reply_with!(ib, fs.write_at(inode, offset, &data))
         }
         FSIfaceEvent::mkdir => {
             let path = read_types!(ib, &str);

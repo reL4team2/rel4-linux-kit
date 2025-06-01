@@ -5,7 +5,7 @@ extern crate alloc;
 extern crate blk_thread;
 
 use blk_thread::VIRTIOBLK;
-use common::{config::DEFAULT_SERVE_EP, read_types};
+use common::{config::DEFAULT_SERVE_EP, read_types, reply_with};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::main;
 use srv_gate::blk::BlockIfaceEvent;
@@ -28,7 +28,7 @@ fn main() {
             };
             match msg_label {
                 BlockIfaceEvent::init => {
-                    let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
+                    let channel_id = read_types!(ib, usize);
                     virtio_blk.init(channel_id);
                     sel4::reply(ib, rev_msg.build());
                 }
@@ -44,8 +44,7 @@ fn main() {
                     sel4::reply(ib, rev_msg.build());
                 }
                 BlockIfaceEvent::capacity => {
-                    ib.msg_regs_mut()[0] = virtio_blk.capacity();
-                    sel4::reply(ib, rev_msg.length(1).build());
+                    reply_with!(ib, virtio_blk.capacity())
                 }
             }
         }
