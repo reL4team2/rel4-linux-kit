@@ -15,7 +15,7 @@ runs:
     shell: bash
     run: |
       MUSL_PATH=aarch64-linux-musl-cross
-      wget https://musl.cc/${MUSL_PATH}.tgz
+      wget https://github.com/reL4team2/rel4-linux-kit/releases/download/toolchain/${MUSL_PATH}.tgz
       tar -xf ${MUSL_PATH}.tgz
   - uses: actions/cache/save@v4
     if: steps.cache-musl.outputs.cache-hit != 'true'
