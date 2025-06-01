@@ -1,0 +1,31 @@
+# 利用文件描述 依赖关系，然后动态的选择是否引入模块
+# 如果合并成一个文件，需要设置继承资源
+# 如果存在多个程序都直接依赖一个模块且这个模块拥有自己独特的资源，那么这个模块无法被合并
+[[tasks]]
+name = "uart-thread"
+file = "uart-thread"
+mem = [["VIRT_PL011_ADDR", "PL011_ADDR", "0x1000"]]
+cfg = ["uart_ipc"]
+
+[[tasks]]
+deps = ["uart-thread"]
+name = "test-demo"
+file = "test-demo"
+
+[[tasks]]
+name = "block-thread"
+file = "blk-thread"
+mem = [["VIRTIO_MMIO_VIRT_ADDR", "VIRTIO_MMIO_ADDR", "0x1000"]]
+dma = [["DMA_ADDR_START", "0x2000"]]
+cfg = ["blk_ipc"]
+
+[[tasks]]
+deps = ["fs-thread", "uart-thread"]
+name = "kernel-thread"
+file = "kernel-thread"
+
+[[tasks]]
+deps = ["block-thread"]
+name = "fs-thread"
+file = "lwext4-thread"
+cfg = ["fs_ipc"]

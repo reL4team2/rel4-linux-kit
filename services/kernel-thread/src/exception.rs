@@ -128,7 +128,7 @@ pub async fn waiting_for_end() {
         let next_task = task_map.values_mut().find(|x| x.exit.is_none());
         if next_task.is_none() {
             sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
-            common::services::root::shutdown().unwrap();
+            common::services::root::shutdown();
         }
     }
 }

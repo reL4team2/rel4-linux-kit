@@ -4,14 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# sel4 = { workspace = true }
 sel4 = { workspace = true, default-features = false }
-sel4-logging = { workspace = true }
 sel4-runtime = { workspace = true }
-slot-manager = { workspace = true }
+sel4-kit = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
 config = { workspace = true }
 virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "61ece50", default-features = false }
 flatten_objects = { workspace = true }
+srv-gate = { workspace = true }

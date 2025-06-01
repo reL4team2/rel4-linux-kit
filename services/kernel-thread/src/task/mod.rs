@@ -26,8 +26,8 @@ use sel4::{
     CapRights, Error, VmAttributes,
     init_thread::{self, slot},
 };
+use sel4_kit::slot_manager::LeafSlot;
 use signal::TaskSignal;
-use slot_manager::LeafSlot;
 use spin::Mutex;
 
 use crate::utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace};

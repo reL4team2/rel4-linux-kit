@@ -19,7 +19,7 @@ pub fn translate_address(vaddr: usize) -> usize {
     let paddr = match map.get(&vp_index) {
         Some(v) => v * PAGE_SIZE + offset,
         None => {
-            let paddr = translate_addr(vaddr).expect("can't translate address");
+            let paddr = translate_addr(vaddr);
 
             map.insert(vp_index, paddr / PAGE_SIZE);
             paddr

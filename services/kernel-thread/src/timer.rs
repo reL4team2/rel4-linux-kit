@@ -4,12 +4,12 @@
 
 use common::arch::{get_curr_ns, get_cval_ns};
 use sel4::{CapRights, cap::Notification};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 use spin::Lazy;
 
 use crate::{child_test::TASK_MAP, exception::GLOBAL_NOTIFY, utils::obj::alloc_slot};
 
-static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(|| alloc_slot());
+static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
 static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
     // 从 Global_Notify 复制一个具有 badge 的Notification
     let slot = alloc_slot();
@@ -22,8 +22,7 @@ static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
 /// 初始化定时器相关的任务
 pub fn init() {
     // 注册 Timer IRQ
-    common::services::root::register_irq(common::arch::GENERIC_TIMER_PCNT_IRQ, *TIMER_IRQ_SLOT)
-        .unwrap();
+    common::services::root::register_irq(common::arch::GENERIC_TIMER_PCNT_IRQ, *TIMER_IRQ_SLOT);
     TIMER_IRQ_SLOT
         .cap::<sel4::cap_type::IrqHandler>()
         .irq_handler_set_notification(*TIMER_IRQ_NOTIFY)

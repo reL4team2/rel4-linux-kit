@@ -3,10 +3,8 @@ use sel4::{IpcBuffer, MessageInfo, with_ipc_buffer_mut};
 
 use crate::consts::REG_LEN;
 
-pub mod block;
 pub mod fs;
 pub mod root;
-pub mod uart;
 
 // TODO: 设置一个新的 ipc_buffer 因为 ipc_buffer 是线程独占的，所以可以不加锁
 // 使用 with_ipc_buffer 的形式很难受

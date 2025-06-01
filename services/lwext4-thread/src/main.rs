@@ -2,234 +2,124 @@
 #![no_main]
 
 extern crate alloc;
+extern crate lwext4_thread;
 
-mod imp;
-
-use core::{iter::zip, mem::ManuallyDrop};
-
-use alloc::string::String;
 use common::{
     consts::{DEFAULT_SERVE_EP, IPC_DATA_LEN, REG_LEN},
-    services::{
-        IpcBufferRW,
-        block::BlockService,
-        fs::{Dirent64, FileEvent, Stat, StatMode},
-        root::{create_channel, find_service, join_channel},
-    },
+    services::{IpcBufferRW, root::join_channel},
 };
 use flatten_objects::FlattenObjects;
-use imp::Ext4Disk;
-use lwext4_rust::{
-    Ext4BlockWrapper, Ext4File, InodeTypes,
-    bindings::{O_CREAT, O_TRUNC},
-};
 use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::utils::alloc_free_addr;
-use spin::Lazy;
-use syscalls::Errno;
+use srv_gate::fs::{FSIface, FSIfaceEvent, Stat};
 
-sel4_runtime::entry_point!(main);
-
-const O_DIRECTORY: u32 = 0o40000;
-const STORE_CAP: usize = 500;
-static BLK_SERVICE: Lazy<BlockService> = Lazy::new(|| find_service("block-thread").unwrap().into());
-
-fn main() -> ! {
-    common::init_log!(log::LevelFilter::Error);
-    common::init_recv_slot();
-
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
 
-    BLK_SERVICE.ping().unwrap();
-    let channel_id = create_channel(0x3_0000_0000, 4).unwrap();
-    BLK_SERVICE.init(channel_id).unwrap();
+    // let channel_id = create_channel(0x3_0000_0000, 4);
+    // BLK_IMPLS[0].lock().init(channel_id);
 
-    let mut stores = FlattenObjects::<Ext4File, STORE_CAP>::new();
     let mut mapped = FlattenObjects::<(usize, usize), 32>::new();
-    let _ = ManuallyDrop::new(Ext4BlockWrapper::<Ext4Disk>::new(Ext4Disk::new()).unwrap());
+    let mut fs = lwext4_thread::EXT4FS.lock();
 
     loop {
-        with_ipc_buffer_mut(|ib| handle_events(&mut stores, &mut mapped, ib));
+        with_ipc_buffer_mut(|ib| handle_events(ib, &mut *fs, &mut mapped));
     }
 }
 
 fn handle_events(
-    stores: &mut FlattenObjects<Ext4File, STORE_CAP>,
-    mapped: &mut FlattenObjects<(usize, usize), 32>,
     ib: &mut IpcBuffer,
+    fs: &mut (dyn FSIface + 'static),
+    mapped: &mut FlattenObjects<(usize, usize), 32>,
 ) {
     let (message, badge) = DEFAULT_SERVE_EP.recv(());
     let rev_msg = MessageInfoBuilder::default();
 
-    let msg_label = FileEvent::from(message.label());
+    let msg_label = FSIfaceEvent::try_from(message.label()).unwrap();
     log::debug!("Recv <{:?}> len: {}", msg_label, message.length());
     match msg_label {
-        FileEvent::Ping => sel4::reply(ib, rev_msg.build()),
-        FileEvent::Init => {
-            let ptr = alloc_free_addr(0) as *mut u8;
-            assert_eq!(message.length(), 1);
+        FSIfaceEvent::init => {
             let channel_id = with_ipc_buffer_mut(|ib| ib.msg_regs()[0] as _);
-            let size = join_channel(channel_id, ptr as usize).unwrap();
+            let ptr = alloc_free_addr(0) as *mut u8;
+            let size = join_channel(channel_id, ptr as usize);
+            alloc_free_addr(size);
             mapped
                 .add_at(badge as _, (ptr as usize, channel_id))
                 .map_err(|_| ())
                 .unwrap();
+            fs.init(channel_id, 0, 0);
             sel4::reply(ib, rev_msg.build());
-            alloc_free_addr(size);
         }
-        FileEvent::Open => {
+        FSIfaceEvent::open => {
             // TODO: Open Directory
             let mut offset = 0;
             let flags = u32::read_buffer(ib, &mut offset);
             let path = <&str>::read_buffer(ib, &mut offset);
-            let mut ext4_file = Ext4File::new("/", lwext4_rust::InodeTypes::EXT4_DE_DIR);
-            if flags & O_CREAT == O_CREAT {
-                if flags & O_DIRECTORY != O_DIRECTORY {
-                    ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
-                    // FIXME: clean this O_TRUNC
-                    ext4_file.file_open(&path, flags | O_TRUNC).unwrap();
-                } else {
-                    panic!("Just support create regular file");
+            match fs.open(&path, flags) {
+                Ok((index, size)) => {
+                    ib.msg_regs_mut()[0] = index as _;
+                    ib.msg_regs_mut()[1] = size as _;
+                    sel4::reply(ib, rev_msg.length(2).build());
                 }
-            } else if ext4_file.check_inode_exist(&path, InodeTypes::EXT4_DE_DIR) {
-                ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-            } else if ext4_file.check_inode_exist(&path, InodeTypes::EXT4_DE_REG_FILE) {
-                ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_REG_FILE);
-                ext4_file.file_open(&path, flags).unwrap();
-            } else {
-                sel4::reply(ib, rev_msg.label(Errno::EACCES.into_raw() as _).build());
-                return;
-            }
-
-            let file_size = ext4_file.file_size();
-            if let Ok(index) = stores.add(ext4_file) {
-                ib.msg_regs_mut()[0] = index as _;
-                ib.msg_regs_mut()[1] = file_size;
-
-                sel4::reply(ib, rev_msg.length(2).build());
-            } else {
-                panic!("Can't add files");
+                Err(errno) => {
+                    ib.msg_regs_mut()[0] = errno.into_raw() as _;
+                    sel4::reply(ib, rev_msg.length(1).build());
+                }
             }
         }
-        FileEvent::ReadAt => {
-            let addr = mapped.get(badge as usize).unwrap().0;
-            let (inode, offset) = (ib.msg_regs()[0] as usize, ib.msg_regs()[1] as _);
+        FSIfaceEvent::read_at => {
+            let (inode, offset) = (ib.msg_regs()[0], ib.msg_regs()[1] as _);
             let buf_len = ib.msg_regs()[2] as usize;
-            if let Some(ext4_file) = stores.get_mut(inode) {
-                // let mut buffer = [0u8; IPC_DATA_LEN - REG_LEN];
-                ext4_file.file_seek(offset, 0).unwrap();
-                let buffer = unsafe { core::slice::from_raw_parts_mut(addr as _, buf_len) };
-                let rlen = ext4_file.file_read(buffer).unwrap();
+            let addr = mapped.get(badge as usize).unwrap().0;
 
-                ib.msg_regs_mut()[0] = rlen as _;
-                sel4::reply(ib, rev_msg.length(1).build());
-            } else {
-                panic!("Can't Find File")
-            }
+            let buffer = unsafe { core::slice::from_raw_parts_mut(addr as _, buf_len) };
+
+            ib.msg_regs_mut()[0] = fs.read_at(inode, offset, buffer) as _;
+            sel4::reply(ib, rev_msg.length(1).build());
         }
-        FileEvent::WriteAt => {
-            let (inode, offset) = (ib.msg_regs()[0] as usize, ib.msg_regs()[1] as _);
+        FSIfaceEvent::write_at => {
+            let (inode, offset) = (ib.msg_regs()[0], ib.msg_regs()[1] as _);
             let data_len = ib.msg_regs()[2] as usize;
-            if let Some(ext4_file) = stores.get_mut(inode) {
-                ext4_file.file_seek(offset, 0).unwrap();
-                let data = ib.msg_bytes()[3 * REG_LEN..3 * REG_LEN + data_len].to_vec();
-                let wlen = ext4_file.file_write(&data).unwrap();
-                ib.msg_regs_mut()[0] = wlen as _;
-                sel4::reply(ib, rev_msg.length(1).build());
-            } else {
-                panic!("Can't Find File")
-            }
+            let data = ib.msg_bytes()[3 * REG_LEN..3 * REG_LEN + data_len].to_vec();
+
+            ib.msg_regs_mut()[0] = fs.write_at(inode, offset, &data) as _;
+            sel4::reply(ib, rev_msg.length(1).build());
         }
-        FileEvent::Mkdir => {
+        FSIfaceEvent::mkdir => {
             let path = <&str>::read_buffer(ib, &mut 0);
-            let mut ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-            ext4_file.dir_mk(&path).unwrap();
+            fs.mkdir(&path);
             sel4::reply(ib, rev_msg.build());
         }
-        FileEvent::Unlink => {
+        FSIfaceEvent::unlink => {
             let path = <&str>::read_buffer(ib, &mut 0);
-            let mut ext4_file = Ext4File::new(&path, lwext4_rust::InodeTypes::EXT4_DE_DIR);
-            ext4_file.file_remove(&path).unwrap();
+            fs.unlink(&path);
             sel4::reply(ib, rev_msg.build());
         }
-        FileEvent::Close => {
+        FSIfaceEvent::close => {
             let index = ib.msg_regs()[0] as usize;
-            if let Some(mut ext4_file) = stores.remove(index) {
-                ext4_file.file_close().unwrap();
-            }
+            fs.close(index);
             sel4::reply(ib, rev_msg.build());
         }
-        FileEvent::Stat => {
+        FSIfaceEvent::stat => {
             let inode = ib.msg_regs()[0] as usize;
-            if let Some(ext4_file) = stores.get_mut(inode) {
-                let mode = ext4_file.file_mode_get().unwrap()
-                    | match ext4_file.get_type() {
-                        InodeTypes::EXT4_DE_REG_FILE => StatMode::FILE,
-                        InodeTypes::EXT4_DE_DIR => StatMode::DIR,
-                        InodeTypes::EXT4_DE_CHRDEV => StatMode::CHAR,
-                        InodeTypes::EXT4_DE_BLKDEV => StatMode::BLOCK,
-                        InodeTypes::EXT4_DE_FIFO => StatMode::FIFO,
-                        InodeTypes::EXT4_DE_SOCK => StatMode::SOCKET,
-                        InodeTypes::EXT4_DE_SYMLINK => StatMode::LINK,
-                        _ => StatMode::FILE,
-                    }
-                    .bits();
-                let stat = Stat {
-                    blksize: 0x200,
-                    ino: inode as _,
-                    mode,
-                    nlink: 1,
-                    size: ext4_file.file_size(),
-                    ..Default::default()
-                };
-                let len = size_of::<Stat>() / REG_LEN;
-                unsafe {
-                    (ib.msg_bytes_mut().as_ptr() as *mut Stat).copy_from(&stat, 1);
-                }
-                sel4::reply(ib, rev_msg.length(len).build());
-            } else {
-                panic!("Can't Find File")
+            let stat = fs.stat(inode);
+            let len = size_of::<Stat>() / REG_LEN;
+            unsafe {
+                (ib.msg_bytes_mut().as_ptr() as *mut Stat).copy_from(&stat, 1);
             }
+            sel4::reply(ib, rev_msg.length(len).build());
         }
-        FileEvent::GetDents64 => {
-            let inode = ib.msg_regs()[0] as usize;
-            let mut offset = ib.msg_regs()[1] as usize;
+        FSIfaceEvent::getdents64 => {
+            let inode = ib.msg_regs()[0];
+            let offset = ib.msg_regs()[1] as usize;
             let rlen = (ib.msg_regs()[2] as usize).min(IPC_DATA_LEN - 2 * REG_LEN);
-            if let Some(ext4_file) = stores.get_mut(inode) {
-                let entries = ext4_file.lwext4_dir_entries().unwrap();
-                let mut real_rlen: usize = 0;
-                let mut base_ptr = ib.msg_bytes_mut().as_mut_ptr() as usize + 2 * REG_LEN;
-                for (name, ty) in zip(entries.0, entries.1).skip(offset) {
-                    log::debug!("{:?} , {:?}", String::from_utf8(name.clone()), ty);
-                    let len = name.len() + size_of::<Dirent64>();
-                    let aligned = (len + 7) / 8 * 8;
-                    if real_rlen + aligned > rlen {
-                        break;
-                    }
-                    let dirent = unsafe { (base_ptr as *mut Dirent64).as_mut() }.unwrap();
-                    dirent.ftype = 0;
-                    dirent.reclen = aligned as _;
-                    dirent.ino = 0;
-                    dirent.off = (real_rlen + aligned) as _;
-                    unsafe {
-                        dirent
-                            .name
-                            .as_mut_ptr()
-                            .copy_from(name.as_ptr(), name.len());
-                    }
-                    real_rlen += aligned;
-                    base_ptr += aligned;
-                    offset += 1;
-                }
-                ib.msg_regs_mut()[0] = real_rlen as _;
-                ib.msg_regs_mut()[1] = offset as _;
-                sel4::reply(ib, rev_msg.length(2 + real_rlen.div_ceil(REG_LEN)).build());
-            } else {
-                panic!("Can't find folder")
-            }
-        }
-        _ => {
-            log::warn!("Unknown label: {:?}", msg_label);
+            let buf = &mut ib.msg_bytes_mut()[2 * REG_LEN..][..rlen];
+
+            let (real_rlen, offset) = fs.getdents64(inode, offset, buf);
+            ib.msg_regs_mut()[0] = real_rlen as _;
+            ib.msg_regs_mut()[1] = offset as _;
+            sel4::reply(ib, rev_msg.length(2 + real_rlen.div_ceil(REG_LEN)).build());
         }
     }
 }

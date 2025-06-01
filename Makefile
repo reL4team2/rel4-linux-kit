@@ -1,3 +1,9 @@
+# export RUSTFLAGS = --cfg=uart_ipc --cfg=blk_ipc
+# export RUSTFLAGS = --cfg=uart_ipc
+export RUSTFLAGS := --check-cfg=cfg(uart_ipc) --check-cfg=cfg(blk_ipc) --check-cfg=cfg(fs_ipc) 
+
+include tools/autoconfig.mk
+
 BUILD_DIR := target
 TARGET := aarch64-sel4
 QEMU_LOG ?= n
@@ -31,6 +37,7 @@ CARGO_BUILD_ARGS := --artifact-dir $(BUILD_DIR) \
 
 build: 
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
+#	cargo build $(CARGO_BUILD_ARGS) -p uart-thread -p test-demo
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
 
 image := $(BUILD_DIR)/image.elf
@@ -70,7 +77,7 @@ disk_img: testcases
 	sudo umount mount
 	sync
 
-run: buld_img disk_img
+run: buld_img
 	$(qemu_cmd)
 	@rm $(image)
 
@@ -83,6 +90,9 @@ busybox:
 clean:
 	rm -rf $(BUILD_DIR)
 	make -C examples/linux-apps clean
+
+clippy:
+	cargo clippy
 
 cloc:
 	cloc . --not-match-d=.env --not-match-d=target/

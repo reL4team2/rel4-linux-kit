@@ -2,87 +2,45 @@
 #![no_main]
 
 extern crate alloc;
+extern crate uart_thread;
 
-use alloc::collections::vec_deque::VecDeque;
-use arm_pl011::pl011::Pl011Uart;
-use common::{
-    consts::DEFAULT_SERVE_EP,
-    ipc::ipc_saver::IpcSaver,
-    services::{
-        root::{register_irq, register_notify},
-        uart::UartEvent,
-    },
-    slot::alloc_slot,
-};
-use config::{SERIAL_DEVICE_IRQ, VIRTIO_MMIO_VIRT_ADDR};
-use sel4::{MessageInfoBuilder, init_thread, with_ipc_buffer_mut};
+use common::consts::{DEFAULT_SERVE_EP, REG_LEN};
+use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
+use srv_gate::uart::UartIfaceEvent;
+use uart_thread::PL011DRV;
 
-sel4_runtime::entry_point!(main);
-
-fn main() -> ! {
-    common::init_log!(log::LevelFilter::Error);
-    common::init_recv_slot();
-
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
+    // let mut pl011 = Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR);
+    let mut pl011 = PL011DRV.lock();
 
-    // 向 root-task 申请一个中断
-    let irq_handler = alloc_slot().cap();
-    register_irq(SERIAL_DEVICE_IRQ, irq_handler.into()).expect("can't register interrupt handler");
-
-    // 向 root-task 申请一个通知
-    let ntfn = alloc_slot().cap();
-    register_notify(ntfn.into(), usize::MAX).expect("Can't register interrupt handler");
-
-    // 设置 pl011 地址空间
-    let mut pl011 = Pl011Uart::new(VIRTIO_MMIO_VIRT_ADDR as _);
-    pl011.init();
-    pl011.ack_interrupts();
-
-    irq_handler.irq_handler_set_notification(ntfn).unwrap();
-    irq_handler.irq_handler_ack().unwrap();
-
-    let rev_msg = MessageInfoBuilder::default();
-    let mut buffer = VecDeque::new();
-    let mut ipc_saver = IpcSaver::new();
-    init_thread::slot::TCB
-        .cap()
-        .tcb_bind_notification(ntfn)
-        .unwrap();
-
-    loop {
-        let (msg, badge) = DEFAULT_SERVE_EP.recv(());
-        if badge == u64::MAX {
-            let char = pl011.getchar().unwrap();
-            pl011.ack_interrupts();
-            irq_handler.irq_handler_ack().unwrap();
-
-            if ipc_saver.queue_len() > 0 {
-                with_ipc_buffer_mut(|ib| {
-                    ib.msg_bytes_mut()[0] = char;
-                    ipc_saver.reply_one(rev_msg.length(1).build()).unwrap();
-                });
-            } else {
-                buffer.push_back(char);
-            }
-        } else {
-            let msg_label = match UartEvent::try_from(msg.label()) {
+    with_ipc_buffer_mut(|ib| {
+        loop {
+            // TODO: 根据 badge 保存 IPC reply，并在需要的时候发回
+            let (msg, _) = DEFAULT_SERVE_EP.recv(());
+            let msg_label = match UartIfaceEvent::try_from(msg.label()) {
                 Ok(label) => label,
                 Err(_) => continue,
             };
             match msg_label {
-                UartEvent::Ping => {
-                    with_ipc_buffer_mut(|ib| {
-                        sel4::reply(ib, rev_msg.build());
-                    });
+                UartIfaceEvent::init => sel4::reply(ib, MessageInfoBuilder::default().build()),
+                UartIfaceEvent::getchar => {
+                    let c = pl011.getchar();
+                    ib.msg_regs_mut()[0] = c as _;
+                    sel4::reply(ib, MessageInfoBuilder::default().length(1).build());
                 }
-                UartEvent::GetChar => match buffer.pop_front() {
-                    Some(c) => with_ipc_buffer_mut(|ib| {
-                        ib.msg_bytes_mut()[0] = c;
-                        sel4::reply(ib, rev_msg.length(1).build());
-                    }),
-                    None => ipc_saver.save_caller().unwrap(),
-                },
+                UartIfaceEvent::putchar => {
+                    pl011.putchar(ib.msg_bytes()[0]);
+                    sel4::reply(ib, MessageInfoBuilder::default().build());
+                }
+                UartIfaceEvent::puts => {
+                    log::debug!("putstring");
+                    let len = ib.msg_regs()[0] as usize;
+                    pl011.puts(&ib.msg_bytes()[REG_LEN..len + REG_LEN]);
+                    sel4::reply(ib, MessageInfoBuilder::default().build());
+                }
             }
         }
-    }
+    });
 }

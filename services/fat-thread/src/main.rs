@@ -9,16 +9,12 @@ use common::{
     services::{block::BlockService, fs::FileEvent, root::find_service},
 };
 use cursor::DiskCursor;
-use sel4::{MessageInfoBuilder, debug_print, debug_println, with_ipc_buffer_mut};
+use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 
 mod cursor;
 
-sel4_runtime::entry_point!(main);
-
-fn main() -> ! {
-    common::init_log!(log::LevelFilter::Trace);
-    common::init_recv_slot();
-
+#[sel4_runtime::main]
+fn main() {
     log::info!("Booting...");
 
     let blk_ep =

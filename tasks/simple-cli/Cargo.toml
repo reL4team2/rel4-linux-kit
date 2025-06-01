@@ -8,11 +8,14 @@ sel4 = { workspace = true }
 sel4-ctors-dtors = { workspace = true }
 sel4-panicking = { workspace = true, features = ["alloc"] }
 sel4-panicking-env = { workspace = true }
-sel4-logging = { workspace = true }
 sel4-dlmalloc = { workspace = true }
 sel4-sync = { workspace = true }
 sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-slot-manager = { workspace = true }
+sel4-kit = { workspace = true }
+
+uart-thread = { path = "../../services/uart-thread" }
+zerocopy = "0.8.25"
+srv-gate = { workspace = true }

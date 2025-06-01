@@ -13,6 +13,10 @@ use futures::task::LocalSpawnExt;
 extern crate log;
 #[macro_use]
 extern crate alloc;
+#[cfg(not(fs_ipc))]
+extern crate lwext4_thread;
+#[cfg(not(uart_ipc))]
+extern crate uart_thread;
 
 #[macro_use]
 pub mod rasync;
@@ -29,8 +33,6 @@ pub mod syscall;
 pub mod task;
 pub mod timer;
 pub mod utils;
-
-sel4_runtime::entry_point!(main);
 
 // macro_rules! test_task {
 //     ($file:expr $(,$args:expr)*) => {{
@@ -51,10 +53,8 @@ macro_rules! test_task {
     }};
 }
 
-fn main() -> ! {
-    // 初始化接收 IPC 传递的 Capability 的 Slot
-    common::init_recv_slot();
-
+#[sel4_runtime::main]
+fn main() {
     // 初始化 LOG
     logging::init();
 

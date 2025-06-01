@@ -1,6 +1,6 @@
-//! slot-manager crate
+//! slot-manager
 //!
-//! 这个 crate 中提供两个 struct [LeafSlot] 和 [SlotManager]
+//! 这个 module 中提供两个 struct [LeafSlot] 和 [SlotManager]
 //!
 //! ## [LeafSlot]
 //!
@@ -29,10 +29,6 @@
 //! [SlotManager] 通过指定空 Slot 的范围创建，对空 slot 进行管理，可以申请新的 slot 位置。
 //! 申请后范围的结构为 [LeafSlot]
 //!
-
-#![no_std]
-#![deny(warnings)]
-#![deny(missing_docs)]
 
 use core::ops::Range;
 

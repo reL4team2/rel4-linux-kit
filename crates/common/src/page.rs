@@ -16,7 +16,7 @@ use core::{
 use config::PAGE_SIZE;
 use core::slice;
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::DEFAULT_PAGE_PLACEHOLDER;
 

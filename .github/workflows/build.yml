@@ -16,23 +16,11 @@ jobs:
       uses: baptiste0928/cargo-install@v3
       with:
         crate: cargo-binutils
-    - name: Cache Musl GCC
-      id: cache-musl
-      uses: actions/cache@v4
-      with:
-        path: aarch64-linux-musl-cross
-        key: aarch64-linux-musl-cross
-    - name: Download Musl Toolchain
-      if: steps.cache-musl.outputs.cache-hit != 'true'
-      run: |
-        wget https://musl.cc/aarch64-linux-musl-cross.tgz
-        tar -xf aarch64-linux-musl-cross.tgz
-    - name: Add toolchain to PATH
-      run: echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
-    - run: aarch64-linux-musl-gcc --version
+    - uses: ./.github/workflows/actions/setup-musl
     - name: Download sel4
       run: |
         mkdir -p .env
         wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+    - run: tools/app-parser.py kernel-thread uart-thread block-thread fs-thread test-demo
     - name: Test Build 
       run: make build

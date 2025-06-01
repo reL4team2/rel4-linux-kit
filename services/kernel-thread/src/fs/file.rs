@@ -7,7 +7,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use common::services::fs::Stat;
+use srv_gate::fs::Stat;
 use syscalls::Errno;
 
 use crate::syscall::SysResult;

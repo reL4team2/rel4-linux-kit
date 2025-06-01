@@ -2,5 +2,8 @@
   "rust-analyzer.cargo.target": "aarch64-unknown-linux-gnu",
   "rust-analyzer.cargo.buildScripts.enable": true,
   "rust-analyzer.cargo.buildScripts.useRustcWrapper": true,
-  "rust-analyzer.check.allTargets": false
+  "rust-analyzer.check.allTargets": false,
+  "rust-analyzer.check.extraEnv": {
+    "RUSTFLAGS": "--check-cfg=cfg(uart_ipc) --check-cfg=cfg(fs_ipc) --check-cfg=cfg(blk_ipc)"
+  }
 }

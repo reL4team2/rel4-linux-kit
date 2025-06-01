@@ -37,3 +37,33 @@ make run
 ## if you want to get a clean output.
 make run LOG=error
 ```
+
+```mermaid
+---
+title: IPC 架构模块
+---
+flowchart TB
+    srv-iface["服务接口层"]
+    blk-thread["块设备任务"]
+    fat-thread["fat32文件系统任务"]
+    lwext4-thread["ext4文件系统任务"]
+    kernel-thread["内核服务任务"]
+    uart-thread["串口服务"]
+    root-task["根任务"]
+    demo-task["demo 程序"]
+    sel4-runtime["sel4运行时"]
+
+    uart-thread --> srv-iface
+    uart-thread --> sel4-runtime
+    demo-task --> srv-iface
+    demo-task --> sel4-runtime
+    srv-iface --> sel4-runtime
+    blk-thread --> sel4-runtime
+    fat-thread --> sel4-runtime
+    kernel-thread --> sel4-runtime
+    root-task --> sel4-runtime
+    lwext4-thread --> sel4-runtime
+
+
+
+```

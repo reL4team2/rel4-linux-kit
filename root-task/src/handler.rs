@@ -6,7 +6,7 @@ use common::{
 };
 use config::PAGE_SIZE;
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
-use slot_manager::LeafSlot;
+use sel4_kit::slot_manager::LeafSlot;
 
 use crate::{OBJ_ALLOCATOR, RootTaskHandler};
 

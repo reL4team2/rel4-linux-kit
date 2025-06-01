@@ -3,7 +3,7 @@
 //!
 
 use alloc::{boxed::Box, string::String};
-use common::services::fs::Stat;
+use srv_gate::fs::Stat;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 

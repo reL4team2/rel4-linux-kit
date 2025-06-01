@@ -5,12 +5,11 @@ edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
-sel4-logging = { workspace = true }
 sel4-runtime = { workspace = true }
 spin = { workspace = true }
 log = "0.4"
 common = { workspace = true }
-slot-manager = { workspace = true }
+sel4-kit = { workspace = true }
 
 hashbrown = { workspace = true }
 
@@ -19,3 +18,5 @@ lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-
 
 flatten_objects = { workspace = true }
 syscalls = { workspace = true }
+srv-gate = { workspace = true }
+blk-thread = { path = "../blk-thread" }

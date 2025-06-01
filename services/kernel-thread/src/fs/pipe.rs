@@ -61,7 +61,7 @@ impl FileInterface for Pipe {
         todo!()
     }
 
-    fn stat(&self) -> super::vfs::FileResult<common::services::fs::Stat> {
+    fn stat(&self) -> Result<srv_gate::fs::Stat, Errno> {
         todo!()
     }
 }

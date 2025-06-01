@@ -7,4 +7,9 @@
 
 pub mod entry;
 pub mod heap;
+pub mod logging;
+pub mod macros;
 pub mod utils;
+
+pub use common_macros::main;
+pub use sel4_logging::{Logger, LoggerBuilder};

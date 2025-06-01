@@ -3,9 +3,9 @@
 //!
 
 use alloc::{boxed::Box, string::String, sync::Arc};
-use common::services::fs::Stat;
 use num_enum::TryFromPrimitive;
 use spin::mutex::Mutex;
+use srv_gate::fs::Stat;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 

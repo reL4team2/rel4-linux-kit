@@ -1,0 +1,17 @@
+[package]
+name = "srv-gate"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+
+[dependencies]
+sel4 = { workspace = true }
+common = { workspace = true }
+linkme = { workspace = true }
+spin = { workspace = true }
+num_enum = { version = "0.7.3", default-features = false }
+zerocopy = { workspace = true }
+log = "0.4"
+paste = "1.0"
+syscalls = { workspace = true }
