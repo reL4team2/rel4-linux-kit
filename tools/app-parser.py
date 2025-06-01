@@ -50,7 +50,6 @@ class Task:
             task.select()
 
     def get_mems(self):
-        print(f"task {self.name} get memory")
         ret = []
         ret.extend(self.mem)
         for task in self.deptask:
@@ -60,7 +59,6 @@ class Task:
         return ret
 
     def get_dmas(self):
-        print(f"task {self.name} get memory")
         ret = []
         ret.extend(self.dma)
         for task in self.deptask:
@@ -76,7 +74,6 @@ tasks: List[Task] = {}
 def get_all_standalone_tasks():
     ret = []
     for task in tasks.values():
-        print(f"{task.name}: {task.in_degree}")
         # 小于等于 1 的不是没有使用就是只是依赖
         if task.in_degree <= 1:
             continue

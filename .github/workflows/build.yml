@@ -21,5 +21,6 @@ jobs:
       run: |
         mkdir -p .env
         wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
+    - run: tools/app-parser.py kernel-thread uart-thread block-thread fs-thread test-demo
     - name: Test Build 
       run: make build

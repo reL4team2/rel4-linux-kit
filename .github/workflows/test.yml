@@ -29,5 +29,6 @@ jobs:
         wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
         mkdir -p testcases
         ./tools/modify-multi.py .env/aarch64 testcases
+    - run: tools/app-parser.py kernel-thread uart-thread block-thread fs-thread test-demo
     - name: Test Build 
       run: make build
