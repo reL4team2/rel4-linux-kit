@@ -4,7 +4,7 @@ use crate::{
     task::Sel4Task,
 };
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc};
-use config::PAGE_SIZE;
+use common::config::PAGE_SIZE;
 use object::{BinaryFormat, Object};
 use sel4::Result;
 use spin::Mutex;

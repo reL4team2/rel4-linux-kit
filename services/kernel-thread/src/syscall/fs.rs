@@ -3,6 +3,7 @@
 //!
 
 use alloc::{boxed::Box, string::String, sync::Arc};
+use libc_types::fcntl::FcntlCmd;
 use num_enum::TryFromPrimitive;
 use spin::mutex::Mutex;
 use srv_gate::fs::Stat;
@@ -12,7 +13,6 @@ use zerocopy::{FromBytes, IntoBytes};
 use crate::{
     consts::fd::FD_CUR_DIR,
     fs::{file::File, get_mounted, mount, pipe::create_pipe2, umount},
-    syscall::types::fs::FcntlCmd,
     task::Sel4Task,
 };
 

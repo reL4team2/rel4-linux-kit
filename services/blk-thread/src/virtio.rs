@@ -1,6 +1,5 @@
 use alloc::collections::BTreeMap;
-use common::services::root::translate_addr;
-use config::DMA_ADDR_START;
+use common::{config::DMA_ADDR_START, root::translate_addr};
 use core::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},

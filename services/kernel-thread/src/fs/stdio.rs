@@ -42,7 +42,7 @@ impl FileInterface for StdConsole {
         if self.0 == 0 {
             return Err(Errno::EPERM);
         }
-        data.iter().for_each(|c| sel4::debug_put_char(*c));
+        srv_gate::UART_IMPLS[0].lock().puts(data);
         Ok(data.len())
     }
 

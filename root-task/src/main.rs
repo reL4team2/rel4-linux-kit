@@ -10,12 +10,14 @@ mod handler;
 mod task;
 mod utils;
 
-use ::config::{DEFAULT_CUSTOM_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR};
 use alloc::vec::Vec;
-use common::*;
+use common::{
+    ObjectAllocator,
+    config::{DEFAULT_CUSTOM_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR},
+    page::PhysPage,
+};
 use config::TASK_FILES;
 use include_bytes_aligned::include_bytes_aligned;
-use page::PhysPage;
 use sel4::{
     Cap, CapRights, ObjectBlueprintArm, UntypedDesc,
     cap::{LargePage, SmallPage, Untyped},
@@ -78,7 +80,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             task.name,
             task.file,
         )?);
-        debug_println!("task {:#x?}", task)
+        debug_println!("service {:#x?}", task)
     }
 
     // 处理所有定义的任务

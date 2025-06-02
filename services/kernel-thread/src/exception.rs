@@ -4,8 +4,10 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::{consts::DEFAULT_SERVE_EP, page::PhysPage};
-use config::PAGE_SIZE;
+use common::{
+    config::{DEFAULT_SERVE_EP, PAGE_SIZE},
+    page::PhysPage,
+};
 use sel4::{Fault, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer};
 use spin::Lazy;
 use syscalls::Errno;
@@ -68,7 +70,7 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .unwrap();
 
         // 如果没有定时器
-        if task.timer == 0 {
+        if task.timer.is_zero() {
             // 检查信号
             task.check_signal(&mut user_ctx);
             // 恢复任务运行状态
@@ -128,7 +130,7 @@ pub async fn waiting_for_end() {
         let next_task = task_map.values_mut().find(|x| x.exit.is_none());
         if next_task.is_none() {
             sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
-            common::services::root::shutdown();
+            common::root::shutdown();
         }
     }
 }

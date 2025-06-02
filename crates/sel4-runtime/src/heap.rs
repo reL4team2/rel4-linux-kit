@@ -2,7 +2,7 @@
 //!
 //! 这个模块中定义了程序将会使用的堆栈结构
 
-use config::SERVICE_HEAP_SIZE;
+use common::config::{self, SERVICE_HEAP_SIZE};
 use sel4_dlmalloc::{StaticDlmallocGlobalAlloc, StaticHeap};
 use sel4_sync::PanickingRawMutex;
 

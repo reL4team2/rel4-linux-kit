@@ -12,7 +12,7 @@ pub trait UartIface: Sync + Send {
 #[cfg(uart_ipc)]
 mod _impl {
 
-    use common::{generate_ipc_send, services::root::find_service};
+    use common::{generate_ipc_send, root::find_service};
     use sel4::cap::Endpoint;
 
     use crate::def_uart_impl;

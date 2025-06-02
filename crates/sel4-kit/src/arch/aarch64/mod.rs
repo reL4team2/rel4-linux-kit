@@ -1,3 +1,9 @@
+mod timer;
+
+pub use timer::{GENERIC_TIMER_PCNT_IRQ, current_time, get_cval, set_timer};
+
+use sel4::sys::seL4_MessageInfo;
+
 /// Arm Power State Coordination Interface
 ///               Platform Design Document
 /// 手册: https://developer.arm.com/documentation/den0022/latest
@@ -47,6 +53,34 @@ pub fn sys_null(sys: isize) {
     unsafe {
         core::arch::asm!("svc 0",
             in("x7") sys,
+        );
+    }
+}
+
+///  回复一个消息
+///
+/// # 参数
+///
+/// - `sys` reply 使用的系统调用号
+/// - `info` 回复的时候使用的 [seL4_MessageInfo]
+/// - `mrx` 回复使用的消息
+#[cfg(not(feature = "mcs"))]
+pub fn sys_reply(
+    sys: isize,
+    info: seL4_MessageInfo,
+    mr0: usize,
+    mr1: usize,
+    mr2: usize,
+    mr3: usize,
+) {
+    unsafe {
+        core::arch::asm!("svc 0",
+            in("x7") sys,
+            in("x1") info.0.into_inner()[0],
+            in("x2") mr0,
+            in("x3") mr1,
+            in("x4") mr2,
+            in("x5") mr3,
         );
     }
 }

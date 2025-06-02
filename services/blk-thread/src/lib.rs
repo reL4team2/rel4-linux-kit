@@ -7,10 +7,10 @@ extern crate alloc;
 use core::ptr::NonNull;
 
 use common::{
-    services::root::{join_channel, register_irq, register_notify},
+    config::{VIRTIO_MMIO_BLK_VIRT_ADDR, VIRTIO_NET_IRQ},
+    root::{join_channel, register_irq, register_notify},
     slot::alloc_slot,
 };
-use config::{VIRTIO_MMIO_BLK_VIRT_ADDR, VIRTIO_NET_IRQ};
 use flatten_objects::FlattenObjects;
 use sel4::cap::{IrqHandler, Notification};
 use sel4_runtime::utils::alloc_free_addr;

@@ -9,22 +9,24 @@
 //! `CNTFRQ_EL0` <https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Registers/CNTFRQ-EL0--Counter-timer-Frequency-Register>
 //!
 
+use core::time::Duration;
+
 /// PCNT 使用的中断号
 pub const GENERIC_TIMER_PCNT_IRQ: usize = 30;
+
+const NS_PER_SEC: usize = 1_000_000_000;
 
 /// 获取当前的时间(ns)
 #[cfg(target_arch = "aarch64")]
 #[inline]
-pub fn get_curr_ns() -> usize {
+pub fn current_time() -> core::time::Duration {
     let cnt: usize;
     let freq: usize = get_freq();
     unsafe {
         core::arch::asm!("mrs  {}, cntpct_el0", out(reg) cnt);
     }
-    cnt * 1_000_000_000 / freq
+    core::time::Duration::new((cnt / freq) as _, ((cnt % freq) * NS_PER_SEC / freq) as _)
 }
-
-pub const US_PER_SEC: usize = 1_000_000;
 
 /// 获取当前的时钟频率
 #[inline]
@@ -36,29 +38,13 @@ fn get_freq() -> usize {
     freq
 }
 
-/// 获取当前的时间(us)
-#[inline]
-pub fn get_curr_us() -> usize {
-    get_curr_ns() / 1000
-}
-
-/// 获取当前的时间(ms)
-#[inline]
-pub fn get_curr_ms() -> usize {
-    get_curr_ns() / 1_000_000
-}
-
-/// 获取当前的时间 (sec)
-#[inline]
-pub fn get_curr_sec() -> usize {
-    get_curr_ns() / 1_000_000_000
-}
-
 /// 设置定时器
 #[inline]
-pub fn set_timer(next_ns: usize) {
-    let next_ticks = next_ns * get_freq() / 1_000_000_000;
-    let enable = if next_ns != 0 { 1 } else { 0 };
+pub fn set_timer(next: Duration) {
+    let freq = get_freq();
+    let next_ticks =
+        next.as_secs() as usize * freq + next.subsec_nanos() as usize * freq / NS_PER_SEC;
+    let enable = if next.is_zero() { 0 } else { 1 };
     unsafe {
         core::arch::asm!(
             "msr cntp_cval_el0, {}",
@@ -71,10 +57,11 @@ pub fn set_timer(next_ns: usize) {
 
 /// 获取当前 timer 定时的时间
 #[inline]
-pub fn get_cval_ns() -> usize {
+pub fn get_cval() -> Duration {
     let cval: usize;
+    let freq = get_freq();
     unsafe {
         core::arch::asm!("mrs  {}, cntp_cval_el0", out(reg) cval);
     }
-    cval * 1_000_000_000 / get_freq()
+    core::time::Duration::new((cval / freq) as _, ((cval % freq) * NS_PER_SEC / freq) as _)
 }

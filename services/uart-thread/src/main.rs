@@ -4,7 +4,7 @@
 extern crate alloc;
 extern crate uart_thread;
 
-use common::consts::{DEFAULT_SERVE_EP, REG_LEN};
+use common::{config::DEFAULT_SERVE_EP, read_types, reply_with};
 use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use srv_gate::uart::UartIfaceEvent;
 use uart_thread::PL011DRV;
@@ -12,7 +12,6 @@ use uart_thread::PL011DRV;
 #[sel4_runtime::main]
 fn main() {
     log::info!("Booting...");
-    // let mut pl011 = Pl011UartIfaceImpl::new(VIRTIO_MMIO_VIRT_ADDR);
     let mut pl011 = PL011DRV.lock();
 
     with_ipc_buffer_mut(|ib| {
@@ -25,19 +24,13 @@ fn main() {
             };
             match msg_label {
                 UartIfaceEvent::init => sel4::reply(ib, MessageInfoBuilder::default().build()),
-                UartIfaceEvent::getchar => {
-                    let c = pl011.getchar();
-                    ib.msg_regs_mut()[0] = c as _;
-                    sel4::reply(ib, MessageInfoBuilder::default().length(1).build());
-                }
+                UartIfaceEvent::getchar => reply_with!(ib, pl011.getchar()),
                 UartIfaceEvent::putchar => {
-                    pl011.putchar(ib.msg_bytes()[0]);
+                    pl011.putchar(read_types!(u8));
                     sel4::reply(ib, MessageInfoBuilder::default().build());
                 }
                 UartIfaceEvent::puts => {
-                    log::debug!("putstring");
-                    let len = ib.msg_regs()[0] as usize;
-                    pl011.puts(&ib.msg_bytes()[REG_LEN..len + REG_LEN]);
+                    pl011.puts(&read_types!(&[u8]));
                     sel4::reply(ib, MessageInfoBuilder::default().build());
                 }
             }

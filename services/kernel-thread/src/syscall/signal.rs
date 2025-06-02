@@ -2,6 +2,7 @@
 //!
 //!
 
+use libc_types::types::SigMaskHow;
 use sel4::UserContext;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
@@ -10,12 +11,12 @@ use crate::task::Sel4Task;
 
 use super::{
     SysResult,
-    types::signal::{SigAction, SigMaskHow, SigProcMask},
+    types::signal::{SigAction, SigProcMask},
 };
 
 pub(super) fn sys_sigprocmask(
     task: &mut Sel4Task,
-    how: usize,
+    how: u8,
     set: *const SigProcMask,
     old: *mut SigProcMask,
 ) -> SysResult {

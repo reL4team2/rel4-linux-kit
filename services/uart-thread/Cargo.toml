@@ -4,16 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# sel4 相关依赖
+common = { workspace = true }
 sel4 = { workspace = true }
+sel4-kit = { workspace = true }
 sel4-runtime = { workspace = true }
 
 spin = { workspace = true }
 log = "0.4"
-config = { workspace = true }
-common = { workspace = true }
-sel4-kit = { workspace = true }
 arm_pl011 = { git = "https://github.com/Byte-OS/arm_pl011.git", rev = "8a66e24" }
-futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 srv-gate = { workspace = true }
-
-linkme = { workspace = true }

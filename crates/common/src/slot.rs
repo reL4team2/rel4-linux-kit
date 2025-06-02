@@ -3,6 +3,7 @@
 //! 提供一个基础的 [SlotManager]，方便任务进行 [LeafSlot] 的申请和释放
 use core::ops::Range;
 
+use sel4::{init_thread, with_ipc_buffer_mut};
 use sel4_kit::slot_manager::{LeafSlot, SlotManager};
 use spin::{Mutex, once::Once};
 
@@ -34,4 +35,15 @@ pub fn alloc_slot() -> LeafSlot {
 #[inline]
 pub fn alloc_slots(num: usize) -> LeafSlot {
     SLOT_MANAGER.lock().alloc_slots(num)
+}
+
+/// 初始化接收 Slot
+pub fn init_recv_slot() {
+    with_ipc_buffer_mut(|ipc_buffer| {
+        ipc_buffer.set_recv_slot(
+            &init_thread::slot::CNODE
+                .cap()
+                .absolute_cptr_from_bits_with_depth(0, 64),
+        );
+    })
 }

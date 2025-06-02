@@ -24,7 +24,7 @@ macro_rules! init_log {
                 record.args()
             )
         }
-        static LOGGER: sel4_logging::Logger = sel4_logging::LoggerBuilder::const_default()
+        static LOGGER: $crate::Logger = $crate::LoggerBuilder::const_default()
             .write(|s| sel4::debug_print!("{}", s))
             .level_filter($level)
             .fmt(fmt_with_module)

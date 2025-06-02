@@ -7,7 +7,7 @@ edition = "2024"
 
 [dependencies]
 sel4 = { workspace = true }
-config = { workspace = true }
+sel4-logging = { workspace = true }
 common-macros = { workspace = true }
 sel4-kit = { workspace = true }
 object = { version = "0.36.1", default-features = false, features = ["read"] }

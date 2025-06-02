@@ -3,8 +3,7 @@
 //!
 
 use alloc::{string::String, vec::Vec};
-use common::page::PhysPage;
-use config::PAGE_SIZE;
+use common::{config::PAGE_SIZE, page::PhysPage};
 use object::Object;
 use sel4::UserContext;
 use syscalls::Errno;

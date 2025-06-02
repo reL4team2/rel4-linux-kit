@@ -1,10 +1,6 @@
 use core::sync::atomic::AtomicUsize;
 
-use common::{
-    page::PhysPage,
-    services::{IpcBufferRW, root::RootEvent},
-};
-use config::PAGE_SIZE;
+use common::{config::PAGE_SIZE, page::PhysPage, read_types, reply_with, root::RootEvent};
 use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
 use sel4_kit::slot_manager::LeafSlot;
 
@@ -26,14 +22,23 @@ impl RootTaskHandler {
         loop {
             let (message, badge) = self.fault_ep.recv(());
             self.badge = badge;
-            let msg_label = RootEvent::from(message.label());
+            let msg_label = match RootEvent::try_from(message.label()) {
+                Ok(x) => x,
+                Err(_) => {
+                    if message.label() >= 8 {
+                        log::error!("Unknown root messaage label: {}", message.label())
+                    }
+                    let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+                    self.handle_fault(fault);
+                    continue;
+                }
+            };
 
             match msg_label {
-                RootEvent::Ping => sel4::reply(ib, rev_msg.build()),
                 RootEvent::CreateChannel => {
                     static CHANNEL_ID: AtomicUsize = AtomicUsize::new(1);
-                    let addr = ib.msg_regs()[0] as usize;
-                    let page_count = ib.msg_regs()[1] as usize;
+                    let (addr, page_count) = read_types!(ib, usize, usize);
+
                     let pages = OBJ_ALLOCATOR.lock().alloc_pages(page_count);
                     pages
                         .iter()
@@ -50,12 +55,11 @@ impl RootTaskHandler {
                         });
                     let channel_id = CHANNEL_ID.fetch_add(1, core::sync::atomic::Ordering::SeqCst);
                     self.channels.push((channel_id, pages));
-                    ib.msg_regs_mut()[0] = channel_id as u64;
-                    sel4::reply(ib, rev_msg.length(1).build());
+
+                    reply_with!(ib, channel_id);
                 }
                 RootEvent::JoinChannel => {
-                    let channel_id = ib.msg_regs()[0] as usize;
-                    let addr = ib.msg_regs()[1] as usize;
+                    let (channel_id, addr) = read_types!(ib, usize, usize);
                     if let Some((_, pages)) = self.channels.iter().find(|x| x.0 == channel_id) {
                         pages
                             .iter()
@@ -70,13 +74,11 @@ impl RootTaskHandler {
                                 self.tasks[badge as usize]
                                     .map_page(addr + idx * PAGE_SIZE, PhysPage::new(x.cap()));
                             });
-                        ib.msg_regs_mut()[0] = (pages.len() * PAGE_SIZE) as u64;
-                        sel4::reply(ib, rev_msg.length(1).build());
+                        reply_with!(ib, pages.len() * PAGE_SIZE);
                     }
                 }
                 RootEvent::TranslateAddr => {
-                    let mut off = 0;
-                    let addr = usize::read_buffer(ib, &mut off);
+                    let addr = read_types!(ib, usize);
 
                     let phys_addr = self.tasks[badge as usize]
                         .mapped_page
@@ -84,11 +86,11 @@ impl RootTaskHandler {
                         .map(|x| x.addr())
                         .unwrap();
 
-                    ib.msg_regs_mut()[0] = (phys_addr + addr % 0x1000) as _;
-                    sel4::reply(ib, rev_msg.length(off).build());
+                    reply_with!(ib, phys_addr + addr % 0x1000);
                 }
                 RootEvent::FindService => {
-                    let name = <&str>::read_buffer(ib, &mut 0);
+                    let name = read_types!(ib, &str);
+
                     let task = self.tasks.iter().find(|task| task.name == name);
                     let msg = match task {
                         Some(task) => {
@@ -107,7 +109,7 @@ impl RootTaskHandler {
                 // Allocate a irq handler capability
                 // Transfer it to the requested service
                 RootEvent::RegisterIRQ => {
-                    let irq = ib.msg_regs()[0];
+                    let irq = read_types!(ib, u64);
                     let dst_slot = LeafSlot::new(0);
                     slot::IRQ_CONTROL
                         .cap()
@@ -133,7 +135,8 @@ impl RootTaskHandler {
                 }
                 RootEvent::AllocPage => {
                     assert_eq!(message.length(), 1);
-                    let addr = ib.msg_regs()[0] as usize;
+                    let addr = read_types!(ib, usize);
+
                     let page = OBJ_ALLOCATOR.lock().alloc_page();
                     self.tasks[badge as usize].map_page(addr, PhysPage::new(page));
                     LeafSlot::new(0)
@@ -144,13 +147,6 @@ impl RootTaskHandler {
                     LeafSlot::new(0).delete().unwrap();
                 }
                 RootEvent::Shutdown => sel4_kit::arch::shutdown(),
-                RootEvent::Unknown(label) => {
-                    if label >= 8 {
-                        log::error!("Unknown root messaage label: {label}")
-                    }
-                    let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-                    self.handle_fault(fault);
-                }
             }
         }
     }

@@ -1,4 +1,7 @@
-use crate::OBJ_ALLOCATOR;
+use crate::{
+    OBJ_ALLOCATOR,
+    utils::{footprint, map_image, map_intermediate_translation_tables},
+};
 use alloc::{
     collections::btree_map::BTreeMap,
     string::{String, ToString},
@@ -6,11 +9,12 @@ use alloc::{
     vec::Vec,
 };
 use common::{
-    consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION},
-    footprint, map_image, map_intermediate_translation_tables,
+    config::{
+        self, CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, DEFAULT_THREAD_NOTIFICATION,
+        PAGE_SIZE, STACK_ALIGN_SIZE,
+    },
     page::PhysPage,
 };
-use config::{CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use core::ops::DerefMut;
 use object::{File, Object};
 use sel4::{

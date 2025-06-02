@@ -4,18 +4,18 @@
 extern crate alloc;
 
 mod obj_allocator;
-mod utils;
 
-pub mod arch;
-pub mod consts;
+pub mod config;
 pub mod ipc_saver;
+pub mod ipcrw;
 pub mod log_impl;
 pub mod page;
-pub mod services;
+pub mod root;
 pub mod slot;
 
 pub use common_macros::{generate_ipc_send, ipc_trait, ipc_trait_impl};
 pub use obj_allocator::*;
-pub use utils::*;
+
+pub use sel4_logging::{Logger, LoggerBuilder};
 
 // FIXME: Make this variable more generic.

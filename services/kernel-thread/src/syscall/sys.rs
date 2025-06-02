@@ -2,7 +2,9 @@
 //!
 //!
 
-use common::arch::get_curr_ns;
+use core::time::Duration;
+
+use sel4_kit::arch::current_time;
 use srv_gate::fs::TimeSpec;
 use zerocopy::{FromBytes, IntoBytes};
 
@@ -49,14 +51,14 @@ pub(super) fn sys_nanosleep(
         "[task {}] sys_nanosleep @ req_ptr: {:p}, rem_ptr: {:p}",
         task.id, req_ptr, rem_ptr
     );
-    let ns = get_curr_ns();
+    let curr_time = current_time();
     let nano_bytes = task
         .read_bytes(req_ptr as _, size_of::<TimeSpec>())
         .unwrap();
     let req = TimeSpec::ref_from_bytes(&nano_bytes).unwrap();
     debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
 
-    task.timer = ns + req.sec * 1_000_000_000 + req.nsec;
+    task.timer = curr_time + Duration::new(req.sec as _, req.nsec as _);
     flush_timer(task.timer);
 
     if !rem_ptr.is_null() {

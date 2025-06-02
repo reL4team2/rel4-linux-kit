@@ -10,13 +10,13 @@ mod signal;
 
 use alloc::sync::Arc;
 use common::{
-    consts::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP},
+    config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE},
     page::PhysPage,
 };
-use config::{CNODE_RADIX_BITS, PAGE_SIZE};
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
 };
 use file::TaskFileInfo;
 use info::TaskInfo;
@@ -61,7 +61,7 @@ pub struct Sel4Task {
     /// 任务相关文件信息。
     pub file: TaskFileInfo,
     /// 定时器
-    pub timer: usize,
+    pub timer: Duration,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
     pub info: TaskInfo,
 }
@@ -128,7 +128,7 @@ impl Sel4Task {
             clear_child_tid: None,
             file: TaskFileInfo::default(),
             info: TaskInfo::default(),
-            timer: 0,
+            timer: Duration::ZERO,
         })
     }
 
@@ -148,7 +148,7 @@ impl Sel4Task {
             clear_child_tid: None,
             file: self.file.clone(),
             info: self.info.clone(),
-            timer: 0,
+            timer: Duration::ZERO,
         })
     }
 

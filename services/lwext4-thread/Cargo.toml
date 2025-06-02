@@ -4,17 +4,18 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# sel4 相关依赖
+common = { workspace = true }
 sel4 = { workspace = true }
+sel4-kit = { workspace = true }
 sel4-runtime = { workspace = true }
+
 spin = { workspace = true }
 log = "0.4"
-common = { workspace = true }
-sel4-kit = { workspace = true }
-
-hashbrown = { workspace = true }
 
 # ext4 依赖
 lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false, rev = "ee5131c" }
+libc-types = { workspace = true }
 
 flatten_objects = { workspace = true }
 syscalls = { workspace = true }
