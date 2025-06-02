@@ -399,7 +399,6 @@ dependencies = [
  "flatten_objects",
  "futures",
  "hashbrown",
- "include_bytes_aligned",
  "libc-types",
  "log",
  "lwext4-thread",
@@ -1207,8 +1206,6 @@ version = "0.1.0"
 dependencies = [
  "arm_pl011",
  "common",
- "futures",
- "linkme",
  "log",
  "sel4",
  "sel4-kit",
