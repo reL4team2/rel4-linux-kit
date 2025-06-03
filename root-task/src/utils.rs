@@ -55,6 +55,7 @@ pub fn display_bootinfo(
 pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {
     let min: usize = image
         .segments()
+        .filter(|x| x.address() != 0)
         .map(|seg| seg.address())
         .min()
         .unwrap()
@@ -111,6 +112,9 @@ pub fn map_image<'a>(
         .collect::<Vec<(sel4::cap::Granule, sel4::CapRightsBuilder)>>();
 
     for seg in image.segments() {
+        if seg.address() == 0 {
+            continue;
+        }
         let segment_addr = usize::try_from(seg.address()).unwrap();
         let segment_size = usize::try_from(seg.size()).unwrap();
         let segment_footprint =

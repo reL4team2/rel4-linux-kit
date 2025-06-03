@@ -103,7 +103,7 @@ def write_to_file(file):
     for task in get_all_standalone_tasks():
         output += "service! { \n"
         output += 'name: "%s", \n' % (task.name)
-        output += 'file: "%s.elf", \n' % (task.file)
+        output += 'file: "%s", \n' % (task.file)
         mem_list = [
             "(%s, %s, %s)" % (mem[0], mem[1], mem[2]) for mem in task.get_mems()
         ]

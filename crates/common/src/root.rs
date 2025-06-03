@@ -15,7 +15,7 @@ pub enum RootEvent {
     AllocPage,
     FindService,
     RegisterIRQ,
-    Shutdown,
+    Shutdown = 0x204,
     TranslateAddr,
     CreateChannel,
     JoinChannel,

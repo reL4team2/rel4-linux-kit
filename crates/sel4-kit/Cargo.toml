@@ -7,6 +7,6 @@ edition = "2024"
 mcs = []
 
 [dependencies]
-sel4 = { workspace = true }
+sel4 = { workspace = true, features = ["state"] }
 
 log = "0.4"
