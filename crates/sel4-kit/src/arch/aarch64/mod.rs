@@ -65,7 +65,7 @@ pub fn sys_null(sys: isize) {
 #[cfg(not(feature = "mcs"))]
 pub fn sys_reply(
     sys: isize,
-    info: seL4_MessageInfo,
+    info: sel4::sys::seL4_MessageInfo,
     mr0: usize,
     mr1: usize,
     mr2: usize,
