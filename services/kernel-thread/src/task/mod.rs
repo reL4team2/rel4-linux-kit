@@ -1,7 +1,6 @@
 //! 任务相关接口
 //!
 //! 本接口中包含 Task 结构体的定义和实现    
-mod auxv;
 mod file;
 mod info;
 mod init;
@@ -252,6 +251,7 @@ impl Sel4Task {
             let mut data = seg.data().unwrap();
             let mut vaddr = seg.address() as usize;
             let vaddr_end = vaddr + seg.size() as usize;
+            log::debug!("load memory: {:#x} - {:#x}", vaddr, vaddr_end);
 
             while vaddr < vaddr_end {
                 let voffset = vaddr % PAGE_SIZE;

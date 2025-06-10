@@ -115,23 +115,23 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
         // 映射 DMA 内存，应该随机分配任意内存即可
         for (start, size) in t.dma {
-            // // 申请多个页表
-            // // TODO: 检查页表是否连续
-            // let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
+            // 申请多个页表
+            // TODO: 检查页表是否连续
+            let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
 
-            // // 映射多个页表
-            // pages_cap.into_iter().enumerate().for_each(|(i, page)| {
-            //     debug_println!(
-            //         "[RootTask] Mapping DMA {:#x} -> {:#x}",
-            //         start + i * PAGE_SIZE,
-            //         page.frame_get_address().unwrap()
-            //     );
-            //     tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
-            // });
-            for i in 0..size / PAGE_SIZE {
-                let page_cap = OBJ_ALLOCATOR.lock().alloc_page();
-                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page_cap));
-            }
+            // 映射多个页表
+            pages_cap.into_iter().enumerate().for_each(|(i, page)| {
+                debug_println!(
+                    "[RootTask] Mapping DMA {:#x} -> {:#x}",
+                    start + i * PAGE_SIZE,
+                    page.frame_get_address().unwrap()
+                );
+                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
+            });
+            // for i in 0..size / PAGE_SIZE {
+            //     let page_cap = OBJ_ALLOCATOR.lock().alloc_page();
+            //     tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page_cap));
+            // }
         }
 
         // FIXME: 将分配内存的逻辑写成一个通用的逻辑

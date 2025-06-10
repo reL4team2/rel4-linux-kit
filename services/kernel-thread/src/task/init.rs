@@ -1,12 +1,13 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
+use libc_types::elf::AuxType;
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::task::DEF_STACK_TOP;
 
-use super::{Sel4Task, auxv::AuxV};
+use super::Sel4Task;
 
 impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
@@ -82,14 +83,14 @@ impl Sel4Task {
         };
 
         let mut auxv = BTreeMap::new();
-        auxv.insert(AuxV::EXECFN, args_ptr[0]);
-        auxv.insert(AuxV::PAGESZ, PAGE_SIZE);
-        auxv.insert(AuxV::ENTRY, self.info.entry);
-        auxv.insert(AuxV::GID, 0);
-        auxv.insert(AuxV::EGID, 0);
-        auxv.insert(AuxV::UID, 0);
-        auxv.insert(AuxV::EUID, 0);
-        auxv.insert(AuxV::NULL, 0);
+        auxv.insert(AuxType::ExecFn, args_ptr[0]);
+        auxv.insert(AuxType::PageSize, PAGE_SIZE);
+        auxv.insert(AuxType::Entry, self.info.entry);
+        auxv.insert(AuxType::GID, 0);
+        auxv.insert(AuxType::EGID, 0);
+        auxv.insert(AuxType::UID, 0);
+        auxv.insert(AuxType::EUID, 0);
+        auxv.insert(AuxType::Null, 0);
 
         // push auxiliary vector
         for (key, v) in auxv.into_iter() {

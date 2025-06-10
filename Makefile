@@ -61,9 +61,7 @@ qemu_cmd := \
 		-kernel $(image)
 
 testcases:
-	wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
-	mkdir -p testcases
-	cp -r .env/aarch64/* testcases
+	wget -qO- https://github.com/reL4team2/rel4-linux-kit/releases/download/toolchain/testcases.tgz | tar -zxf - -C .
 
 disk_img: testcases
 	mkdir -p mount

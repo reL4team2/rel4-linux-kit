@@ -1,7 +1,7 @@
 //! 标准输入输出使用的接口
 //!
 //! 目前标准输入输出等都使用一个结构体，通过设置不同的位置来确保只读，只写
-
+use sel4::debug_print;
 use srv_gate::fs::Stat;
 use syscalls::Errno;
 
@@ -42,7 +42,9 @@ impl FileInterface for StdConsole {
         if self.0 == 0 {
             return Err(Errno::EPERM);
         }
-        srv_gate::UART_IMPLS[0].lock().puts(data);
+        // srv_gate::UART_IMPLS[0].lock().puts(data);
+        // debug_println!("{}", );
+        data.iter().for_each(|x| debug_print!("{}", *x as char));
         Ok(data.len())
     }
 

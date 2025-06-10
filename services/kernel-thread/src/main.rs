@@ -73,7 +73,8 @@ fn main() {
     // 初始化定时器
     timer::init();
 
-    test_task!("busybox", "sh", "/init.sh");
+    // test_task!("busybox", "sh", "/init.sh");
+    test_task!("runtest.exe", "-w", "entry-static.exe", "argv");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     spawn_async!(pool, exception::waiting_and_handle());
