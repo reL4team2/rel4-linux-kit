@@ -34,7 +34,7 @@ pub fn alloc_slot() -> LeafSlot {
 /// 说明： 申请的 [LeafSlot] 从返回的地方开始，调用 [LeafSlot::next_slot] 获取下一个
 #[inline]
 pub fn alloc_slots(num: usize) -> LeafSlot {
-    SLOT_MANAGER.lock().alloc_slots(num)
+    SLOT_MANAGER.lock().alloc_slots(num).next().unwrap()
 }
 
 /// 初始化接收 Slot

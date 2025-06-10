@@ -1,3 +1,4 @@
+#[cfg(feature = "alloc")]
 use alloc::{
     string::{String, ToString},
     vec::Vec,
@@ -40,6 +41,7 @@ pub trait IpcTypeWriter {
 
 impl_ipc_rw!(u8, u16, u32, u64, i8, i16, i32, i64, usize);
 
+#[cfg(feature = "alloc")]
 impl IpcTypeReader for &str {
     type OutType = String;
 
@@ -52,6 +54,7 @@ impl IpcTypeReader for &str {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl IpcTypeReader for String {
     type OutType = String;
 
@@ -64,6 +67,7 @@ impl IpcTypeReader for String {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl IpcTypeReader for &[u8] {
     type OutType = Vec<u8>;
 
