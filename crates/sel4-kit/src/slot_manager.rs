@@ -222,9 +222,42 @@ impl SlotManager {
     ///
     /// 返回的是开始位置的 LeafSlot
     #[inline]
-    pub fn alloc_slots(&mut self, num: usize) -> LeafSlot {
+    pub fn alloc_slots(&mut self, num: usize) -> SlotRange {
         let idx = self.empty_slots.next().unwrap();
         self.empty_slots.start += num - 1;
-        LeafSlot::new(idx)
+        SlotRange(idx..idx + num)
+    }
+
+    /// 扩展 SlotManager 的管理大小
+    ///
+    /// # 参数
+    /// - `extend_len` 需要扩展的大小
+    ///
+    /// 扩展的方式为从原有的范围的结尾向后增长
+    pub fn extend(&mut self, extend_len: usize) {
+        if self.empty_slots.end < usize::MAX - extend_len {
+            self.empty_slots.end += extend_len;
+        }
+    }
+
+    /// 获取 [SlotManager] 中可用的大小
+    ///
+    /// # 返回值
+    /// - [usize] 当前尚未使用的 Slot 数量
+    pub fn available(&self) -> usize {
+        self.empty_slots.end - self.empty_slots.start
+    }
+}
+
+/// Slot 范围
+///
+/// 可以利用 [Iterator] 从 [SlotRange] 中迭代出 [LeafSlot]
+pub struct SlotRange(Range<usize>);
+
+impl Iterator for SlotRange {
+    type Item = LeafSlot;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(LeafSlot::new(self.0.next()?))
     }
 }

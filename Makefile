@@ -15,10 +15,12 @@ loader := $(loader_artifacts_dir)/sel4-kernel-loader
 loader_cli := sel4-kernel-loader-add-payload
 
 app_crate := root-task
-app := $(BUILD_DIR)/$(app_crate).elf
+app := $(BUILD_DIR)/$(app_crate)
 
 qemu_args := -drive file=mount.img,if=none,format=raw,id=x0
 qemu_args += -device virtio-blk-device,drive=x0
+qemu_args += -device virtio-net-device,netdev=net0
+qemu_args += -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555
 
 # qemu_args += -netdev user,id=net0,hostfwd=tcp::6379-:6379
 # qemu_args += -device virtio-net-device,netdev=net0

@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use sel4::{
     CapTypeForObjectOfFixedSize,
     cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace},
@@ -151,8 +150,9 @@ impl ObjectAllocator {
     }
 
     /// 申请多个页
+    #[cfg(feature = "alloc")]
     #[inline]
-    pub fn alloc_pages(&mut self, pages: usize) -> Vec<Granule> {
+    pub fn alloc_pages(&mut self, pages: usize) -> alloc::vec::Vec<Granule> {
         let leaf_slot = super::slot::alloc_slots(pages);
 
         self.ut

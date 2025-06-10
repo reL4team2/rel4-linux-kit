@@ -1,14 +1,16 @@
 #![no_std]
 #![feature(str_from_raw_parts)]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
-
 mod obj_allocator;
 
 pub mod config;
+#[cfg(feature = "alloc")]
 pub mod ipc_saver;
 pub mod ipcrw;
 pub mod log_impl;
+pub mod macros;
 pub mod page;
 pub mod root;
 pub mod slot;

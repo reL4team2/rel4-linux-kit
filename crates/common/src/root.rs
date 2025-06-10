@@ -15,7 +15,7 @@ pub enum RootEvent {
     AllocPage,
     FindService,
     RegisterIRQ,
-    Shutdown,
+    Shutdown = 0x204,
     TranslateAddr,
     CreateChannel,
     JoinChannel,
@@ -46,8 +46,19 @@ pub fn find_service(name: &str) -> Result<LeafSlot, sel4::Error> {
     Ok(dst_slot)
 }
 
-#[generate_ipc_send(label = RootEvent::TranslateAddr)]
-pub fn translate_addr(vaddr: usize) -> usize {}
+// #[generate_ipc_send(label = RootEvent::TranslateAddr)]
+pub fn translate_addr(vaddr: usize) -> usize {
+    let addr = &mut (vaddr as u64);
+    sel4::sys::seL4_CallWithMRsWithoutIPCBuffer(
+        crate::config::DEFAULT_PARENT_EP.bits(),
+        sel4::sys::seL4_MessageInfo::new(RootEvent::TranslateAddr.into(), 0, 0, 1),
+        Some(addr),
+        None,
+        None,
+        None,
+    );
+    *addr as _
+}
 
 pub fn register_irq(irq: usize, target_slot: LeafSlot) {
     let msg = &mut MessageInfo::new(RootEvent::RegisterIRQ.into(), 0, 0, 1);
@@ -110,5 +121,14 @@ pub fn create_channel(addr: usize, page_count: usize) -> usize {}
 pub fn join_channel(channel_id: usize, addr: usize) -> usize {}
 
 /// 向 ROOT_EP 发送关机
-#[generate_ipc_send(label = RootEvent::Shutdown)]
-pub fn shutdown() -> ! {}
+pub fn shutdown() -> ! {
+    sel4::sys::seL4_CallWithMRsWithoutIPCBuffer(
+        crate::config::DEFAULT_PARENT_EP.bits(),
+        sel4::sys::seL4_MessageInfo::new(RootEvent::Shutdown.into(), 0, 0, 0),
+        None,
+        None,
+        None,
+        None,
+    );
+    unreachable!()
+}

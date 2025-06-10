@@ -122,11 +122,8 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
- "bitflags",
  "common-macros",
- "log",
  "num_enum",
- "object",
  "sel4",
  "sel4-kit",
  "sel4-logging",
