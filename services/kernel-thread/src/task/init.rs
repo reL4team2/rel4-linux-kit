@@ -1,6 +1,6 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
-use libc_types::elf::AuxType;
+use libc_core::elf::AuxType;
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;

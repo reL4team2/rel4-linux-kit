@@ -4,20 +4,20 @@
 
 use core::time::Duration;
 
+use libc_core::{
+    types::{TimeSpec, TimeVal},
+    utsname::UTSName,
+};
 use sel4_kit::arch::current_time;
-use srv_gate::fs::TimeSpec;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{task::Sel4Task, timer::flush_timer};
 
-use super::{
-    SysResult,
-    types::sys::{TimeVal, UtsName},
-};
+use super::SysResult;
 
-pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UtsName) -> SysResult {
-    let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UtsName>()).unwrap();
-    let utsname = UtsName::mut_from_bytes(&mut utsname_bytes).unwrap();
+pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UTSName) -> SysResult {
+    let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UTSName>()).unwrap();
+    let utsname = UTSName::mut_from_bytes(&mut utsname_bytes).unwrap();
     let sysname = b"rel4-linux";
     let nodename = b"rel4-beta1";
     let release = b"vb0.1";
@@ -37,7 +37,7 @@ pub(super) fn sys_gettimeofday(
     tv: *mut TimeVal,
     _timeone: usize,
 ) -> SysResult {
-    let tv_now = TimeVal::now();
+    let tv_now: TimeVal = current_time().into();
     task.write_bytes(tv as _, tv_now.as_bytes());
     Ok(0)
 }

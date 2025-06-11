@@ -6,7 +6,6 @@ pub mod mm;
 pub mod signal;
 pub mod sys;
 pub mod thread;
-pub mod types;
 
 use fs::*;
 use mm::*;

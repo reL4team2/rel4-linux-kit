@@ -3,10 +3,12 @@
 //!
 
 use alloc::{boxed::Box, string::String, sync::Arc};
-use libc_types::fcntl::FcntlCmd;
+use libc_core::{
+    fcntl::FcntlCmd,
+    types::{IoVec, Stat},
+};
 use num_enum::TryFromPrimitive;
 use spin::mutex::Mutex;
-use srv_gate::fs::Stat;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
@@ -16,7 +18,7 @@ use crate::{
     task::Sel4Task,
 };
 
-use super::{SysResult, types::IoVec};
+use super::SysResult;
 
 pub(super) fn sys_chdir(task: &mut Sel4Task, path: *const u8) -> SysResult {
     let path = task.deal_path(FD_CUR_DIR, path)?;

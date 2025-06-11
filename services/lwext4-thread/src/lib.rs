@@ -14,15 +14,12 @@ use alloc::string::String;
 use common::root::create_channel;
 use flatten_objects::FlattenObjects;
 use imp::Ext4Disk;
-use libc_types::types::{Dirent64, StatMode};
+use libc_core::types::{Dirent64, Stat, StatMode};
 use lwext4_rust::{
     Ext4BlockWrapper, Ext4File, InodeTypes,
     bindings::{O_CREAT, O_TRUNC},
 };
-use srv_gate::{
-    BLK_IMPLS, def_fs_impl,
-    fs::{FSIface, Stat},
-};
+use srv_gate::{BLK_IMPLS, def_fs_impl, fs::FSIface};
 use syscalls::Errno;
 
 const O_DIRECTORY: u32 = 0o40000;
@@ -121,7 +118,7 @@ impl FSIface for EXT4FSImpl {
 
     fn stat(&mut self, inode: usize) -> Stat {
         if let Some(ext4_file) = self.stores.get_mut(inode) {
-            let mode = ext4_file.file_mode_get().unwrap()
+            let mode = StatMode::from_bits_retain(ext4_file.file_mode_get().unwrap())
                 | match ext4_file.get_type() {
                     InodeTypes::EXT4_DE_REG_FILE => StatMode::FILE,
                     InodeTypes::EXT4_DE_DIR => StatMode::DIR,
@@ -131,8 +128,7 @@ impl FSIface for EXT4FSImpl {
                     InodeTypes::EXT4_DE_SOCK => StatMode::SOCKET,
                     InodeTypes::EXT4_DE_SYMLINK => StatMode::LINK,
                     _ => StatMode::FILE,
-                }
-                .bits();
+                };
             Stat {
                 blksize: 0x200,
                 ino: inode as _,

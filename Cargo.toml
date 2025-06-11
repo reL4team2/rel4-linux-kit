@@ -52,7 +52,7 @@ common-macros = { path = "crates/common-macros" }
 srv-gate = { path = "crates/srv-gate" }
 flatten_objects = "0.2.2"
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
-libc-types = { git = "https://github.com/Byte-OS/ByteOS", rev = "0617152" }
+libc-core = { version = "0.2.0", features = ["zerocopy"] }
 
 spin = "0.9.8"
 syscalls = { version = "0.6", default-features = false }

@@ -4,6 +4,7 @@
 
 use alloc::{string::String, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
+use libc_core::sched::{CloneFlags, WaitOption};
 use object::Object;
 use sel4::UserContext;
 use syscalls::Errno;
@@ -16,12 +17,11 @@ use crate::{
         task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     },
     fs::file::File,
-    syscall::types::thread::WaitOption,
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
 };
 
-use super::{SysResult, types::thread::CloneFlags};
+use super::SysResult;
 
 /// 获取进程 id
 #[inline]
@@ -91,7 +91,7 @@ pub(super) fn sys_clone(
 ) -> SysResult {
     let signal = flags & 0xff;
     let flags = CloneFlags::from_bits_truncate(flags);
-    if !flags.is_empty() {
+    if flags.bits() > 0xff {
         panic!("Custom Clone is not supported");
     }
     log::debug!(

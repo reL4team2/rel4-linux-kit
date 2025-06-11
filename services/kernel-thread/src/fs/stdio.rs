@@ -1,8 +1,8 @@
 //! 标准输入输出使用的接口
 //!
 //! 目前标准输入输出等都使用一个结构体，通过设置不同的位置来确保只读，只写
+use libc_core::types::Stat;
 use sel4::debug_print;
-use srv_gate::fs::Stat;
 use syscalls::Errno;
 
 use crate::device::uart::get_char;

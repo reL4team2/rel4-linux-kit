@@ -5,7 +5,7 @@
 use super::SysResult;
 use crate::{consts::task::DEF_HEAP_ADDR, task::Sel4Task, utils::obj::alloc_page};
 use common::{config::PAGE_SIZE, page::PhysPage};
-use libc_types::mman::MapFlags;
+use libc_core::mman::MapFlags;
 use syscalls::Errno;
 
 #[inline]

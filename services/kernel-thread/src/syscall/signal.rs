@@ -2,30 +2,30 @@
 //!
 //!
 
-use libc_types::types::SigMaskHow;
+use libc_core::{
+    internal::SigAction,
+    types::{SigMaskHow, SigSet},
+};
 use sel4::UserContext;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::task::Sel4Task;
 
-use super::{
-    SysResult,
-    types::signal::{SigAction, SigProcMask},
-};
+use super::SysResult;
 
 pub(super) fn sys_sigprocmask(
     task: &mut Sel4Task,
     how: u8,
-    set: *const SigProcMask,
-    old: *mut SigProcMask,
+    set: *const SigSet,
+    old: *mut SigSet,
 ) -> SysResult {
     if !old.is_null() {
         task.write_bytes(old as _, task.signal.mask.as_bytes());
     }
     if !set.is_null() {
-        let sigproc_bytes = task.read_bytes(set as _, size_of::<SigProcMask>()).unwrap();
-        let maskset = &mut SigProcMask::ref_from_bytes(&sigproc_bytes).unwrap();
+        let sigproc_bytes = task.read_bytes(set as _, size_of::<SigSet>()).unwrap();
+        let maskset = &mut SigSet::ref_from_bytes(&sigproc_bytes).unwrap();
         let sighow = SigMaskHow::try_from(how).or(Err(Errno::EINVAL))?;
         task.signal.mask.handle(sighow, maskset);
     }
@@ -39,7 +39,7 @@ pub(super) fn sys_sigaction(
     oldact: *mut SigAction,
 ) -> SysResult {
     if !oldact.is_null() {
-        if let Some(old) = task.signal.actions[sig] {
+        if let Some(old) = &task.signal.actions[sig] {
             task.write_bytes(oldact as _, old.as_bytes());
         }
     }
@@ -47,7 +47,7 @@ pub(super) fn sys_sigaction(
     if !act.is_null() {
         let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
         let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
-        task.signal.actions[sig] = Some(*sigact);
+        task.signal.actions[sig] = Some(sigact.clone());
     }
     Ok(0)
 }
