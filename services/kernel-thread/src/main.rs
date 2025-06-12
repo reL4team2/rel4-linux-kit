@@ -47,14 +47,16 @@ pub mod utils;
 //     }};
 // }
 
-// macro_rules! test_task {
-// ($file:expr $(,$args:expr)*) => {{
-//         let mut file =
-//             fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
-//         child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
-//         sel4::debug_println!("loading file: {}", $file);
-//     }};
-// }
+macro_rules! test_task {
+($file:expr $(,$args:expr)*) => {{
+        let file =
+            ::fs::file::File::open(concat!("/", $file), OpenFlags::RDONLY).unwrap();
+        let mut data = vec![0u8; file.file_size().unwrap()];
+        file.read(&mut data).unwrap();
+        child_test::add_test_child(&data, &[$file $(,$args)*]).unwrap();
+        sel4::debug_println!("loading file: {}", $file);
+    }};
+}
 
 #[sel4_runtime::main]
 fn main() {
@@ -66,10 +68,6 @@ fn main() {
 
     // 初始化文件系统
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
-    let dir = ::fs::file::File::open("/", OpenFlags::DIRECTORY).unwrap();
-    for file in dir.read_dir().unwrap() {
-        log::error!("file: {:#x?}", file.filename);
-    }
 
     // 初始化设备
     device::init();
@@ -80,17 +78,14 @@ fn main() {
     // 初始化定时器
     timer::init();
 
-    {
-        let file = ::fs::file::File::open("/busybox", OpenFlags::RDONLY).unwrap();
-        let mut data = vec![0u8; file.file_size().unwrap()];
-        log::debug!("read data");
-        let rlen = file.read(&mut data).unwrap();
-        log::debug!("rlen: {}", rlen);
-        child_test::add_test_child(&data, &["echo", "123"]).unwrap();
-        sel4::debug_println!("loading file: {}", file.path());
-    }
+    // {
+    //     let file = ::fs::file::File::open("/busybox", OpenFlags::RDONLY).unwrap();
+    //     let mut data = vec![0u8; file.file_size().unwrap()];
+    //     file.read(&mut data).unwrap();
+    //     child_test::add_test_child(&data, &["echo", "123"]).unwrap();
+    // }
     // test_task!("busybox", "sh", "/init.sh");
-    // test_task!("runtest.exe", "-w", "entry-static.exe", "argv");
+    test_task!("runtest.exe", "-w", "entry-static.exe", "basename");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     spawn_async!(pool, exception::waiting_and_handle());

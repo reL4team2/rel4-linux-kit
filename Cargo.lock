@@ -240,7 +240,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 [[package]]
 name = "ext4fs"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=a871b75#a871b758951dd8e724199aa8bf274537fc2ef140"
 dependencies = [
  "libc-core",
  "log",
@@ -280,7 +280,7 @@ checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
 [[package]]
 name = "fs"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=a871b75#a871b758951dd8e724199aa8bf274537fc2ef140"
 dependencies = [
  "bitflags",
  "libc-core",
@@ -1155,7 +1155,7 @@ dependencies = [
 [[package]]
 name = "sync"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=a871b75#a871b758951dd8e724199aa8bf274537fc2ef140"
 dependencies = [
  "spin",
 ]
@@ -1288,7 +1288,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vfscore"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=a871b75#a871b758951dd8e724199aa8bf274537fc2ef140"
 dependencies = [
  "downcast-rs",
  "libc-core",

@@ -74,7 +74,6 @@ impl BlockIface for VirtIOBlkImpl {
         //     .add_at(badge as _, (ptr as usize, channel_id))
         //     .map_err(|_| ())
         //     .unwrap();
-        sel4::debug_println!("init dev: {}", channel_id);
         self.stores
             .add_at(0, (ptr as usize, channel_id))
             .map_err(|_| ())

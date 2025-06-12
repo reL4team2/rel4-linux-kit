@@ -46,9 +46,8 @@ pub(super) fn sys_mmap(
             .ok_or(Errno::EINVAL)?
             .clone();
         let file_len = file.file_size()?;
-        let mut data = vec![0u8; file_len - *file.offset.lock()];
-        file.readat(*file.offset.lock(), &mut data)?;
-
+        let mut data = vec![0u8; file_len];
+        file.readat(0, &mut data)?;
         for addr in (start..start + size).step_by(PAGE_SIZE) {
             task.map_page(addr, PhysPage::new(alloc_page()));
         }

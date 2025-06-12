@@ -65,6 +65,7 @@ pub fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
         Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0 as _, a1 as _, a2 as _),
         Sysno::rt_sigreturn => sys_sigreturn(task, ctx),
+        Sysno::rt_sigtimedwait => sys_sigtimedwait(task),
         Sysno::sched_yield => sys_sched_yield(task),
         Sysno::set_tid_address => sys_set_tid_addr(task, a0),
         Sysno::umount2 => sys_umount(task, a0 as _, a1 as _),

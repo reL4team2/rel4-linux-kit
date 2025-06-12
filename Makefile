@@ -21,7 +21,7 @@ qemu_args := -drive file=mount.img,if=none,format=raw,id=x0
 qemu_args += -device virtio-blk-device,drive=x0
 qemu_args += -device virtio-net-device,netdev=net0
 qemu_args += -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555
-
+qemu_args += --trace "virtio_*" --trace "virtqueue_*"
 # qemu_args += -netdev user,id=net0,hostfwd=tcp::6379-:6379
 # qemu_args += -device virtio-net-device,netdev=net0
 # qemu_args += -object filter-dump,id=net0,netdev=net0,file=packets.pcap

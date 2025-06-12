@@ -63,3 +63,12 @@ pub(super) fn sys_sigreturn(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
     *ctx = saved_ctx;
     Ok(*ctx.c_param(0) as _)
 }
+
+pub(super) fn sys_sigtimedwait(_task: &mut Sel4Task) -> SysResult {
+    debug!("sys_sigtimedwait @ ");
+    // WaitSignal(self.task.clone()).await;
+    // let task = current_user_task();
+    // task.inner_map(|x| x.signal.has_signal());
+    // Err(LinuxError::EAGAIN)
+    Ok(0)
+}
