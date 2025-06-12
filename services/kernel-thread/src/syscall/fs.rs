@@ -2,30 +2,24 @@
 //!
 //!
 
-use alloc::{boxed::Box, string::String, sync::Arc};
+use alloc::{string::String, sync::Arc};
+use fs::{file::File, pipe::create_pipe};
 use libc_core::{
-    fcntl::FcntlCmd,
+    fcntl::{AT_FDCWD, FcntlCmd, OpenFlags},
     types::{IoVec, Stat},
 };
 use num_enum::TryFromPrimitive;
-use spin::mutex::Mutex;
 use syscalls::Errno;
-use zerocopy::{FromBytes, IntoBytes};
+use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::{
-    consts::fd::FD_CUR_DIR,
-    fs::{file::File, get_mounted, mount, pipe::create_pipe2, umount},
-    task::Sel4Task,
-};
+use crate::task::Sel4Task;
 
 use super::SysResult;
 
 pub(super) fn sys_chdir(task: &mut Sel4Task, path: *const u8) -> SysResult {
-    let path = task.deal_path(FD_CUR_DIR, path)?;
-    const O_DIRECTORY: u64 = 0o40000;
+    let dir = task.fd_open(AT_FDCWD, path, OpenFlags::DIRECTORY)?;
     // 确保路径存在
-    File::open(&path, O_DIRECTORY)?;
-    task.file.work_dir = path;
+    task.file.work_dir = dir;
 
     Ok(0)
 }
@@ -51,7 +45,8 @@ pub(super) fn sys_fstat(task: &Sel4Task, fd: usize, stat_ptr: *mut Stat) -> SysR
     let file_table = task.file.file_ds.lock();
     let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
 
-    let stat = file.lock().stat()?;
+    let mut stat = Stat::new_zeroed();
+    let stat = file.stat(&mut stat)?;
     task.write_bytes(stat_ptr as _, stat.as_bytes());
     Ok(0)
 }
@@ -69,7 +64,7 @@ pub(super) fn sys_getdents64(
     let file_table = task.file.file_ds.lock();
     let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
     let mut buffer = vec![0u8; len];
-    let rlen = file.lock().getdents64(&mut buffer)?;
+    let rlen = file.getdents(&mut buffer)?;
     task.write_bytes(buf_ptr as _, &buffer[..rlen]);
     Ok(rlen)
 }
@@ -79,14 +74,14 @@ pub(super) fn sys_pipe2(task: &Sel4Task, fdsp: *const u32, flags: u64) -> SysRes
         panic!("flags != 0 is not supported");
     }
     log::debug!("pipe2 {:#p} {:#x}", fdsp, flags);
-    let (rxp, txp) = create_pipe2();
+    let (rxp, txp) = create_pipe();
     let mut file_table = task.file.file_ds.lock();
 
     let rx = file_table
-        .add(Arc::new(Mutex::new(File::from_raw(Box::new(rxp)))))
+        .add(File::new_dev(rxp))
         .map_err(|_| Errno::EMFILE)? as u32;
     let tx = file_table
-        .add(Arc::new(Mutex::new(File::from_raw(Box::new(txp)))))
+        .add(File::new_dev(txp))
         .map_err(|_| Errno::EMFILE)? as u32;
 
     task.write_bytes(fdsp as _, [rx, tx].as_bytes());
@@ -101,15 +96,13 @@ pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize
     let mut file_table = task.file.file_ds.lock();
     let file = file_table.get_mut(fd).ok_or(Errno::EBADF)?;
     let mut buffer = vec![0u8; count];
-    let rlen = file.lock().read(&mut buffer)?;
+    let rlen = file.read(&mut buffer)?;
     task.write_bytes(bufp as _, &buffer);
     Ok(rlen)
 }
 
 pub(super) fn sys_unlinkat(task: &Sel4Task, fd: isize, path: *const u8, _flags: u64) -> SysResult {
-    let path = task.deal_path(fd, path)?;
-    File::unlink(&path).unwrap();
-
+    task.fd_open(fd, path, OpenFlags::RDONLY)?.remove_self()?;
     Ok(0)
 }
 
@@ -119,7 +112,7 @@ pub(super) fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) 
     let mut file_table = task.file.file_ds.lock();
     let file = file_table.get_mut(fd).ok_or(Errno::EBADF)?;
 
-    file.lock().write(&buf)
+    file.write(&buf)
 }
 
 pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: usize) -> SysResult {
@@ -139,7 +132,7 @@ pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: u
 
 pub(super) fn sys_getcwd(task: &Sel4Task, buf: *mut u8, _size: usize) -> SysResult {
     log::warn!("get cwd is a simple implement, always return /");
-    task.write_bytes(buf as _, task.file.work_dir.as_bytes());
+    task.write_bytes(buf as _, task.file.work_dir.path().as_bytes());
 
     Ok(buf as _)
 }
@@ -151,21 +144,21 @@ pub(super) fn sys_mkdirat(
     mode: usize,
 ) -> SysResult {
     log::warn!("mkdirat @ mod {} is not supported", mode);
-    let path = task.deal_path(dirfd, path)?;
-    File::mkdir(&path)
+    task.fd_open(dirfd, path, OpenFlags::DIRECTORY | OpenFlags::CREAT)?;
+    Ok(0)
 }
 
 pub(super) fn sys_openat(
     task: &mut Sel4Task,
     fd: isize,
     path: *const u8,
-    flags: u64,
+    flags: usize,
     _mode: usize,
 ) -> SysResult {
-    let path = task.deal_path(fd, path)?;
+    let flags = OpenFlags::from_bits_truncate(flags);
+    let file = task.fd_open(fd, path, flags)?;
 
-    let file = File::open(&path, flags)?;
-    match task.file.file_ds.lock().add(Arc::new(Mutex::new(file))) {
+    match task.file.file_ds.lock().add(Arc::new(file)) {
         Ok(idx) => Ok(idx),
         Err(_) => todo!(),
     }
@@ -191,7 +184,7 @@ pub(super) fn sys_mount(
         data
     );
     if source == "/dev/vda2" {
-        mount(&target, get_mounted("/").1).unwrap();
+        // mount(&target, get_mounted("/").1).unwrap();
     } else {
         return Err(Errno::EPERM);
     }
@@ -214,5 +207,6 @@ pub(super) fn sys_fcntl(task: &Sel4Task, fd: usize, cmd: u32, _arg: usize) -> Sy
 pub(super) fn sys_umount(task: &Sel4Task, target: *const u8, flags: u64) -> SysResult {
     let target = String::from_utf8(task.read_cstr(target as _).ok_or(Errno::EINVAL)?).unwrap();
     log::debug!("umount @ {} {:#x}", target, flags);
-    umount(&target).map(|_| 0)
+    // umount(&target).map(|_| 0)
+    Ok(0)
 }

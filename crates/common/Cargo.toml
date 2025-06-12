@@ -14,6 +14,8 @@ sel4 = { workspace = true }
 sel4-logging = { workspace = true }
 common-macros = { workspace = true }
 sel4-kit = { workspace = true }
+object = { version = "0.36.1", default-features = false, features = ["read"] }
+bitflags = "2.9.1"
 num_enum = { version = "0.7.3", default-features = false }
 spin = { workspace = true }
 syscalls = { workspace = true }

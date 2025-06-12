@@ -4,7 +4,11 @@
 
 use alloc::{string::String, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
-use libc_core::sched::{CloneFlags, WaitOption};
+use fs::file::File;
+use libc_core::{
+    fcntl::{AT_FDCWD, OpenFlags},
+    sched::{CloneFlags, WaitOption},
+};
 use object::Object;
 use sel4::UserContext;
 use syscalls::Errno;
@@ -12,11 +16,7 @@ use zerocopy::IntoBytes;
 
 use crate::{
     child_test::TASK_MAP,
-    consts::{
-        fd::{DEF_OPEN_FLAGS, FD_CUR_DIR},
-        task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
-    },
-    fs::file::File,
+    consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
 };
@@ -163,7 +163,7 @@ pub(super) fn sys_execve(
     args: *const *const u8,
     envp: *const *const u8,
 ) -> SysResult {
-    let path = task.deal_path(FD_CUR_DIR, path)?;
+    let path = task.fd_resolve(AT_FDCWD, path)?;
     let argsp = if !args.is_null() {
         task.read_vec(args as _).ok_or(Errno::EINVAL)?
     } else {
@@ -185,11 +185,13 @@ pub(super) fn sys_execve(
         .map(|x| x.map(|x| String::from_utf8(x).unwrap()))
         .collect::<Result<Vec<_>, Errno>>()?;
 
-    let mut file = File::open(&path, DEF_OPEN_FLAGS)?;
+    let file = File::open(path, OpenFlags::RDONLY)?;
 
     task.clear_maped();
 
-    let file_data = file.read_all().unwrap();
+    let mut file_data = vec![0u8; file.file_size().unwrap()];
+    file.read(&mut file_data)?;
+    // let file_data = file.read_all().();
     let file = object::File::parse(file_data.as_slice()).expect("can't load elf file");
     task.load_elf(&file);
 

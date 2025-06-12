@@ -122,8 +122,10 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "common-macros",
  "num_enum",
+ "object",
  "sel4",
  "sel4-kit",
  "sel4-logging",
@@ -218,6 +220,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast-rs"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -228,6 +236,19 @@ name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
+
+[[package]]
+name = "ext4fs"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+dependencies = [
+ "libc-core",
+ "log",
+ "lwext4_rust",
+ "sync",
+ "syscalls",
+ "vfscore",
+]
 
 [[package]]
 name = "fallible-iterator"
@@ -255,6 +276,19 @@ name = "foldhash"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
+
+[[package]]
+name = "fs"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+dependencies = [
+ "bitflags",
+ "libc-core",
+ "log",
+ "sync",
+ "syscalls",
+ "vfscore",
+]
 
 [[package]]
 name = "futures"
@@ -393,7 +427,9 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "common",
+ "ext4fs",
  "flatten_objects",
+ "fs",
  "futures",
  "hashbrown",
  "libc-core",
@@ -411,6 +447,7 @@ dependencies = [
  "srv-gate",
  "syscalls",
  "uart-thread",
+ "vfscore",
  "zerocopy 0.8.25",
 ]
 
@@ -428,9 +465,9 @@ checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 
 [[package]]
 name = "libc-core"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "210e2b6b661428809fdc39f6651e341c73a5d769ec622b4b109db4037e722482"
+checksum = "509d456e2be4b2f778b3d9b592e70bf6e877675262040f6d02edfeec217efd50"
 dependencies = [
  "bitflags",
  "num_enum",
@@ -1116,10 +1153,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sync"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+dependencies = [
+ "spin",
+]
+
+[[package]]
 name = "syscalls"
 version = "0.6.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d0e35dc7d73976a53c7e6d7d177ef804a0c0ee774ec77bcc520c2216fd7cbe"
+source = "git+https://github.com/jasonwhite/syscalls.git#92624de3dee33427fde46da083809d7e86a721ec"
 
 [[package]]
 name = "test-demo"
@@ -1240,6 +1284,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vfscore"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=c157728#c1577282d163064fae781e886e5450d4dc355f29"
+dependencies = [
+ "downcast-rs",
+ "libc-core",
+ "syscalls",
+]
 
 [[package]]
 name = "virtio-drivers"

@@ -1,10 +1,7 @@
-use crate::{
-    consts::task::DEF_STACK_TOP,
-    fs::{file::File, stdio::StdConsole},
-    task::Sel4Task,
-};
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc};
+use crate::{consts::task::DEF_STACK_TOP, fs::stdio::StdConsole, task::Sel4Task};
+use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc};
 use common::config::PAGE_SIZE;
+use fs::file::File;
 use object::{BinaryFormat, Object};
 use sel4::Result;
 use spin::Mutex;
@@ -34,8 +31,8 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
 
     let mut file_table = task.file.file_ds.lock();
     for i in 0..3 {
-        let file = File::from_raw(Box::new(StdConsole::new(i)));
-        let _ = file_table.add_at(i as _, Arc::new(Mutex::new(file)));
+        let file = File::new_dev(Arc::new(StdConsole::new(i)));
+        let _ = file_table.add_at(i as _, file);
     }
     drop(file_table);
 
