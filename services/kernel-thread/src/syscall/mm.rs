@@ -9,14 +9,14 @@ use libc_core::mman::MapFlags;
 use syscalls::Errno;
 
 #[inline]
-pub(super) fn sys_brk(task: &mut Sel4Task, heap: usize) -> SysResult {
+pub(super) fn sys_brk(task: &Sel4Task, heap: usize) -> SysResult {
     debug!("BRK @ heap: {heap:#x}");
     Ok(task.brk(heap))
 }
 
 #[inline]
 pub(super) fn sys_mmap(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     start: usize,
     size: usize,
     prot: usize,

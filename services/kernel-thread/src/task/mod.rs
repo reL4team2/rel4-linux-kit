@@ -53,23 +53,23 @@ pub struct Sel4Task {
     /// 任务内存映射信息
     pub mem: Arc<Mutex<TaskMemInfo>>,
     /// 退出状态码
-    pub exit: Option<i32>,
+    pub exit: Mutex<Option<i32>>,
     /// Futex 表
     pub futex_table: Arc<Mutex<FutexTable>>,
     /// 信号信息
-    pub signal: TaskSignal,
+    pub signal: Mutex<TaskSignal>,
     /// The clear thread tid field
     ///
     /// See <https://manpages.debian.org/unstable/manpages-dev/set_tid_address.2.en.html#clear_child_tid>
     ///
     /// When the thread exits, the kernel clears the word at this address if it is not NULL.
-    pub clear_child_tid: Option<usize>,
+    pub clear_child_tid: Mutex<Option<usize>>,
     /// 任务相关文件信息。
     pub file: TaskFileInfo,
     /// 定时器
-    pub timer: Duration,
+    pub timer: Mutex<Duration>,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
-    pub info: TaskInfo,
+    pub info: Mutex<TaskInfo>,
 }
 
 impl Drop for Sel4Task {
@@ -131,12 +131,12 @@ impl Sel4Task {
             vspace,
             futex_table: Arc::new(Mutex::new(BTreeMap::new())),
             mem: Arc::new(Mutex::new(TaskMemInfo::default())),
-            signal: TaskSignal::default(),
-            exit: None,
-            clear_child_tid: None,
+            signal: Mutex::new(TaskSignal::default()),
+            exit: Mutex::new(None),
+            clear_child_tid: Mutex::new(None),
             file: TaskFileInfo::default(),
-            info: TaskInfo::default(),
-            timer: Duration::ZERO,
+            info: Mutex::new(TaskInfo::default()),
+            timer: Mutex::new(Duration::ZERO),
         })
     }
 
@@ -170,13 +170,13 @@ impl Sel4Task {
             cnode,
             vspace: self.vspace,
             mem: self.mem.clone(),
-            exit: None,
+            exit: Mutex::new(None),
             futex_table: self.futex_table.clone(),
-            signal: TaskSignal::default(),
-            clear_child_tid: None,
+            signal: Mutex::new(TaskSignal::default()),
+            clear_child_tid: Mutex::new(None),
             file: self.file.clone(),
-            info: self.info.clone(),
-            timer: Duration::ZERO,
+            info: Mutex::new(self.info.lock().clone()),
+            timer: Mutex::new(Duration::ZERO),
         })
     }
 
@@ -185,7 +185,7 @@ impl Sel4Task {
     /// - `start` 从哪块内存开始
     /// - `size`  需要查找的内存块大小
     pub fn find_free_area(&self, start: usize, size: usize) -> usize {
-        let mut last_addr = self.info.task_vm_end.max(start);
+        let mut last_addr = self.info.lock().task_vm_end.max(start);
         for vaddr in self.mem.lock().mapped_page.keys() {
             if last_addr + size <= *vaddr {
                 return last_addr;
@@ -199,7 +199,7 @@ impl Sel4Task {
     ///
     /// - `vaddr` 需要映射的虚拟地址，需要对齐到 4k 页
     /// - `page`  需要映射的物理页，是一个 Capability
-    pub fn map_page(&mut self, vaddr: usize, page: PhysPage) {
+    pub fn map_page(&self, vaddr: usize, page: PhysPage) {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         for _ in 0..sel4::vspace_levels::NUM_LEVELS {
             let res: core::result::Result<(), sel4::Error> = page.cap().frame_map(
@@ -241,7 +241,7 @@ impl Sel4Task {
     /// - `end`   是结束地址
     ///
     /// 说明: 地址需要对齐到 0x1000
-    pub fn map_region(&mut self, start: usize, end: usize) {
+    pub fn map_region(&self, start: usize, end: usize) {
         assert!(end % 0x1000 == 0);
         assert!(start % 0x1000 == 0);
 
@@ -254,7 +254,7 @@ impl Sel4Task {
     /// 加载一个 elf 文件到当前任务的地址空间
     ///
     /// - `elf_data` 是 elf 文件的数据
-    pub fn load_elf(&mut self, file: &File<'_>) {
+    pub fn load_elf(&self, file: &File<'_>) {
         // 加载程序到内存
         file.sections()
             .filter(|x| x.name() == Ok(".text"))
@@ -312,7 +312,7 @@ impl Sel4Task {
         });
 
         // 配置程序最大的位置
-        self.info.task_vm_end = file
+        self.info.lock().task_vm_end = file
             .sections()
             .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
             .div_ceil(PAGE_SIZE as _) as usize

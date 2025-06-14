@@ -25,7 +25,7 @@ pub type SysResult = Result<usize, Errno>;
 /// 处理系统调用
 /// - `task` [Sel4Task]   需要处理的任务
 /// - `ctx` [UserContext] 系统调用上下文，修改后需要恢复
-pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
+pub async fn handle_syscall(task: &Sel4Task, ctx: &mut UserContext) -> SysResult {
     let id = Sysno::new(*ctx.gpr(8) as _);
     let a0 = *ctx.gpr(0) as usize;
     let a1 = *ctx.gpr(1) as usize;
@@ -74,6 +74,7 @@ pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0 as _, a1 as _, a2 as _),
         Sysno::rt_sigreturn => sys_sigreturn(task, ctx),
         Sysno::rt_sigtimedwait => sys_sigtimedwait(task),
+        Sysno::tkill => sys_tkill(task, a0, a1),
         Sysno::sched_yield => sys_sched_yield(task),
         Sysno::set_tid_address => sys_set_tid_addr(task, a0),
         Sysno::umount2 => sys_umount(task, a0 as _, a1 as _),

@@ -31,7 +31,7 @@ pub static GLOBAL_NOTIFY: Lazy<Notification> = Lazy::new(alloc_notification);
 /// - 异常指令为 0xdeadbeef 时，说明是系统调用
 /// - 异常指令为其他值时，说明是用户异常
 pub async fn handle_user_exception(tid: u64, exception: UserException) {
-    let mut task = TASK_MAP.lock().remove(&tid).unwrap();
+    let task = TASK_MAP.lock().get(&tid).unwrap().clone();
 
     let ins = task.read_ins(exception.inner().get_FaultIP() as _);
 
@@ -41,7 +41,7 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb
             .tcb_read_all_registers(true)
             .expect("can't read task context");
-        let result = handle_syscall(&mut task, &mut user_ctx).await;
+        let result = handle_syscall(&task, &mut user_ctx).await;
         debug!("\t SySCall Ret: {:x?}", result);
         let ret_v = match result {
             Ok(v) => v,
@@ -52,12 +52,7 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
         }
 
-        if task.exit.is_some() {
-            if task.ppid != 0 {
-                TASK_MAP.lock().insert(task.tid as _, task);
-            } else {
-                log::warn!("the orphan task will be destory");
-            }
+        if task.exit.lock().is_some() {
             return;
         }
 
@@ -67,14 +62,12 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             .unwrap();
 
         // 如果没有定时器
-        if task.timer.is_zero() {
+        if task.timer.lock().is_zero() {
             // 检查信号
             task.check_signal(&mut user_ctx);
             // 恢复任务运行状态
             task.tcb.tcb_resume().unwrap();
         }
-
-        TASK_MAP.lock().insert(task.tid as _, task);
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
     }

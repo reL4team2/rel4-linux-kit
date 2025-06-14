@@ -47,16 +47,17 @@ pub fn handle_timer() {
     // 处理已经到时间的定时器
     let curr_time = current_time();
     task_map.values_mut().for_each(|task| {
-        if task.exit.is_none() && !task.timer.is_zero() && curr_time > task.timer {
-            task.timer = Duration::ZERO;
+        let task_timer = *task.timer.lock();
+        if task.exit.lock().is_none() && !task_timer.is_zero() && curr_time > task_timer {
+            *task.timer.lock() = Duration::ZERO;
             task.tcb.tcb_resume().unwrap();
         }
     });
     // 设置下一个定时器
     let next_time = task_map
         .values()
-        .filter(|x| x.exit.is_none() && !x.timer.is_zero())
-        .map(|x| x.timer)
+        .filter(|x| x.exit.lock().is_none() && !x.timer.lock().is_zero())
+        .map(|x| *x.timer.lock())
         .min()
         .unwrap_or(Duration::ZERO);
     set_timer(next_time);

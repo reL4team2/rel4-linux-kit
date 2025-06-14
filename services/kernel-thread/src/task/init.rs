@@ -13,7 +13,7 @@ impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
     ///
     /// 需要传递的栈，环境变量和辅助向量需要提前填充到 [Sel4Task::info] 下
-    pub fn init_stack(&mut self) -> usize {
+    pub fn init_stack(&self) -> usize {
         // Other Strings 以 STACK_ALIGN_SIZE 对齐
         //
         // +------------------+  <- 用户栈顶
@@ -50,6 +50,7 @@ impl Sel4Task {
 
         let args_ptr: Vec<_> = self
             .info
+            .lock()
             .args
             .iter()
             .map(|arg| {
@@ -85,7 +86,7 @@ impl Sel4Task {
         let mut auxv = BTreeMap::new();
         auxv.insert(AuxType::ExecFn, args_ptr[0]);
         auxv.insert(AuxType::PageSize, PAGE_SIZE);
-        auxv.insert(AuxType::Entry, self.info.entry);
+        auxv.insert(AuxType::Entry, self.info.lock().entry);
         auxv.insert(AuxType::GID, 0);
         auxv.insert(AuxType::EGID, 0);
         auxv.insert(AuxType::UID, 0);

@@ -10,6 +10,7 @@ use libc_core::{
     fcntl::{AT_FDCWD, OpenFlags},
     futex::FutexFlags,
     sched::{CloneFlags, WaitOption},
+    signal::SignalNum,
 };
 use object::Object;
 use sel4::UserContext;
@@ -47,15 +48,15 @@ pub fn sys_getppid(task: &Sel4Task) -> SysResult {
 }
 
 #[inline]
-pub(super) fn sys_set_tid_addr(task: &mut Sel4Task, addr: usize) -> SysResult {
-    task.clear_child_tid = Some(addr);
+pub(super) fn sys_set_tid_addr(task: &Sel4Task, addr: usize) -> SysResult {
+    *task.clear_child_tid.lock() = Some(addr);
     Ok(task.tid)
 }
 
 #[inline]
-pub(super) fn sys_exit(task: &mut Sel4Task, exit_code: i32) -> SysResult {
+pub(super) fn sys_exit(task: &Sel4Task, exit_code: i32) -> SysResult {
     debug!("sys_exit @ exit_code: {} ", exit_code);
-    task.exit = Some(exit_code);
+    *task.exit.lock() = Some(exit_code);
     wake_hangs(task);
     Ok(0)
 }
@@ -91,8 +92,8 @@ pub(super) async fn sys_wait4(
         TASK_MAP
             .lock()
             .iter()
-            .find(|(_, target)| target.exit.is_some() && target.ppid == task.pid)
-            .map(|(&tid, task)| (tid, task.exit.unwrap()))
+            .find(|(_, target)| target.exit.lock().is_some() && target.ppid == task.pid)
+            .map(|(&tid, task)| (tid, task.exit.lock().unwrap()))
     };
 
     if finded.is_none() {
@@ -139,7 +140,7 @@ pub(super) fn sys_clone(
         Sel4Task::new().unwrap()
     };
     let new_task_id = new_task.tid;
-    new_task.signal.exit_sig = signal;
+    new_task.signal.lock().exit_sig = signal;
     new_task.ppid = task.pid;
 
     let mut regs = task.tcb.tcb_read_all_registers(false).unwrap();
@@ -199,13 +200,13 @@ pub(super) fn sys_clone(
         .tcb
         .tcb_write_all_registers(true, &mut regs)
         .unwrap();
-    TASK_MAP.lock().insert(new_task_id as _, new_task);
+    TASK_MAP.lock().insert(new_task_id as _, Arc::new(new_task));
 
     Ok(new_task_id)
 }
 
 pub(super) fn sys_execve(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     ctx: &mut UserContext,
     path: *const u8,
     args: *const *const u8,
@@ -244,8 +245,8 @@ pub(super) fn sys_execve(
     task.load_elf(&file);
 
     // 填充初始化信息
-    task.info.entry = file.entry() as _;
-    task.info.args = args;
+    task.info.lock().entry = file.entry() as _;
+    task.info.lock().args = args;
 
     // 映射栈内存并填充初始化信息
     task.map_region(DEF_STACK_TOP - 16 * PAGE_SIZE, DEF_STACK_TOP);
@@ -254,7 +255,7 @@ pub(super) fn sys_execve(
     // 写入线程的寄存器信息
     {
         *ctx = sel4::UserContext::default();
-        *ctx.pc_mut() = (task.info.entry - 4) as _;
+        *ctx.pc_mut() = (task.info.lock().entry - 4) as _;
         *ctx.sp_mut() = sp_ptr as _;
     }
 
@@ -262,7 +263,7 @@ pub(super) fn sys_execve(
 }
 
 #[inline]
-pub(super) fn sys_sched_yield(_task: &mut Sel4Task) -> SysResult {
+pub(super) fn sys_sched_yield(_task: &Sel4Task) -> SysResult {
     Ok(0)
 }
 
@@ -308,4 +309,22 @@ pub(super) async fn sys_futex(
         }
         _ => Err(Errno::EPERM),
     }
+}
+
+pub(super) fn sys_tkill(task: &Sel4Task, tid: usize, signum: usize) -> SysResult {
+    debug!("sys_tkill @ tid: {}, signum: {}", tid, signum);
+    let target_signal = SignalNum::from_num(signum).ok_or(Errno::EINVAL)?;
+    let mut task_map = TASK_MAP.lock();
+    let target = if tid == task.tid {
+        task
+    } else {
+        task_map
+            .iter_mut()
+            .find(|x| *x.0 == tid as _)
+            .map(|(_, task)| task)
+            .ok_or(Errno::ESRCH)?
+    };
+
+    target.add_signal(target_signal);
+    Ok(0)
 }

@@ -18,10 +18,10 @@ use crate::task::Sel4Task;
 
 use super::SysResult;
 
-pub(super) fn sys_chdir(task: &mut Sel4Task, path: *const u8) -> SysResult {
+pub(super) fn sys_chdir(task: &Sel4Task, path: *const u8) -> SysResult {
     let dir = task.fd_open(AT_FDCWD, path, OpenFlags::DIRECTORY)?;
     // 确保路径存在
-    task.file.work_dir = dir;
+    *task.file.work_dir.lock() = dir;
 
     Ok(0)
 }
@@ -224,7 +224,7 @@ pub(super) fn sys_lseek(task: &Sel4Task, fd: usize, offset: usize, whence: usize
 
 pub(super) fn sys_getcwd(task: &Sel4Task, buf: *mut u8, _size: usize) -> SysResult {
     log::warn!("get cwd is a simple implement, always return /");
-    task.write_bytes(buf as _, task.file.work_dir.path().as_bytes());
+    task.write_bytes(buf as _, task.file.work_dir.lock().path().as_bytes());
 
     Ok(buf as _)
 }
@@ -241,7 +241,7 @@ pub(super) fn sys_mkdirat(
 }
 
 pub(super) fn sys_openat(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     fd: isize,
     path: *const u8,
     flags: usize,

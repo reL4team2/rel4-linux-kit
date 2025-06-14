@@ -1,5 +1,5 @@
 use alloc::{collections::vec_deque::VecDeque, vec::Vec};
-use libc_core::{internal::SigAction, types::SigSet};
+use libc_core::{internal::SigAction, signal::SignalNum, types::SigSet};
 use sel4::UserContext;
 
 use super::Sel4Task;
@@ -12,7 +12,7 @@ pub struct TaskSignal {
     /// 信号处理函数
     pub actions: [Option<SigAction>; 65],
     /// 等待处理的信号
-    pub pedings: VecDeque<u8>,
+    pub pedings: VecDeque<SignalNum>,
     /// 处理信号过程中存储的上下文
     pub save_context: Vec<UserContext>,
 }
@@ -36,25 +36,39 @@ impl Sel4Task {
     ///
     /// ## 说明
     /// 当前任务的上下文在检测到信号待处理的时候会进程存储
-    pub fn check_signal(&mut self, ctx: &mut UserContext) {
+    pub fn check_signal(&self, ctx: &mut UserContext) {
         warn!("check signal is not checking the mask now");
-        if let Some(signal) = self.signal.pedings.pop_front() {
+        let mut task_signal = self.signal.lock();
+        if let Some(signal) = task_signal.pedings.pop_front() {
             // 保存处理信号前的上下文，信号处理结束后恢复
-            self.signal.save_context.push(ctx.clone());
+            task_signal.save_context.push(ctx.clone());
 
-            let action = match &self.signal.actions[signal as usize] {
+            let action = match &task_signal.actions[signal.num()] {
                 Some(action) => action,
                 None => {
-                    warn!("signal {} is not handled", signal);
+                    warn!("signal {:?} is not handled", signal);
                     return;
                 }
             };
-            log::warn!("action {signal} value: {:#x?}", action);
+            log::warn!("action {signal:?} value: {:#x?}", action);
             *ctx.c_param_mut(0) = signal as _;
             *ctx.pc_mut() = action.handler as _;
             *ctx.gpr_mut(30) = action.restorer as _;
 
             self.tcb.tcb_write_all_registers(false, ctx).unwrap();
         }
+    }
+
+    /// 添加信号
+    ///
+    /// ## 参数
+    /// - `signal` 为当前 [Sel4Task] 添加的信号
+    ///
+    /// ## 说明
+    ///
+    /// 添加信号可能会打断某些行为
+    #[inline]
+    pub fn add_signal(&self, signal: SignalNum) {
+        self.signal.lock().pedings.push_back(signal);
     }
 }

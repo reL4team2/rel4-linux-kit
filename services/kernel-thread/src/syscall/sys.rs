@@ -17,7 +17,7 @@ use crate::{task::Sel4Task, timer::flush_timer};
 
 use super::SysResult;
 
-pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UTSName) -> SysResult {
+pub(super) fn sys_uname(task: &Sel4Task, buf: *mut UTSName) -> SysResult {
     let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UTSName>()).unwrap();
     let utsname = UTSName::mut_from_bytes(&mut utsname_bytes).unwrap();
     let sysname = b"rel4-linux";
@@ -34,18 +34,14 @@ pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UTSName) -> SysResult {
     Ok(0)
 }
 
-pub(super) fn sys_gettimeofday(
-    task: &mut Sel4Task,
-    tv: *mut TimeVal,
-    _timeone: usize,
-) -> SysResult {
+pub(super) fn sys_gettimeofday(task: &Sel4Task, tv: *mut TimeVal, _timeone: usize) -> SysResult {
     let tv_now: TimeVal = current_time().into();
     task.write_bytes(tv as _, tv_now.as_bytes());
     Ok(0)
 }
 
 pub(super) fn sys_clock_gettime(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     clock_id: usize,
     times_ptr: *mut TimeSpec,
 ) -> SysResult {
@@ -74,7 +70,7 @@ pub(super) fn sys_clock_gettime(
 }
 
 pub(super) fn sys_nanosleep(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     req_ptr: *const TimeSpec,
     rem_ptr: *mut TimeSpec,
 ) -> SysResult {
@@ -89,8 +85,8 @@ pub(super) fn sys_nanosleep(
     let req = TimeSpec::ref_from_bytes(&nano_bytes).unwrap();
     debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
 
-    task.timer = curr_time + Duration::new(req.sec as _, req.nsec as _);
-    flush_timer(task.timer);
+    *task.timer.lock() = curr_time + Duration::new(req.sec as _, req.nsec as _);
+    flush_timer(*task.timer.lock());
 
     if !rem_ptr.is_null() {
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
@@ -99,7 +95,7 @@ pub(super) fn sys_nanosleep(
 }
 
 pub(super) fn sys_prlimit64(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     pid: usize,
     resource: usize,
     new_limit: *const Rlimit,

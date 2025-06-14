@@ -14,7 +14,7 @@ use super::Sel4Task;
 #[derive(Clone)]
 pub struct TaskFileInfo {
     /// 工作目录
-    pub work_dir: File,
+    pub work_dir: Arc<Mutex<File>>,
     /// 文件描述符
     pub file_ds: Arc<Mutex<FlattenObjects<Arc<File>, 0x200>>>,
     /// 读写限制
@@ -25,7 +25,7 @@ impl Default for TaskFileInfo {
     fn default() -> Self {
         let file_ds = Arc::new(Mutex::new(FlattenObjects::new()));
         Self {
-            work_dir: File::open("/", OpenFlags::DIRECTORY).unwrap(),
+            work_dir: Arc::new(Mutex::new(File::open("/", OpenFlags::DIRECTORY).unwrap())),
             file_ds,
             rlimit: Arc::new(Mutex::new(Rlimit {
                 curr: 150,
@@ -61,16 +61,17 @@ impl Sel4Task {
         } else {
             let parent = match dirfd {
                 AT_FDCWD => self.file.work_dir.clone(),
-                _ => self
-                    .file
-                    .file_ds
-                    .lock()
-                    .get(dirfd as _)
-                    .ok_or(Errno::EBADF)?
-                    .as_ref()
-                    .clone(),
+                _ => Arc::new(Mutex::new(
+                    self.file
+                        .file_ds
+                        .lock()
+                        .get(dirfd as _)
+                        .ok_or(Errno::EBADF)?
+                        .as_ref()
+                        .clone(),
+                )),
             };
-            Ok(parent.path_buf().join(&filename))
+            Ok(parent.lock().path_buf().join(&filename))
         }
     }
 }

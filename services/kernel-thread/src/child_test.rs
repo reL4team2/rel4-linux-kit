@@ -9,12 +9,15 @@ use object::{BinaryFormat, Object};
 use spin::Mutex;
 use syscalls::Errno;
 
+/// 任务类型
+pub type ArcTask = Arc<Sel4Task>;
+
 /// 任务表，可以通过任务 ID 获取任务
-pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());
+pub static TASK_MAP: Mutex<BTreeMap<u64, ArcTask>> = Mutex::new(BTreeMap::new());
 
 /// 添加一个测试任务
 pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<(), sel4::Error> {
-    let mut task = Sel4Task::new()?;
+    let task = Sel4Task::new()?;
 
     let file: object::File<'_> = object::File::parse(elf_file).expect("can't load elf file");
     assert!(file.format() == BinaryFormat::Elf);
@@ -22,8 +25,8 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<(), sel4::Error>
     task.load_elf(&file);
 
     // 填充初始化信息
-    task.info.entry = file.entry() as _;
-    task.info.args = args.iter().map(|x| String::from(*x)).collect();
+    task.info.lock().entry = file.entry() as _;
+    task.info.lock().args = args.iter().map(|x| String::from(*x)).collect();
 
     // 映射栈内存并填充初始化信息
     task.map_region(DEF_STACK_TOP - 16 * PAGE_SIZE, DEF_STACK_TOP);
@@ -43,7 +46,7 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<(), sel4::Error>
     {
         let mut user_context = sel4::UserContext::default();
 
-        *user_context.pc_mut() = task.info.entry as _;
+        *user_context.pc_mut() = task.info.lock().entry as _;
         *user_context.sp_mut() = sp_ptr as _;
 
         // 写入寄存器信息并恢复运行
@@ -52,7 +55,7 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<(), sel4::Error>
             .unwrap();
     }
 
-    TASK_MAP.lock().insert(task.tid as _, task);
+    TASK_MAP.lock().insert(task.tid as _, Arc::new(task));
 
     Ok(())
 }
@@ -76,9 +79,11 @@ impl Future for WaitPid {
         let finded = task_map
             .iter()
             .find(|(_, target)| {
-                target.exit.is_some() && target.ppid == self.0 as _ && target.pid == self.1 as _
+                target.exit.lock().is_some()
+                    && target.ppid == self.0 as _
+                    && target.pid == self.1 as _
             })
-            .map(|(&tid, task)| (tid, task.exit.unwrap()));
+            .map(|(&tid, task)| (tid, task.exit.lock().unwrap()));
 
         match finded {
             Some(res) => Poll::Ready(Some(res)),
@@ -110,8 +115,8 @@ impl Future for WaitAnyChild {
         let task_map = TASK_MAP.lock();
         let finded = task_map
             .iter()
-            .find(|(_, target)| target.exit.is_some() && target.ppid == self.0 as _)
-            .map(|(&tid, task)| (tid, task.exit.unwrap()));
+            .find(|(_, target)| target.exit.lock().is_some() && target.ppid == self.0 as _)
+            .map(|(&tid, task)| (tid, task.exit.lock().unwrap()));
 
         match finded {
             Some(res) => Poll::Ready(Some(res)),

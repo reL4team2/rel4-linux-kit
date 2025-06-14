@@ -35,7 +35,7 @@ impl Sel4Task {
     ///
     /// ### 说明
     /// 如果 `value` 的值为 0，则返回当前的堆地址，否则就将堆扩展到指定的地址
-    pub fn brk(&mut self, value: usize) -> usize {
+    pub fn brk(&self, value: usize) -> usize {
         let mut mem_info = self.mem.lock();
         if value == 0 {
             return mem_info.heap;

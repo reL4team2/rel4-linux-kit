@@ -91,7 +91,7 @@ fn main() {
     loop {
         {
             // 所有的任务都执行完毕
-            if !TASK_MAP.lock().iter().any(|x| x.1.exit.is_none()) {
+            if !TASK_MAP.lock().iter().any(|x| x.1.exit.lock().is_none()) {
                 sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
                 shutdown();
             }

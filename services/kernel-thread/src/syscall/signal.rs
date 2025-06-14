@@ -4,6 +4,7 @@
 
 use libc_core::{
     internal::SigAction,
+    signal::SignalNum,
     types::{SigMaskHow, SigSet},
 };
 use sel4::UserContext;
@@ -15,31 +16,31 @@ use crate::task::Sel4Task;
 use super::SysResult;
 
 pub(super) fn sys_sigprocmask(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     how: u8,
     set: *const SigSet,
     old: *mut SigSet,
 ) -> SysResult {
     if !old.is_null() {
-        task.write_bytes(old as _, task.signal.mask.as_bytes());
+        task.write_bytes(old as _, task.signal.lock().mask.as_bytes());
     }
     if !set.is_null() {
         let sigproc_bytes = task.read_bytes(set as _, size_of::<SigSet>()).unwrap();
         let maskset = &mut SigSet::ref_from_bytes(&sigproc_bytes).unwrap();
         let sighow = SigMaskHow::try_from(how).or(Err(Errno::EINVAL))?;
-        task.signal.mask.handle(sighow, maskset);
+        task.signal.lock().mask.handle(sighow, maskset);
     }
     Ok(0)
 }
 
 pub(super) fn sys_sigaction(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     sig: usize,
     act: *const SigAction,
     oldact: *mut SigAction,
 ) -> SysResult {
     if !oldact.is_null() {
-        if let Some(old) = &task.signal.actions[sig] {
+        if let Some(old) = &task.signal.lock().actions[sig] {
             task.write_bytes(oldact as _, old.as_bytes());
         }
     }
@@ -47,24 +48,24 @@ pub(super) fn sys_sigaction(
     if !act.is_null() {
         let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
         let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
-        task.signal.actions[sig] = Some(sigact.clone());
+        task.signal.lock().actions[sig] = Some(sigact.clone());
     }
     Ok(0)
 }
 
-pub(super) fn sys_kill(task: &mut Sel4Task, pid: usize, sig: usize) -> SysResult {
+pub(super) fn sys_kill(task: &Sel4Task, pid: usize, sig: usize) -> SysResult {
     assert_eq!(pid, task.pid);
-    task.signal.pedings.push_back(sig as _);
+    task.add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?);
     Ok(0)
 }
 
-pub(super) fn sys_sigreturn(task: &mut Sel4Task, ctx: &mut UserContext) -> SysResult {
-    let saved_ctx = task.signal.save_context.pop().unwrap();
+pub(super) fn sys_sigreturn(task: &Sel4Task, ctx: &mut UserContext) -> SysResult {
+    let saved_ctx = task.signal.lock().save_context.pop().unwrap();
     *ctx = saved_ctx;
     Ok(*ctx.c_param(0) as _)
 }
 
-pub(super) fn sys_sigtimedwait(_task: &mut Sel4Task) -> SysResult {
+pub(super) fn sys_sigtimedwait(_task: &Sel4Task) -> SysResult {
     debug!("sys_sigtimedwait @ ");
     // WaitSignal(self.task.clone()).await;
     // let task = current_user_task();
