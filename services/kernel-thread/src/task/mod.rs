@@ -122,7 +122,7 @@ impl Sel4Task {
             )?;
 
         Ok(Sel4Task {
-            tid: tid,
+            tid,
             pid: tid,
             pgid: 0,
             ppid: 1,
@@ -142,15 +142,32 @@ impl Sel4Task {
 
     /// 创建一个新的线程
     pub fn create_thread(&self) -> Result<Self, sel4::Error> {
-        let tcb = alloc_tcb();
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
+        let tcb = alloc_tcb();
+        let cnode = alloc_cnode(CNODE_RADIX_BITS);
+
+        // 构建 CSpace 需要的结构
+        cnode
+            .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
+            .copy(&LeafSlot::from_cap(tcb).abs_cptr(), CapRights::all())
+            .unwrap();
+
+        // Copy EndPoint to child
+        cnode
+            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP.bits(), CNODE_RADIX_BITS)
+            .mint(
+                &LeafSlot::from(DEFAULT_SERVE_EP).abs_cptr(),
+                CapRights::all(),
+                tid as u64,
+            )?;
+
         Ok(Sel4Task {
             pid: self.pid,
             ppid: self.ppid,
             pgid: self.pgid,
-            tid: tid,
+            tid,
             tcb,
-            cnode: self.cnode,
+            cnode,
             vspace: self.vspace,
             mem: self.mem.clone(),
             exit: None,

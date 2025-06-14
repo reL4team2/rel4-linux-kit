@@ -159,11 +159,7 @@ impl Future for WaitFutex {
         self.polled = true;
         let mut futex_table = self.table.lock();
         let waker = cx.waker().clone();
-        // futex_table.insert(self.uaddr, waker);
-        if !futex_table.contains_key(&self.uaddr) {
-            futex_table.insert(self.uaddr, Vec::new());
-        }
-        futex_table.get_mut(&self.uaddr).unwrap().push(waker);
+        futex_table.entry(self.uaddr).or_default().push(waker);
         Poll::Pending
         // if !signal.is_empty(None) {
         //     self.0
@@ -194,7 +190,7 @@ pub fn futex_wake(futex_table: Arc<Mutex<FutexTable>>, uaddr: usize, wake_count:
     if que_size == 0 {
         0
     } else {
-        let wake_count = core::cmp::min(wake_count as usize, que_size);
+        let wake_count = core::cmp::min(wake_count, que_size);
         let que = futex_table.get_mut(&uaddr).map(|x| x.drain(..wake_count));
         if let Some(queue) = que {
             queue.for_each(|x| x.wake());
@@ -214,18 +210,15 @@ pub fn futex_requeue(
 
     let waked_size = futex_table
         .get_mut(&uaddr)
-        .map(|x| x.drain(..wake_count as usize).count())
+        .map(|x| x.drain(..wake_count).count())
         .unwrap_or(0);
 
     let reque: Option<Vec<_>> = futex_table
         .get_mut(&uaddr)
-        .map(|x| x.drain(..reque_count as usize).collect());
+        .map(|x| x.drain(..reque_count).collect());
 
     if let Some(reque) = reque {
-        if !futex_table.contains_key(&uaddr2) {
-            futex_table.insert(uaddr2, vec![]);
-        }
-        futex_table.get_mut(&uaddr2).unwrap().extend(reque);
+        futex_table.entry(uaddr2).or_default().extend(reque);
     }
 
     waked_size

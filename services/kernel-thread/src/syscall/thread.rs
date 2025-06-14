@@ -306,8 +306,6 @@ pub(super) async fn sys_futex(
                 value2,
             ))
         }
-        _ => {
-            return Err(Errno::EPERM);
-        }
+        _ => Err(Errno::EPERM),
     }
 }
