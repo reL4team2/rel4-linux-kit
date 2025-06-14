@@ -2,6 +2,8 @@
 //!
 //!
 
+use core::time::Duration;
+
 use alloc::{string::String, sync::Arc, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
 use flatten_objects::FlattenObjects;
@@ -15,6 +17,7 @@ use libc_core::{
 };
 use object::Object;
 use sel4::UserContext;
+use sel4_kit::arch::current_time;
 use spin::mutex::Mutex;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
@@ -23,6 +26,7 @@ use crate::{
     child_test::{ArcTask, TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex},
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
+    timer::wait_time,
     utils::{obj::alloc_page, page::map_page_self},
 };
 
@@ -109,7 +113,7 @@ pub(super) async fn sys_wait4(
 }
 
 #[inline]
-pub(super) fn sys_clone(
+pub(super) async fn sys_clone(
     task: &Sel4Task,
     flags: u32,       // 复制 标志位
     stack: usize,     // 指定新的栈，可以为 0, 0 不处理
@@ -139,6 +143,7 @@ pub(super) fn sys_clone(
     };
     let new_task_id = new_task.tid;
     new_task.signal.lock().exit_sig = SignalNum::from_num(signal as _);
+    new_task.signal.lock().mask = task.signal.lock().mask;
     new_task.ppid = task.pid;
 
     let mut regs = task.tcb.tcb_read_all_registers(false).unwrap();
@@ -173,6 +178,8 @@ pub(super) fn sys_clone(
                 let _ = new_ft.add_at(idx, fd.clone());
             }
         }
+    }
+    if flags.contains(CloneFlags::CLONE_FS) {
         new_task.file.work_dir = task.file.work_dir.clone();
     }
 
@@ -211,7 +218,7 @@ pub(super) fn sys_clone(
         .tcb_write_all_registers(true, &mut regs)
         .unwrap();
     TASK_MAP.lock().insert(new_task_id as _, Arc::new(new_task));
-
+    wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
     Ok(new_task_id)
 }
 

@@ -15,7 +15,6 @@ use common::{
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
-    time::Duration,
 };
 use file::TaskFileInfo;
 use info::TaskInfo;
@@ -67,8 +66,6 @@ pub struct Sel4Task {
     pub clear_child_tid: Mutex<usize>,
     /// 任务相关文件信息。
     pub file: TaskFileInfo,
-    /// 定时器
-    pub timer: Mutex<Duration>,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
     pub info: Mutex<TaskInfo>,
 }
@@ -137,7 +134,6 @@ impl Sel4Task {
             clear_child_tid: Mutex::new(0),
             file: TaskFileInfo::default(),
             info: Mutex::new(TaskInfo::default()),
-            timer: Mutex::new(Duration::ZERO),
         })
     }
 
@@ -176,7 +172,6 @@ impl Sel4Task {
             clear_child_tid: Mutex::new(0),
             file: self.file.clone(),
             info: Mutex::new(self.info.lock().clone()),
-            timer: Mutex::new(Duration::ZERO),
         })
     }
 

@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use libc_core::{
     internal::SigAction,
     signal::{SignalNum, UContext},
-    types::{SigSet, SigSetExtended},
+    types::SigSet,
 };
 use sel4::UserContext;
 use spin::Mutex;
@@ -51,7 +51,6 @@ impl Sel4Task {
             let action = actions[signal.num()].clone();
             drop(actions);
 
-            log::error!("handle signal: {:?} {:#x}", signal, action.handler);
             if action.handler == SigAction::SIG_IGN {
                 // ignore signal if the handler of is SIG_IGN(1)
                 return;
@@ -64,7 +63,6 @@ impl Sel4Task {
                 }
                 return;
             }
-
             let new_sp = self.write_ucontext(ctx, task_signal.mask);
             task_signal.mask = action.mask;
             *ctx.c_param_mut(0) = signal.num() as _;
@@ -106,17 +104,13 @@ impl Sel4Task {
         let mut uctx = UContext::new_zeroed();
         uctx.sig_mask.sigset = mask;
         uctx.regs.pc = *ctx.pc() as _;
-        log::error!(
-            "pc - base: {:#x}",
-            &uctx.sig_mask as *const SigSetExtended as usize - &uctx as *const UContext as usize
-        );
         uctx.regs.sp = *ctx.sp() as _;
         for i in 0..31 {
             uctx.regs.gregs[i] = *ctx.gpr(i) as _;
         }
         // let bytes = uctx.as_bytes();
         // let new_sp = uctx.regs.sp - uctx.as_bytes().len();
-        let new_sp = uctx.regs.sp - size_of::<UContext>();
+        let new_sp = (uctx.regs.sp - size_of::<UContext>()) & !0xF;
         let bytes = unsafe {
             core::slice::from_raw_parts(
                 &uctx as *const UContext as *const u8,

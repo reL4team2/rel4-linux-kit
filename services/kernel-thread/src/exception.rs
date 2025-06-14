@@ -59,13 +59,10 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb_write_all_registers(false, &mut user_ctx)
             .unwrap();
 
-        // 如果没有定时器
-        if task.timer.lock().is_zero() {
-            // 检查信号
-            task.check_signal(&mut user_ctx);
-            // 恢复任务运行状态
-            task.tcb.tcb_resume().unwrap();
-        }
+        // 检查信号
+        task.check_signal(&mut user_ctx);
+        // 恢复任务运行状态
+        task.tcb.tcb_resume().unwrap();
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
     }

@@ -13,7 +13,7 @@ use sel4_kit::arch::current_time;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{task::Sel4Task, timer::flush_timer};
+use crate::{task::Sel4Task, timer::wait_time};
 
 use super::SysResult;
 
@@ -69,7 +69,7 @@ pub(super) fn sys_clock_gettime(
     Ok(0)
 }
 
-pub(super) fn sys_nanosleep(
+pub(super) async fn sys_nanosleep(
     task: &Sel4Task,
     req_ptr: *const TimeSpec,
     rem_ptr: *mut TimeSpec,
@@ -85,12 +85,16 @@ pub(super) fn sys_nanosleep(
     let req = TimeSpec::ref_from_bytes(&nano_bytes).unwrap();
     debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
 
-    *task.timer.lock() = curr_time + Duration::new(req.sec as _, req.nsec as _);
-    flush_timer(*task.timer.lock());
+    wait_time(
+        curr_time + Duration::new(req.sec as _, req.nsec as _),
+        task.tid,
+    )
+    .await?;
 
     if !rem_ptr.is_null() {
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
     }
+
     Ok(0)
 }
 

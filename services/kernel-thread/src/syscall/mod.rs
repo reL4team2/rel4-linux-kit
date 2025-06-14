@@ -40,7 +40,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
     match id.unwrap() {
         Sysno::brk => sys_brk(task, a0),
         Sysno::chdir => sys_chdir(task, a0 as _),
-        Sysno::clone => sys_clone(task, a0 as _, a1, a2 as _, a3, a4 as _),
+        Sysno::clone => sys_clone(task, a0 as _, a1, a2 as _, a3, a4 as _).await,
         Sysno::close => sys_close(task, a0),
         Sysno::dup => sys_dup(task, a0),
         Sysno::dup3 => sys_dup3(task, a0, a1),
@@ -64,7 +64,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::mmap => sys_mmap(task, a0, a1, a2, a3, a4 as _, a5),
         Sysno::mount => sys_mount(task, a0 as _, a1 as _, a2 as _, a3 as _, a4),
         Sysno::munmap => sys_munmap(task, a0, a1),
-        Sysno::nanosleep => sys_nanosleep(task, a0 as _, a1 as _),
+        Sysno::nanosleep => sys_nanosleep(task, a0 as _, a1 as _).await,
         Sysno::openat => sys_openat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::pipe2 => sys_pipe2(task, a0 as _, a1 as _),
         Sysno::read => sys_read(task, a0, a1 as _, a2),

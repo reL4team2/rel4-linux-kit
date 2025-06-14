@@ -161,28 +161,16 @@ impl Future for WaitFutex {
         cx: &mut core::task::Context<'_>,
     ) -> Poll<Self::Output> {
         if self.polled {
-            log::error!("wake up: {:?}", self.errno.lock());
             return Poll::Ready(*self.errno.lock());
         }
         self.polled = true;
 
         let waker = cx.waker().clone();
-        // futex_table.entry(self.uaddr).or_default().push(waker);
         self.task
             .futex_table
             .lock()
             .push((self.uaddr, self.task.tid, waker, self.errno.clone()));
         Poll::Pending
-        // if !signal.is_empty(None) {
-        //     self.0
-        //         .lock()
-        //         .values_mut()
-        //         .find(|x| x.contains(&self.1))
-        //         .map(|x| x.retain(|x| *x != self.1));
-        //     Poll::Ready(Err(Errno::EINTR))
-        // } else {
-        //     Poll::Pending
-        // }
     }
 }
 
@@ -203,20 +191,14 @@ pub fn futex_wake(
     mut wake_count: usize,
 ) -> usize {
     let mut futex_table = futex_table.lock();
-    // let que_size = futex_table.get_mut(&uaddr).map(|x| x.len()).unwrap_or(0);
-    // if que_size == 0 {
-    //     0
-    // } else {
-    //     let wake_count = core::cmp::min(wake_count, que_size);
-    //     let que = futex_table.get_mut(&uaddr).map(|x| x.drain(..wake_count));
-    //     if let Some(queue) = que {
-    //         queue.for_each(|x| x.wake());
-    //     }
-    //     wake_count
-    // }
+
     let queue = futex_table.extract_if(.., |x| {
-        wake_count -= 1;
-        x.0 == uaddr && wake_count != usize::MAX
+        if x.0 == uaddr && wake_count != 0 {
+            wake_count -= 1;
+            true
+        } else {
+            false
+        }
     });
     let mut res = 0;
     queue.for_each(|(_uaddr, _tid, waker, _)| {
@@ -226,14 +208,14 @@ pub fn futex_wake(
     res
 }
 
-pub fn futex_signal_task(futex_table: Arc<Mutex<FutexTable>>, tid: usize, code: Errno) {
-    futex_table.lock().retain_mut(|x| {
-        if x.1 == tid {
-            *x.3.lock() = Err(code);
-            x.2.wake_by_ref();
-        }
-        x.1 != tid
-    });
+pub fn futex_signal_task(_futex_table: Arc<Mutex<FutexTable>>, _tid: usize, _code: Errno) {
+    // futex_table.lock().retain_mut(|x| {
+    //     if x.1 == tid {
+    //         *x.3.lock() = Err(code);
+    //         x.2.wake_by_ref();
+    //     }
+    //     x.1 != tid
+    // });
 }
 
 pub fn futex_requeue(

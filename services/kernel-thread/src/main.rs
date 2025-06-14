@@ -72,6 +72,7 @@ fn main() {
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
     ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/tmp");
     ::fs::dentry::mount_fs(fs::devfs::DevFS::new(), "/dev");
+    ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/dev/shm");
 
     // 初始化设备
     device::init();
@@ -88,7 +89,12 @@ fn main() {
     ./runtest.exe -w entry-static.exe pthread_condattr_setclock
     */
     // test_task!("busybox", "sh", "/init.sh");
-    test_task!("runtest.exe", "-w", "entry-static.exe", "pthread_cancel");
+    test_task!(
+        "runtest.exe",
+        "-w",
+        "entry-static.exe",
+        "pthread_cond_smasher"
+    );
     // test_task!("entry-static.exe", "clock_gettime");
     // test_task!("busybox", "sh", "/run-static.sh");
 
