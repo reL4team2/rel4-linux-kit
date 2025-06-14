@@ -479,8 +479,6 @@ checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 [[package]]
 name = "libc-core"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "509d456e2be4b2f778b3d9b592e70bf6e877675262040f6d02edfeec217efd50"
 dependencies = [
  "bitflags",
  "num_enum",

@@ -54,7 +54,7 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 
         if task.exit.is_some() {
             if task.ppid != 0 {
-                TASK_MAP.lock().insert(task.id as _, task);
+                TASK_MAP.lock().insert(task.tid as _, task);
             } else {
                 log::warn!("the orphan task will be destory");
             }
@@ -74,7 +74,7 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             task.tcb.tcb_resume().unwrap();
         }
 
-        TASK_MAP.lock().insert(task.id as _, task);
+        TASK_MAP.lock().insert(task.tid as _, task);
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
     }

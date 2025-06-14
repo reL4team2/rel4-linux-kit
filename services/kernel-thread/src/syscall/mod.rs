@@ -33,7 +33,7 @@ pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
     let a3 = *ctx.gpr(3) as usize;
     let a4 = *ctx.gpr(4) as usize;
     let a5 = *ctx.gpr(5) as usize;
-    log::debug!("SysCall: {:#x?}", id.unwrap());
+    log::debug!("[task {}] SysCall: {:#x?}", task.tid, id.unwrap());
     if id.is_none() {
         return Err(Errno::ENOSYS);
     }
@@ -48,6 +48,9 @@ pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
         Sysno::exit => sys_exit(task, a0 as _),
         Sysno::fcntl => sys_fcntl(task, a0, a1 as _, a2 as _),
         Sysno::fstat => sys_fstat(task, a0, a1 as _),
+        Sysno::fstatat => sys_fstatat(task, a0 as _, a1 as _, a2 as _, a3 as _),
+        Sysno::statfs => sys_statfs(task, a0 as _, a1 as _),
+        Sysno::futex => sys_futex(task, a0 as _, a1, a2, a3, a4, a5).await,
         Sysno::getcwd => sys_getcwd(task, a0 as _, a1),
         Sysno::getdents64 => sys_getdents64(task, a0, a1 as _, a2),
         Sysno::getpid => sys_getpid(task),
@@ -65,6 +68,8 @@ pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
         Sysno::openat => sys_openat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::pipe2 => sys_pipe2(task, a0 as _, a1 as _),
         Sysno::read => sys_read(task, a0, a1 as _, a2),
+        Sysno::readv => sys_readv(task, a0, a1 as _, a2),
+        Sysno::pread64 => sys_pread64(task, a0, a1 as _, a2, a3),
         Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0 as _, a1 as _, a2 as _),
         Sysno::rt_sigreturn => sys_sigreturn(task, ctx),
@@ -74,11 +79,13 @@ pub async fn handle_syscall(task: &mut Sel4Task, ctx: &mut UserContext) -> SysRe
         Sysno::umount2 => sys_umount(task, a0 as _, a1 as _),
         Sysno::uname => sys_uname(task, a0 as _),
         Sysno::unlinkat => sys_unlinkat(task, a0 as _, a1 as _, a2 as _),
+        Sysno::utimensat => sys_utimensat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::wait4 => sys_wait4(task, ctx, a0 as _, a1 as _, a2 as _).await,
         Sysno::write => sys_write(task, a0, a1 as _, a2),
         Sysno::writev => sys_writev(task, a0, a1 as _, a2),
         Sysno::prlimit64 => sys_prlimit64(task, a0, a1, a2 as _, a3 as _),
-        Sysno::getuid | Sysno::getgid | Sysno::ioctl => Ok(0),
+        Sysno::mprotect => Ok(0),
+        Sysno::getuid | Sysno::getgid | Sysno::ioctl | Sysno::geteuid | Sysno::getegid => Ok(0),
         _ => Err(Errno::EPERM),
     }
 }

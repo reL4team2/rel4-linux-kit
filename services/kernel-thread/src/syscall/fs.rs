@@ -5,10 +5,12 @@
 use alloc::{string::String, sync::Arc};
 use fs::{SeekFrom, file::File, pipe::create_pipe};
 use libc_core::{
-    fcntl::{AT_FDCWD, FcntlCmd, OpenFlags},
-    types::{IoVec, Stat},
+    consts::UTIME_NOW,
+    fcntl::{AT_FDCWD, AT_SYMLINK_NOFOLLOW, FcntlCmd, OpenFlags},
+    types::{IoVec, Stat, StatFS, TimeSpec},
 };
 use num_enum::TryFromPrimitive;
+use sel4_kit::arch::current_time;
 use syscalls::Errno;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
@@ -32,13 +34,20 @@ pub(super) fn sys_close(task: &Sel4Task, fd: usize) -> SysResult {
 pub(super) fn sys_dup(task: &Sel4Task, fd: usize) -> SysResult {
     let mut file_table = task.file.file_ds.lock();
     let old_fd = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
-    file_table.add(old_fd).map_err(|_| Errno::EBADFD)
+    if file_table.count() >= task.file.rlimit.lock().curr {
+        return Err(Errno::EMFILE);
+    }
+    file_table.add(old_fd).map_err(|_| Errno::EMFILE)
 }
 
 pub(super) fn sys_dup3(task: &Sel4Task, fd: usize, fd_dst: usize) -> SysResult {
     let mut file_table = task.file.file_ds.lock();
     let old_fd = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
-    file_table.add_at(fd_dst, old_fd).map_err(|_| Errno::EBADF)
+    if file_table.count() >= task.file.rlimit.lock().curr && fd_dst >= file_table.count() {
+        return Err(Errno::EMFILE);
+    }
+    let _ = file_table.remove(fd_dst);
+    file_table.add_at(fd_dst, old_fd).map_err(|_| Errno::EMFILE)
 }
 
 pub(super) fn sys_fstat(task: &Sel4Task, fd: usize, stat_ptr: *mut Stat) -> SysResult {
@@ -51,6 +60,38 @@ pub(super) fn sys_fstat(task: &Sel4Task, fd: usize, stat_ptr: *mut Stat) -> SysR
     Ok(0)
 }
 
+pub(super) fn sys_fstatat(
+    task: &Sel4Task,
+    dirfd: isize,
+    path_ptr: *const u8,
+    stat_ptr: *mut Stat,
+    flags: u32,
+) -> SysResult {
+    let path = task.fd_resolve(dirfd, path_ptr)?;
+    let file = if flags & AT_SYMLINK_NOFOLLOW == 0 {
+        File::open(path, OpenFlags::RDONLY)?
+    } else {
+        File::open_link(path, OpenFlags::RDONLY)?
+    };
+    let mut stat: Stat = Stat::default();
+    file.stat(&mut stat)?;
+
+    task.write_bytes(stat_ptr as _, stat.as_bytes());
+    Ok(0)
+}
+
+pub(super) fn sys_statfs(
+    task: &Sel4Task,
+    filename_ptr: *const u8,
+    statfs_ptr: *mut StatFS,
+) -> SysResult {
+    let mut statfs: StatFS = StatFS::default();
+    task.fd_open(AT_FDCWD, filename_ptr, OpenFlags::RDONLY)?
+        .statfs(&mut statfs)?;
+    task.write_bytes(statfs_ptr as _, statfs.as_bytes());
+    Ok(0)
+}
+
 pub(super) fn sys_getdents64(
     task: &Sel4Task,
     fd: usize,
@@ -59,7 +100,7 @@ pub(super) fn sys_getdents64(
 ) -> SysResult {
     debug!(
         "[task {}] sys_getdents64 @ fd: {}, buf_ptr: {:p}, len: {}",
-        task.id, fd, buf_ptr, len
+        task.tid, fd, buf_ptr, len
     );
     let file_table = task.file.file_ds.lock();
     let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
@@ -98,6 +139,41 @@ pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize
     let mut buffer = vec![0u8; count];
     let rlen = file.read(&mut buffer)?;
     task.write_bytes(bufp as _, &buffer);
+    Ok(rlen)
+}
+
+pub(super) fn sys_readv(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: usize) -> SysResult {
+    let mut rsize = 0;
+    let iovec_bytes = task
+        .read_bytes(iov as _, size_of::<IoVec>() * iocnt)
+        .unwrap();
+
+    let iovec = <[IoVec]>::ref_from_bytes_with_elems(&iovec_bytes, iocnt).unwrap();
+    for item in iovec.iter() {
+        let rlen_once = sys_read(task, fd, item.base as _, item.len)?;
+        rsize += rlen_once;
+    }
+
+    Ok(rsize)
+}
+
+pub(super) fn sys_pread64(
+    task: &Sel4Task,
+    fd: usize,
+    buff_ptr: *const u8,
+    len: usize,
+    offset: usize,
+) -> SysResult {
+    let mut buffer = vec![0u8; len];
+    let file = task
+        .file
+        .file_ds
+        .lock()
+        .get(fd)
+        .ok_or(Errno::EBADF)?
+        .clone();
+    let rlen = file.readat(offset, &mut buffer)?;
+    task.write_bytes(buff_ptr as _, &buffer[..rlen]);
     Ok(rlen)
 }
 
@@ -174,9 +250,13 @@ pub(super) fn sys_openat(
     let flags = OpenFlags::from_bits_truncate(flags);
     let file = task.fd_open(fd, path, flags)?;
 
+    if task.file.file_ds.lock().count() >= task.file.rlimit.lock().curr {
+        return Err(Errno::EMFILE);
+    }
+
     match task.file.file_ds.lock().add(Arc::new(file)) {
         Ok(idx) => Ok(idx),
-        Err(_) => todo!(),
+        Err(_) => Err(Errno::EMFILE),
     }
 }
 
@@ -208,14 +288,27 @@ pub(super) fn sys_mount(
 }
 
 /// TODO: 检查 `arg` 参数，完善 `fcntl` 系统调用
-pub(super) fn sys_fcntl(task: &Sel4Task, fd: usize, cmd: u32, _arg: usize) -> SysResult {
+pub(super) fn sys_fcntl(task: &Sel4Task, fd: usize, cmd: u32, arg: usize) -> SysResult {
     let cmd = FcntlCmd::try_from_primitive(cmd).map_err(|_| Errno::EINVAL)?;
-
     // 检查文件是否存在
-    let _file = task.file.file_ds.lock().get_mut(fd).ok_or(Errno::EBADF)?;
+    let file = task
+        .file
+        .file_ds
+        .lock()
+        .get_mut(fd)
+        .ok_or(Errno::EBADF)?
+        .clone();
     match cmd {
         FcntlCmd::DUPFD | FcntlCmd::DUPFDCLOEXEC => sys_dup(task, fd),
         FcntlCmd::SETFD => Ok(0),
+        FcntlCmd::GETFL => Ok(file.flags.lock().bits()),
+        FcntlCmd::SETFL => {
+            let mut file_table = task.file.file_ds.lock();
+            *file.flags.lock() = OpenFlags::from_bits_truncate(arg);
+            let _ = file_table.remove(fd);
+            file_table.add_at(fd, file).map_err(|_| Errno::EMFILE)?;
+            Ok(0)
+        }
         _ => todo!("cmd is not implemented: {:?}", cmd),
     }
 }
@@ -224,5 +317,55 @@ pub(super) fn sys_umount(task: &Sel4Task, target: *const u8, flags: u64) -> SysR
     let target = String::from_utf8(task.read_cstr(target as _).ok_or(Errno::EINVAL)?).unwrap();
     log::debug!("umount @ {} {:#x}", target, flags);
     // umount(&target).map(|_| 0)
+    Ok(0)
+}
+
+pub(super) fn sys_utimensat(
+    task: &Sel4Task,
+    dirfd: isize,
+    path: *const u8,
+    times_ptr: *mut TimeSpec,
+    _flags: usize,
+) -> SysResult {
+    // build times
+    let mut times = match times_ptr.is_null() {
+        true => {
+            vec![current_time().into(), current_time().into()]
+        }
+        false => {
+            let timespec_bytes = task
+                .read_bytes(times_ptr as _, size_of::<TimeSpec>() * 2)
+                .ok_or(Errno::EINVAL)?;
+            let ts = <[TimeSpec]>::ref_from_bytes_with_elems(&timespec_bytes, 2)
+                .map_err(|_| Errno::EINVAL)?;
+            let mut times = vec![];
+            for item in ts.iter().take(2) {
+                if item.nsec == UTIME_NOW {
+                    times.push(current_time().into());
+                } else {
+                    times.push(*item);
+                }
+            }
+            times.to_vec()
+        }
+    };
+
+    if path.is_null() {
+        task.file
+            .file_ds
+            .lock()
+            .get(dirfd as _)
+            .ok_or(Errno::EBADF)?
+            .utimes(&mut times)?;
+        return Ok(0);
+    }
+
+    // debug!("times: {:?} path: {}", times, path);
+    // if path == "/dev/null/invalid" {
+    //     return Ok(0);
+    // }
+    task.fd_open(dirfd, path, OpenFlags::RDONLY)?
+        .utimes(&mut times)?;
+
     Ok(0)
 }

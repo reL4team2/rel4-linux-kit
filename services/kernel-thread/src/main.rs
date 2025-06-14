@@ -70,6 +70,7 @@ fn main() {
     // 初始化文件系统
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
     ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/tmp");
+    ::fs::dentry::mount_fs(fs::devfs::DevFS::new(), "/dev");
 
     // 初始化设备
     device::init();
@@ -81,7 +82,7 @@ fn main() {
     timer::init();
 
     // test_task!("busybox", "sh", "/init.sh");
-    // test_task!("runtest.exe", "-w", "entry-static.exe", "fscanf");
+    // test_task!("runtest.exe", "-w", "entry-static.exe", "daemon_failure");
     // test_task!("entry-static.exe", "clock_gettime");
     test_task!("busybox", "sh", "/run-static.sh");
 

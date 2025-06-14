@@ -1,7 +1,10 @@
 use alloc::{string::String, sync::Arc};
 use flatten_objects::FlattenObjects;
 use fs::{file::File, pathbuf::PathBuf};
-use libc_core::fcntl::{AT_FDCWD, OpenFlags};
+use libc_core::{
+    fcntl::{AT_FDCWD, OpenFlags},
+    resource::Rlimit,
+};
 use spin::Mutex;
 use syscalls::Errno;
 use vfscore::VfsResult;
@@ -14,6 +17,8 @@ pub struct TaskFileInfo {
     pub work_dir: File,
     /// 文件描述符
     pub file_ds: Arc<Mutex<FlattenObjects<Arc<File>, 0x200>>>,
+    /// 读写限制
+    pub rlimit: Arc<Mutex<Rlimit>>,
 }
 
 impl Default for TaskFileInfo {
@@ -22,6 +27,10 @@ impl Default for TaskFileInfo {
         Self {
             work_dir: File::open("/", OpenFlags::DIRECTORY).unwrap(),
             file_ds,
+            rlimit: Arc::new(Mutex::new(Rlimit {
+                curr: 150,
+                max: 200,
+            })),
         }
     }
 }

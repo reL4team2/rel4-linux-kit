@@ -2,20 +2,25 @@
 //!
 //!
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
+use flatten_objects::FlattenObjects;
 use fs::file::File;
 use libc_core::{
     fcntl::{AT_FDCWD, OpenFlags},
+    futex::FutexFlags,
     sched::{CloneFlags, WaitOption},
 };
 use object::Object;
 use sel4::UserContext;
+use spin::mutex::Mutex;
 use syscalls::Errno;
 use zerocopy::IntoBytes;
 
 use crate::{
-    child_test::{TASK_MAP, WaitAnyChild, WaitPid, wake_hangs},
+    child_test::{
+        TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex, wake_hangs,
+    },
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
@@ -44,7 +49,7 @@ pub fn sys_getppid(task: &Sel4Task) -> SysResult {
 #[inline]
 pub(super) fn sys_set_tid_addr(task: &mut Sel4Task, addr: usize) -> SysResult {
     task.clear_child_tid = Some(addr);
-    Ok(task.id)
+    Ok(task.tid)
 }
 
 #[inline]
@@ -115,9 +120,6 @@ pub(super) fn sys_clone(
 ) -> SysResult {
     let signal = flags & 0xff;
     let flags = CloneFlags::from_bits_truncate(flags);
-    if flags.bits() > 0xff {
-        panic!("Custom Clone is not supported");
-    }
     log::debug!(
         "flags: {:?} signal: {} stack: {:#x}, ptid: {:p}  tls: {:#x}, ctid: {:#p}",
         flags,
@@ -127,11 +129,19 @@ pub(super) fn sys_clone(
         tls,
         ctid
     );
-
-    let mut new_task = Sel4Task::new().unwrap();
-    let new_task_id = new_task.id;
+    let mut new_task = if flags.bits() > 0xff {
+        if flags.contains(CloneFlags::CLONE_THREAD) {
+            task.create_thread().unwrap()
+        } else {
+            panic!("Custom Clone is not supported");
+        }
+    } else {
+        Sel4Task::new().unwrap()
+    };
+    let new_task_id = new_task.tid;
     new_task.signal.exit_sig = signal;
     new_task.ppid = task.pid;
+
     let mut regs = task.tcb.tcb_read_all_registers(false).unwrap();
     *regs.c_param_mut(0) = 0;
     *regs.pc_mut() += 4;
@@ -140,8 +150,21 @@ pub(super) fn sys_clone(
     }
     new_task.init_tcb().unwrap();
 
+    if flags.contains(CloneFlags::CLONE_SETTLS) {
+        regs.inner_mut().tpidr_el0 = tls as _;
+    }
+
+    if flags.contains(CloneFlags::CLONE_PARENT_SETTID) {
+        task.write_bytes(ptid as _, new_task_id.as_bytes());
+    }
+
+    if flags.contains(CloneFlags::CLONE_CHILD_SETTID) {
+        task.write_bytes(ctid as _, new_task_id.as_bytes());
+    }
+
     // 复制文件表
-    {
+    if !flags.contains(CloneFlags::CLONE_FILES) {
+        new_task.file.file_ds = Arc::new(Mutex::new(FlattenObjects::new()));
         let mut new_ft = new_task.file.file_ds.lock();
         let old_ft = task.file.file_ds.lock();
 
@@ -154,7 +177,7 @@ pub(super) fn sys_clone(
     }
 
     // 复制映射的地址
-    {
+    if !flags.contains(CloneFlags::CLONE_VM) {
         let old_mem_info = task.mem.lock();
         for (vaddr, page) in old_mem_info.mapped_page.iter() {
             let new_page = alloc_page();
@@ -171,6 +194,7 @@ pub(super) fn sys_clone(
             new_task.map_page(*vaddr, PhysPage::new(new_page));
         }
     }
+
     new_task
         .tcb
         .tcb_write_all_registers(true, &mut regs)
@@ -240,4 +264,50 @@ pub(super) fn sys_execve(
 #[inline]
 pub(super) fn sys_sched_yield(_task: &mut Sel4Task) -> SysResult {
     Ok(0)
+}
+
+pub(super) async fn sys_futex(
+    task: &Sel4Task,
+    uaddr_ptr: *mut i32,
+    op: usize,
+    value: usize,
+    value2: usize,
+    uaddr2: usize,
+    _value3: usize,
+) -> SysResult {
+    let op = if op >= 0x80 { op - 0x80 } else { op };
+    let uaddr = task.read_ins(uaddr_ptr as _).ok_or(Errno::EINVAL)?;
+    let flags = FutexFlags::try_from(op).map_err(|_| Errno::EINVAL)?;
+    debug!(
+        "task {} sys_futex @ uaddr: {:#x} flags: {:?} value: {}",
+        task.tid, uaddr, flags, value
+    );
+
+    match flags {
+        FutexFlags::Wait => {
+            if uaddr == value as _ {
+                wait_futex(task.futex_table.clone(), uaddr_ptr as _).await
+            } else {
+                Err(Errno::EAGAIN)
+            }
+        }
+        FutexFlags::Wake => {
+            let futex_table = task.futex_table.clone();
+            let count = futex_wake(futex_table, uaddr_ptr.addr(), value);
+            Ok(count)
+        }
+        FutexFlags::Requeue => {
+            let futex_table = task.futex_table.clone();
+            Ok(futex_requeue(
+                futex_table,
+                uaddr_ptr.addr(),
+                value,
+                uaddr2,
+                value2,
+            ))
+        }
+        _ => {
+            return Err(Errno::EPERM);
+        }
+    }
 }

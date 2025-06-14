@@ -1,18 +1,19 @@
 use core::task::{Poll, Waker};
 
-use crate::{consts::task::DEF_STACK_TOP, fs::stdio::StdConsole, task::Sel4Task};
+use crate::{consts::task::DEF_STACK_TOP, task::Sel4Task};
 use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use common::config::PAGE_SIZE;
 use fs::file::File;
+use libc_core::fcntl::OpenFlags;
 use object::{BinaryFormat, Object};
-use sel4::Result;
 use spin::Mutex;
+use syscalls::Errno;
 
 /// 任务表，可以通过任务 ID 获取任务
 pub static TASK_MAP: Mutex<BTreeMap<u64, Sel4Task>> = Mutex::new(BTreeMap::new());
 
 /// 添加一个测试任务
-pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
+pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<(), sel4::Error> {
     let mut task = Sel4Task::new()?;
 
     let file: object::File<'_> = object::File::parse(elf_file).expect("can't load elf file");
@@ -32,9 +33,9 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
     task.init_tcb()?;
 
     let mut file_table = task.file.file_ds.lock();
+    let file = Arc::new(File::open("/dev/ttyv0", OpenFlags::RDWR).unwrap());
     for i in 0..3 {
-        let file = File::new_dev(Arc::new(StdConsole::new(i)));
-        let _ = file_table.add_at(i as _, file);
+        let _ = file_table.add_at(i as _, file.clone());
     }
     drop(file_table);
 
@@ -51,7 +52,7 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
             .unwrap();
     }
 
-    TASK_MAP.lock().insert(task.id as _, task);
+    TASK_MAP.lock().insert(task.tid as _, task);
 
     Ok(())
 }
@@ -135,4 +136,97 @@ pub fn wake_hangs(task: &Sel4Task) {
     if let Some(idx) = finded {
         queue.remove(idx).2.wake();
     }
+}
+
+pub type FutexTable = BTreeMap<usize, Vec<Waker>>;
+
+pub struct WaitFutex {
+    pub table: Arc<Mutex<FutexTable>>,
+    pub uaddr: usize,
+    pub polled: bool,
+}
+
+impl Future for WaitFutex {
+    type Output = Result<usize, Errno>;
+
+    fn poll(
+        mut self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        if self.polled {
+            return Poll::Ready(Ok(0));
+        }
+        self.polled = true;
+        let mut futex_table = self.table.lock();
+        let waker = cx.waker().clone();
+        // futex_table.insert(self.uaddr, waker);
+        if !futex_table.contains_key(&self.uaddr) {
+            futex_table.insert(self.uaddr, Vec::new());
+        }
+        futex_table.get_mut(&self.uaddr).unwrap().push(waker);
+        Poll::Pending
+        // if !signal.is_empty(None) {
+        //     self.0
+        //         .lock()
+        //         .values_mut()
+        //         .find(|x| x.contains(&self.1))
+        //         .map(|x| x.retain(|x| *x != self.1));
+        //     Poll::Ready(Err(Errno::EINTR))
+        // } else {
+        //     Poll::Pending
+        // }
+    }
+}
+
+#[inline]
+pub async fn wait_futex(table: Arc<Mutex<FutexTable>>, uaddr: usize) -> Result<usize, Errno> {
+    WaitFutex {
+        table,
+        uaddr,
+        polled: false,
+    }
+    .await
+}
+
+pub fn futex_wake(futex_table: Arc<Mutex<FutexTable>>, uaddr: usize, wake_count: usize) -> usize {
+    let mut futex_table = futex_table.lock();
+    let que_size = futex_table.get_mut(&uaddr).map(|x| x.len()).unwrap_or(0);
+    if que_size == 0 {
+        0
+    } else {
+        let wake_count = core::cmp::min(wake_count as usize, que_size);
+        let que = futex_table.get_mut(&uaddr).map(|x| x.drain(..wake_count));
+        if let Some(queue) = que {
+            queue.for_each(|x| x.wake());
+        }
+        wake_count
+    }
+}
+
+pub fn futex_requeue(
+    futex_table: Arc<Mutex<FutexTable>>,
+    uaddr: usize,
+    wake_count: usize,
+    uaddr2: usize,
+    reque_count: usize,
+) -> usize {
+    let mut futex_table = futex_table.lock();
+
+    let waked_size = futex_table
+        .get_mut(&uaddr)
+        .map(|x| x.drain(..wake_count as usize).count())
+        .unwrap_or(0);
+
+    let reque: Option<Vec<_>> = futex_table
+        .get_mut(&uaddr)
+        .map(|x| x.drain(..reque_count as usize).collect());
+
+    if let Some(reque) = reque {
+        if !futex_table.contains_key(&uaddr2) {
+            futex_table.insert(uaddr2, vec![]);
+        }
+        futex_table.get_mut(&uaddr2).unwrap().extend(reque);
+    }
+
+    waked_size
 }

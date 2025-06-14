@@ -80,7 +80,7 @@ pub(super) fn sys_nanosleep(
 ) -> SysResult {
     debug!(
         "[task {}] sys_nanosleep @ req_ptr: {:p}, rem_ptr: {:p}",
-        task.id, req_ptr, rem_ptr
+        task.tid, req_ptr, rem_ptr
     );
     let curr_time = current_time();
     let nano_bytes = task
@@ -99,7 +99,7 @@ pub(super) fn sys_nanosleep(
 }
 
 pub(super) fn sys_prlimit64(
-    _task: &mut Sel4Task,
+    task: &mut Sel4Task,
     pid: usize,
     resource: usize,
     new_limit: *const Rlimit,
@@ -109,22 +109,22 @@ pub(super) fn sys_prlimit64(
         "sys_getrlimit @ pid: {}, resource: {}, new_limit: {:p}, old_limit: {:p}",
         pid, resource, new_limit, old_limit
     );
-    // match resource {
-    //     7 => {
-    //         if !new_limit.is_null() {
-    //             let rlimit = new_limit.read();
-    //             self.task.pcb.lock().rlimits[7] = rlimit.max;
-    //         }
-    //         if !old_limit.is_null() {
-    //             old_limit.with_mut(|rlimit| {
-    //                 rlimit.max = self.task.inner_map(|inner| inner.rlimits[7]);
-    //                 rlimit.curr = rlimit.max;
-    //             })
-    //         }
-    //     }
-    //     _ => {
-    //         warn!("need to finish prlimit64: resource {}", resource)
-    //     }
-    // }
+    match resource {
+        7 => {
+            if !old_limit.is_null() {
+                task.write_bytes(old_limit as _, task.file.rlimit.lock().as_bytes());
+            }
+            if !new_limit.is_null() {
+                let rlimit_bytes = task
+                    .read_bytes(new_limit as _, size_of::<Rlimit>())
+                    .ok_or(Errno::EINVAL)?;
+                let rlimit = Rlimit::read_from_bytes(&rlimit_bytes).unwrap();
+                *task.file.rlimit.lock() = rlimit;
+            }
+        }
+        _ => {
+            warn!("need to finish prlimit64: resource {}", resource)
+        }
+    }
     Ok(0)
 }

@@ -7,7 +7,7 @@ mod init;
 mod mem;
 mod signal;
 
-use alloc::sync::Arc;
+use alloc::{collections::btree_map::BTreeMap, sync::Arc};
 use common::{
     config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE},
     page::PhysPage,
@@ -29,7 +29,10 @@ use sel4_kit::slot_manager::LeafSlot;
 use signal::TaskSignal;
 use spin::Mutex;
 
-use crate::utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace};
+use crate::{
+    child_test::FutexTable,
+    utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace},
+};
 
 /// Sel4Task 结构体
 pub struct Sel4Task {
@@ -40,7 +43,7 @@ pub struct Sel4Task {
     /// 进程组 ID
     pub pgid: usize,
     /// 任务 ID (线程 ID)
-    pub id: usize,
+    pub tid: usize,
     /// 进程控制块（Capability)
     pub tcb: sel4::cap::Tcb,
     /// 能力空间入口 (CSpace Root)
@@ -51,6 +54,8 @@ pub struct Sel4Task {
     pub mem: Arc<Mutex<TaskMemInfo>>,
     /// 退出状态码
     pub exit: Option<i32>,
+    /// Futex 表
+    pub futex_table: Arc<Mutex<FutexTable>>,
     /// 信号信息
     pub signal: TaskSignal,
     /// The clear thread tid field
@@ -117,13 +122,14 @@ impl Sel4Task {
             )?;
 
         Ok(Sel4Task {
-            id: tid,
+            tid: tid,
             pid: tid,
             pgid: 0,
             ppid: 1,
             tcb,
             cnode,
             vspace,
+            futex_table: Arc::new(Mutex::new(BTreeMap::new())),
             mem: Arc::new(Mutex::new(TaskMemInfo::default())),
             signal: TaskSignal::default(),
             exit: None,
@@ -136,17 +142,19 @@ impl Sel4Task {
 
     /// 创建一个新的线程
     pub fn create_thread(&self) -> Result<Self, sel4::Error> {
+        let tcb = alloc_tcb();
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         Ok(Sel4Task {
             pid: self.pid,
             ppid: self.ppid,
             pgid: self.pgid,
-            id: tid,
-            tcb: self.tcb,
+            tid: tid,
+            tcb,
             cnode: self.cnode,
             vspace: self.vspace,
             mem: self.mem.clone(),
             exit: None,
+            futex_table: self.futex_table.clone(),
             signal: TaskSignal::default(),
             clear_child_tid: None,
             file: self.file.clone(),
