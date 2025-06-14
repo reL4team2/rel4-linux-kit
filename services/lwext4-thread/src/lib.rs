@@ -150,7 +150,7 @@ impl FSIface for EXT4FSImpl {
             for (name, ty) in zip(entries.0, entries.1).skip(offset) {
                 log::debug!("{:?} , {:?}", String::from_utf8(name.clone()), ty);
                 let len = name.len() + size_of::<Dirent64>();
-                let aligned = (len + 7) / 8 * 8;
+                let aligned = len.div_ceil(8) * 8;
                 if real_rlen + aligned > buf.len() {
                     break;
                 }

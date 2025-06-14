@@ -69,12 +69,7 @@ pub(super) async fn sys_wait4(
         panic!("option({:?}  {}) is not supported", options, option);
     }
 
-    if TASK_MAP
-        .lock()
-        .iter()
-        .find(|x| x.1.ppid == task.pid)
-        .is_none()
-    {
+    if !TASK_MAP.lock().iter().any(|x| x.1.ppid == task.pid) {
         return Err(Errno::ECHILD);
     }
 

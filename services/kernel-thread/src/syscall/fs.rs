@@ -46,7 +46,7 @@ pub(super) fn sys_fstat(task: &Sel4Task, fd: usize, stat_ptr: *mut Stat) -> SysR
     let file = file_table.get(fd).ok_or(Errno::EBADF)?.clone();
 
     let mut stat = Stat::new_zeroed();
-    let stat = file.stat(&mut stat)?;
+    file.stat(&mut stat)?;
     task.write_bytes(stat_ptr as _, stat.as_bytes());
     Ok(0)
 }

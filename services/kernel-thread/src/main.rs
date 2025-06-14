@@ -7,7 +7,6 @@
 #![feature(never_type)]
 #![feature(const_trait_impl)]
 
-use ::fs::file::File;
 use common::{config::DEFAULT_SERVE_EP, root::shutdown};
 use futures::task::LocalSpawnExt;
 use libc_core::fcntl::OpenFlags;
@@ -70,9 +69,7 @@ fn main() {
 
     // 初始化文件系统
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
-    {
-        File::open("/tmp", OpenFlags::DIRECTORY | OpenFlags::CREAT).unwrap();
-    }
+    ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/tmp");
 
     // 初始化设备
     device::init();
@@ -84,21 +81,16 @@ fn main() {
     timer::init();
 
     // test_task!("busybox", "sh", "/init.sh");
-    test_task!("runtest.exe", "-w", "entry-static.exe", "fscanf");
+    // test_task!("runtest.exe", "-w", "entry-static.exe", "fscanf");
     // test_task!("entry-static.exe", "clock_gettime");
-    // test_task!("busybox", "sh", "/run-static.sh");
+    test_task!("busybox", "sh", "/run-static.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     let spawner = pool.spawner();
     loop {
         {
             // 所有的任务都执行完毕
-            if TASK_MAP
-                .lock()
-                .iter()
-                .find(|x| x.1.exit.is_none())
-                .is_none()
-            {
+            if !TASK_MAP.lock().iter().any(|x| x.1.exit.is_none()) {
                 sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
                 shutdown();
             }

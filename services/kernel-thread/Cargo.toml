@@ -40,6 +40,7 @@ srv-gate = { workspace = true }
 uart-thread = { workspace = true }
 lwext4-thread = { workspace = true }
 
-fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "a871b75" }
-ext4fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "a871b75" }
-vfscore = { git = "https://github.com/oscomp/ByteOS.git", rev = "a871b75" }
+fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+allocfs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+ext4fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+vfscore = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
