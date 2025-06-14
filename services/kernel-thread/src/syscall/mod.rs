@@ -15,7 +15,7 @@ use sys::*;
 use syscalls::{Errno, Sysno};
 use thread::*;
 
-use crate::task::Sel4Task;
+use crate::child_test::ArcTask;
 
 /// SysCall Result
 ///
@@ -25,7 +25,7 @@ pub type SysResult = Result<usize, Errno>;
 /// 处理系统调用
 /// - `task` [Sel4Task]   需要处理的任务
 /// - `ctx` [UserContext] 系统调用上下文，修改后需要恢复
-pub async fn handle_syscall(task: &Sel4Task, ctx: &mut UserContext) -> SysResult {
+pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult {
     let id = Sysno::new(*ctx.gpr(8) as _);
     let a0 = *ctx.gpr(0) as usize;
     let a1 = *ctx.gpr(1) as usize;
@@ -50,7 +50,7 @@ pub async fn handle_syscall(task: &Sel4Task, ctx: &mut UserContext) -> SysResult
         Sysno::fstat => sys_fstat(task, a0, a1 as _),
         Sysno::fstatat => sys_fstatat(task, a0 as _, a1 as _, a2 as _, a3 as _),
         Sysno::statfs => sys_statfs(task, a0 as _, a1 as _),
-        Sysno::futex => sys_futex(task, a0 as _, a1, a2, a3, a4, a5).await,
+        Sysno::futex => sys_futex(task.clone(), a0 as _, a1, a2, a3, a4, a5).await,
         Sysno::getcwd => sys_getcwd(task, a0 as _, a1),
         Sysno::getdents64 => sys_getdents64(task, a0, a1 as _, a2),
         Sysno::getpid => sys_getpid(task),

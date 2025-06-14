@@ -7,7 +7,7 @@ mod init;
 mod mem;
 mod signal;
 
-use alloc::{collections::btree_map::BTreeMap, sync::Arc};
+use alloc::{sync::Arc, vec::Vec};
 use common::{
     config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE},
     page::PhysPage,
@@ -28,9 +28,10 @@ use sel4::{
 use sel4_kit::slot_manager::LeafSlot;
 use signal::TaskSignal;
 use spin::Mutex;
+use zerocopy::IntoBytes;
 
 use crate::{
-    child_test::FutexTable,
+    child_test::{FutexTable, TASK_MAP, futex_wake, wake_hangs},
     utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace},
 };
 
@@ -53,7 +54,7 @@ pub struct Sel4Task {
     /// 任务内存映射信息
     pub mem: Arc<Mutex<TaskMemInfo>>,
     /// 退出状态码
-    pub exit: Mutex<Option<i32>>,
+    pub exit: Mutex<Option<u32>>,
     /// Futex 表
     pub futex_table: Arc<Mutex<FutexTable>>,
     /// 信号信息
@@ -63,7 +64,7 @@ pub struct Sel4Task {
     /// See <https://manpages.debian.org/unstable/manpages-dev/set_tid_address.2.en.html#clear_child_tid>
     ///
     /// When the thread exits, the kernel clears the word at this address if it is not NULL.
-    pub clear_child_tid: Mutex<Option<usize>>,
+    pub clear_child_tid: Mutex<usize>,
     /// 任务相关文件信息。
     pub file: TaskFileInfo,
     /// 定时器
@@ -129,11 +130,11 @@ impl Sel4Task {
             tcb,
             cnode,
             vspace,
-            futex_table: Arc::new(Mutex::new(BTreeMap::new())),
+            futex_table: Arc::new(Mutex::new(Vec::new())),
             mem: Arc::new(Mutex::new(TaskMemInfo::default())),
             signal: Mutex::new(TaskSignal::default()),
             exit: Mutex::new(None),
-            clear_child_tid: Mutex::new(None),
+            clear_child_tid: Mutex::new(0),
             file: TaskFileInfo::default(),
             info: Mutex::new(TaskInfo::default()),
             timer: Mutex::new(Duration::ZERO),
@@ -145,7 +146,6 @@ impl Sel4Task {
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         let tcb = alloc_tcb();
         let cnode = alloc_cnode(CNODE_RADIX_BITS);
-
         // 构建 CSpace 需要的结构
         cnode
             .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
@@ -173,7 +173,7 @@ impl Sel4Task {
             exit: Mutex::new(None),
             futex_table: self.futex_table.clone(),
             signal: Mutex::new(TaskSignal::default()),
-            clear_child_tid: Mutex::new(None),
+            clear_child_tid: Mutex::new(0),
             file: self.file.clone(),
             info: Mutex::new(self.info.lock().clone()),
             timer: Mutex::new(Duration::ZERO),
@@ -317,5 +317,28 @@ impl Sel4Task {
             .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
             .div_ceil(PAGE_SIZE as _) as usize
             * PAGE_SIZE;
+    }
+
+    /// 退出当前任务
+    ///
+    /// ## 参数
+    /// - `code` 退出使用的 code
+    pub fn exit_with(&self, code: u32) {
+        *self.exit.lock() = Some(code);
+        wake_hangs(self);
+        let uaddr = *self.clear_child_tid.lock();
+        if uaddr != 0 {
+            self.write_bytes(uaddr, 0u32.as_bytes());
+            futex_wake(self.futex_table.clone(), uaddr, 1);
+        }
+        if self.ppid != self.pid {
+            if let Some(signal) = self.signal.lock().exit_sig {
+                TASK_MAP
+                    .lock()
+                    .iter()
+                    .find(|x| *x.0 == self.ppid as _)
+                    .inspect(|parent| parent.1.add_signal(signal, self.tid));
+            }
+        }
     }
 }

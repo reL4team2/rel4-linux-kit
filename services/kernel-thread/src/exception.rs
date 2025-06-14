@@ -9,7 +9,6 @@ use sel4::{
     Fault, MessageInfo, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer,
 };
 use spin::Lazy;
-use syscalls::Errno;
 
 use crate::{
     child_test::TASK_MAP,
@@ -47,10 +46,9 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
             Ok(v) => v,
             Err(e) => -(e.into_raw() as isize) as usize,
         };
-        if result != Err(Errno::EAGAIN) {
-            *user_ctx.gpr_mut(0) = ret_v as _;
-            *user_ctx.pc_mut() = user_ctx.pc().wrapping_add(4) as _;
-        }
+
+        *user_ctx.gpr_mut(0) = ret_v as _;
+        *user_ctx.pc_mut() += 4;
 
         if task.exit.lock().is_some() {
             return;

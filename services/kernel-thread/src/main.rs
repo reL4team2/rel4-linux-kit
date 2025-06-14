@@ -5,6 +5,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![feature(never_type)]
+#![feature(extract_if)]
 #![feature(const_trait_impl)]
 
 use common::{config::DEFAULT_SERVE_EP, root::shutdown};
@@ -81,10 +82,15 @@ fn main() {
     // 初始化定时器
     timer::init();
 
+    /*
+        ./runtest.exe -w entry-static.exe pthread_robust_detach
+    ./runtest.exe -w entry-static.exe pthread_cond_smasher
+    ./runtest.exe -w entry-static.exe pthread_condattr_setclock
+    */
     // test_task!("busybox", "sh", "/init.sh");
-    // test_task!("runtest.exe", "-w", "entry-static.exe", "daemon_failure");
+    test_task!("runtest.exe", "-w", "entry-static.exe", "pthread_cancel");
     // test_task!("entry-static.exe", "clock_gettime");
-    test_task!("busybox", "sh", "/run-static.sh");
+    // test_task!("busybox", "sh", "/run-static.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     let spawner = pool.spawner();

@@ -11,17 +11,16 @@ use libc_core::{
     futex::FutexFlags,
     sched::{CloneFlags, WaitOption},
     signal::SignalNum,
+    types::TimeSpec,
 };
 use object::Object;
 use sel4::UserContext;
 use spin::mutex::Mutex;
 use syscalls::Errno;
-use zerocopy::IntoBytes;
+use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
-    child_test::{
-        TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex, wake_hangs,
-    },
+    child_test::{ArcTask, TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex},
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
@@ -49,15 +48,14 @@ pub fn sys_getppid(task: &Sel4Task) -> SysResult {
 
 #[inline]
 pub(super) fn sys_set_tid_addr(task: &Sel4Task, addr: usize) -> SysResult {
-    *task.clear_child_tid.lock() = Some(addr);
+    *task.clear_child_tid.lock() = addr;
     Ok(task.tid)
 }
 
 #[inline]
 pub(super) fn sys_exit(task: &Sel4Task, exit_code: i32) -> SysResult {
     debug!("sys_exit @ exit_code: {} ", exit_code);
-    *task.exit.lock() = Some(exit_code);
-    wake_hangs(task);
+    task.exit_with(exit_code as _);
     Ok(0)
 }
 
@@ -104,7 +102,7 @@ pub(super) async fn sys_wait4(
         return Ok(pid as _);
     }
     let (idx, exit_code) = finded.map(|x| (x.0, x.1)).unwrap();
-    task.write_bytes(status as _, (exit_code << 8).as_bytes());
+    task.write_bytes(status as _, exit_code.as_bytes());
 
     TASK_MAP.lock().remove(&idx);
     Ok(idx as _)
@@ -140,7 +138,7 @@ pub(super) fn sys_clone(
         Sel4Task::new().unwrap()
     };
     let new_task_id = new_task.tid;
-    new_task.signal.lock().exit_sig = signal;
+    new_task.signal.lock().exit_sig = SignalNum::from_num(signal as _);
     new_task.ppid = task.pid;
 
     let mut regs = task.tcb.tcb_read_all_registers(false).unwrap();
@@ -153,6 +151,7 @@ pub(super) fn sys_clone(
 
     if flags.contains(CloneFlags::CLONE_SETTLS) {
         regs.inner_mut().tpidr_el0 = tls as _;
+        regs.inner_mut().tpidrro_el0 = tls as _;
     }
 
     if flags.contains(CloneFlags::CLONE_PARENT_SETTID) {
@@ -176,6 +175,17 @@ pub(super) fn sys_clone(
         }
         new_task.file.work_dir = task.file.work_dir.clone();
     }
+
+    if flags.contains(CloneFlags::CLONE_SIGHAND) {
+        new_task.signal.lock().actions = task.signal.lock().actions.clone();
+    }
+
+    let clear_child_tid = if flags.contains(CloneFlags::CLONE_CHILD_CLEARTID) {
+        ctid as usize
+    } else {
+        0
+    };
+    *new_task.clear_child_tid.lock() = clear_child_tid;
 
     // 复制映射的地址
     if !flags.contains(CloneFlags::CLONE_VM) {
@@ -268,7 +278,7 @@ pub(super) fn sys_sched_yield(_task: &Sel4Task) -> SysResult {
 }
 
 pub(super) async fn sys_futex(
-    task: &Sel4Task,
+    task: ArcTask,
     uaddr_ptr: *mut i32,
     op: usize,
     value: usize,
@@ -280,28 +290,33 @@ pub(super) async fn sys_futex(
     let uaddr = task.read_ins(uaddr_ptr as _).ok_or(Errno::EINVAL)?;
     let flags = FutexFlags::try_from(op).map_err(|_| Errno::EINVAL)?;
     debug!(
-        "task {} sys_futex @ uaddr: {:#x} flags: {:?} value: {}",
-        task.tid, uaddr, flags, value
+        "task {} sys_futex @ op uaddr: {:p} flags: {:?} value: {:#x} value2: {:#x}",
+        task.tid, uaddr_ptr, flags, value as u32, value2
     );
 
     match flags {
         FutexFlags::Wait => {
             if uaddr == value as _ {
-                wait_futex(task.futex_table.clone(), uaddr_ptr as _).await
+                if value2 != 0 {
+                    let timespec_bytes = task.read_bytes(value2, size_of::<TimeSpec>()).unwrap();
+                    let timespec = TimeSpec::ref_from_bytes(&timespec_bytes).unwrap();
+                    log::error!("timeout : {:#x?}", timespec);
+                }
+                wait_futex(task, uaddr_ptr as _).await
             } else {
                 Err(Errno::EAGAIN)
             }
         }
         FutexFlags::Wake => {
             let futex_table = task.futex_table.clone();
-            let count = futex_wake(futex_table, uaddr_ptr.addr(), value);
+            let count = futex_wake(futex_table, uaddr_ptr as _, value);
             Ok(count)
         }
         FutexFlags::Requeue => {
             let futex_table = task.futex_table.clone();
             Ok(futex_requeue(
                 futex_table,
-                uaddr_ptr.addr(),
+                uaddr_ptr as _,
                 value,
                 uaddr2,
                 value2,
@@ -325,6 +340,6 @@ pub(super) fn sys_tkill(task: &Sel4Task, tid: usize, signum: usize) -> SysResult
             .ok_or(Errno::ESRCH)?
     };
 
-    target.add_signal(target_signal);
+    target.add_signal(target_signal, task.tid);
     Ok(0)
 }

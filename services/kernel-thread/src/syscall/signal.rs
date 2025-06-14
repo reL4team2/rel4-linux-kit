@@ -40,28 +40,29 @@ pub(super) fn sys_sigaction(
     oldact: *mut SigAction,
 ) -> SysResult {
     if !oldact.is_null() {
-        if let Some(old) = &task.signal.lock().actions[sig] {
-            task.write_bytes(oldact as _, old.as_bytes());
-        }
+        task.write_bytes(
+            oldact as _,
+            task.signal.lock().actions.lock()[sig].as_bytes(),
+        );
     }
 
     if !act.is_null() {
         let sigaction_bytes = task.read_bytes(act as _, size_of::<SigAction>()).unwrap();
         let sigact = SigAction::ref_from_bytes(&sigaction_bytes).unwrap();
-        task.signal.lock().actions[sig] = Some(sigact.clone());
+        task.signal.lock().actions.lock()[sig] = sigact.clone();
     }
     Ok(0)
 }
 
 pub(super) fn sys_kill(task: &Sel4Task, pid: usize, sig: usize) -> SysResult {
     assert_eq!(pid, task.pid);
-    task.add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?);
+    task.add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?, task.tid);
     Ok(0)
 }
 
 pub(super) fn sys_sigreturn(task: &Sel4Task, ctx: &mut UserContext) -> SysResult {
-    let saved_ctx = task.signal.lock().save_context.pop().unwrap();
-    *ctx = saved_ctx;
+    task.read_ucontext(ctx);
+    *ctx.pc_mut() -= 4;
     Ok(*ctx.c_param(0) as _)
 }
 

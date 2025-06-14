@@ -69,7 +69,7 @@ pub static WAITING_PID: Mutex<Vec<(u64, u64, Waker)>> = Mutex::new(Vec::new());
 pub struct WaitPid(pub u64, pub u64, pub bool);
 
 impl Future for WaitPid {
-    type Output = Option<(u64, i32)>;
+    type Output = Option<(u64, u32)>;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
@@ -106,7 +106,7 @@ impl Future for WaitPid {
 pub struct WaitAnyChild(pub u64, pub bool);
 
 impl Future for WaitAnyChild {
-    type Output = Option<(u64, i32)>;
+    type Output = Option<(u64, u32)>;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
@@ -143,12 +143,14 @@ pub fn wake_hangs(task: &Sel4Task) {
     }
 }
 
-pub type FutexTable = BTreeMap<usize, Vec<Waker>>;
+/// Futex 等待队列， (等待地址， task_id, Waker)
+pub type FutexTable = Vec<(usize, usize, Waker, Arc<Mutex<Result<usize, Errno>>>)>;
 
 pub struct WaitFutex {
-    pub table: Arc<Mutex<FutexTable>>,
+    pub task: ArcTask,
     pub uaddr: usize,
     pub polled: bool,
+    pub errno: Arc<Mutex<Result<usize, Errno>>>,
 }
 
 impl Future for WaitFutex {
@@ -159,12 +161,17 @@ impl Future for WaitFutex {
         cx: &mut core::task::Context<'_>,
     ) -> Poll<Self::Output> {
         if self.polled {
-            return Poll::Ready(Ok(0));
+            log::error!("wake up: {:?}", self.errno.lock());
+            return Poll::Ready(*self.errno.lock());
         }
         self.polled = true;
-        let mut futex_table = self.table.lock();
+
         let waker = cx.waker().clone();
-        futex_table.entry(self.uaddr).or_default().push(waker);
+        // futex_table.entry(self.uaddr).or_default().push(waker);
+        self.task
+            .futex_table
+            .lock()
+            .push((self.uaddr, self.task.tid, waker, self.errno.clone()));
         Poll::Pending
         // if !signal.is_empty(None) {
         //     self.0
@@ -180,28 +187,53 @@ impl Future for WaitFutex {
 }
 
 #[inline]
-pub async fn wait_futex(table: Arc<Mutex<FutexTable>>, uaddr: usize) -> Result<usize, Errno> {
+pub async fn wait_futex(task: ArcTask, uaddr: usize) -> Result<usize, Errno> {
     WaitFutex {
-        table,
+        task,
         uaddr,
         polled: false,
+        errno: Arc::new(Mutex::new(Ok(0))),
     }
     .await
 }
 
-pub fn futex_wake(futex_table: Arc<Mutex<FutexTable>>, uaddr: usize, wake_count: usize) -> usize {
+pub fn futex_wake(
+    futex_table: Arc<Mutex<FutexTable>>,
+    uaddr: usize,
+    mut wake_count: usize,
+) -> usize {
     let mut futex_table = futex_table.lock();
-    let que_size = futex_table.get_mut(&uaddr).map(|x| x.len()).unwrap_or(0);
-    if que_size == 0 {
-        0
-    } else {
-        let wake_count = core::cmp::min(wake_count, que_size);
-        let que = futex_table.get_mut(&uaddr).map(|x| x.drain(..wake_count));
-        if let Some(queue) = que {
-            queue.for_each(|x| x.wake());
+    // let que_size = futex_table.get_mut(&uaddr).map(|x| x.len()).unwrap_or(0);
+    // if que_size == 0 {
+    //     0
+    // } else {
+    //     let wake_count = core::cmp::min(wake_count, que_size);
+    //     let que = futex_table.get_mut(&uaddr).map(|x| x.drain(..wake_count));
+    //     if let Some(queue) = que {
+    //         queue.for_each(|x| x.wake());
+    //     }
+    //     wake_count
+    // }
+    let queue = futex_table.extract_if(.., |x| {
+        wake_count -= 1;
+        x.0 == uaddr && wake_count != usize::MAX
+    });
+    let mut res = 0;
+    queue.for_each(|(_uaddr, _tid, waker, _)| {
+        res += 1;
+        waker.wake_by_ref();
+    });
+    res
+}
+
+pub fn futex_signal_task(futex_table: Arc<Mutex<FutexTable>>, tid: usize, code: Errno) {
+    futex_table.lock().retain_mut(|x| {
+        if x.1 == tid {
+            *x.3.lock() = Err(code);
+            x.2.wake_by_ref();
         }
-        wake_count
-    }
+        x.1 != tid
+    });
 }
 
 pub fn futex_requeue(
@@ -211,20 +243,19 @@ pub fn futex_requeue(
     uaddr2: usize,
     reque_count: usize,
 ) -> usize {
-    let mut futex_table = futex_table.lock();
+    let waked_size = futex_wake(futex_table.clone(), uaddr, wake_count);
 
-    let waked_size = futex_table
-        .get_mut(&uaddr)
-        .map(|x| x.drain(..wake_count).count())
-        .unwrap_or(0);
-
-    let reque: Option<Vec<_>> = futex_table
-        .get_mut(&uaddr)
-        .map(|x| x.drain(..reque_count).collect());
-
-    if let Some(reque) = reque {
-        futex_table.entry(uaddr2).or_default().extend(reque);
-    }
+    futex_table.lock().iter_mut().fold(reque_count, |count, x| {
+        if count == 0 {
+            return 0;
+        }
+        if x.0 == uaddr {
+            x.0 = uaddr2;
+            count - 1
+        } else {
+            count
+        }
+    });
 
     waked_size
 }
