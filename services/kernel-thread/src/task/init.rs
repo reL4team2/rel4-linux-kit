@@ -54,7 +54,7 @@ impl Sel4Task {
             .iter()
             .map(|arg| {
                 // TODO: set end bit was zeroed manually.
-                stack_ptr = (stack_ptr - arg.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                stack_ptr = (stack_ptr - arg.bytes().len() - 1).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, arg.as_bytes());
                 page_writer.write_u8(stack_ptr + arg.len(), 0);
                 stack_ptr
@@ -70,7 +70,7 @@ impl Sel4Task {
         let envps: Vec<_> = envs
             .iter()
             .map(|env| {
-                stack_ptr = (stack_ptr - env.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                stack_ptr = (stack_ptr - env.bytes().len() - 1).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, env.as_bytes());
                 page_writer.write_u8(stack_ptr + env.len(), 0);
                 stack_ptr

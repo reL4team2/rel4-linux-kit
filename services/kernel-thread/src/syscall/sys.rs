@@ -5,10 +5,12 @@
 use core::time::Duration;
 
 use libc_core::{
+    resource::Rlimit,
     types::{TimeSpec, TimeVal},
     utsname::UTSName,
 };
 use sel4_kit::arch::current_time;
+use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{task::Sel4Task, timer::flush_timer};
@@ -42,6 +44,35 @@ pub(super) fn sys_gettimeofday(
     Ok(0)
 }
 
+pub(super) fn sys_clock_gettime(
+    task: &mut Sel4Task,
+    clock_id: usize,
+    times_ptr: *mut TimeSpec,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_clock_gettime @ clock_id: {}, times_ptr: {:p}",
+        task.pid, clock_id, times_ptr
+    );
+
+    let dura = match clock_id {
+        0 => current_time(), // CLOCK_REALTIME
+        1 => current_time(), // CLOCK_MONOTONIC
+        2 => {
+            warn!("CLOCK_PROCESS_CPUTIME_ID not implemented");
+            Duration::ZERO
+        }
+        3 => {
+            warn!("CLOCK_THREAD_CPUTIME_ID not implemented");
+            Duration::ZERO
+        }
+        _ => return Err(Errno::EINVAL),
+    };
+    log::debug!("dura: {:#x?}", dura);
+    let timespec: TimeSpec = dura.into();
+    task.write_bytes(times_ptr as _, timespec.as_bytes());
+    Ok(0)
+}
+
 pub(super) fn sys_nanosleep(
     task: &mut Sel4Task,
     req_ptr: *const TimeSpec,
@@ -64,5 +95,36 @@ pub(super) fn sys_nanosleep(
     if !rem_ptr.is_null() {
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
     }
+    Ok(0)
+}
+
+pub(super) fn sys_prlimit64(
+    _task: &mut Sel4Task,
+    pid: usize,
+    resource: usize,
+    new_limit: *const Rlimit,
+    old_limit: *mut Rlimit,
+) -> SysResult {
+    debug!(
+        "sys_getrlimit @ pid: {}, resource: {}, new_limit: {:p}, old_limit: {:p}",
+        pid, resource, new_limit, old_limit
+    );
+    // match resource {
+    //     7 => {
+    //         if !new_limit.is_null() {
+    //             let rlimit = new_limit.read();
+    //             self.task.pcb.lock().rlimits[7] = rlimit.max;
+    //         }
+    //         if !old_limit.is_null() {
+    //             old_limit.with_mut(|rlimit| {
+    //                 rlimit.max = self.task.inner_map(|inner| inner.rlimits[7]);
+    //                 rlimit.curr = rlimit.max;
+    //             })
+    //         }
+    //     }
+    //     _ => {
+    //         warn!("need to finish prlimit64: resource {}", resource)
+    //     }
+    // }
     Ok(0)
 }

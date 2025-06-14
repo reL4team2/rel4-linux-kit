@@ -3,7 +3,7 @@
 //!
 
 use alloc::{string::String, sync::Arc};
-use fs::{file::File, pipe::create_pipe};
+use fs::{SeekFrom, file::File, pipe::create_pipe};
 use libc_core::{
     fcntl::{AT_FDCWD, FcntlCmd, OpenFlags},
     types::{IoVec, Stat},
@@ -128,6 +128,22 @@ pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: u
     }
 
     Ok(wsize)
+}
+
+pub(super) fn sys_lseek(task: &Sel4Task, fd: usize, offset: usize, whence: usize) -> SysResult {
+    let seek_from = match whence {
+        0 => SeekFrom::SET(offset),
+        1 => SeekFrom::CURRENT(offset as isize),
+        2 => SeekFrom::END(offset as isize),
+        _ => return Err(Errno::EINVAL),
+    };
+
+    task.file
+        .file_ds
+        .lock()
+        .get(fd)
+        .ok_or(Errno::EBADF)?
+        .seek(seek_from)
 }
 
 pub(super) fn sys_getcwd(task: &Sel4Task, buf: *mut u8, _size: usize) -> SysResult {

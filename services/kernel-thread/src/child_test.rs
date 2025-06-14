@@ -1,5 +1,7 @@
+use core::task::{Poll, Waker};
+
 use crate::{consts::task::DEF_STACK_TOP, fs::stdio::StdConsole, task::Sel4Task};
-use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc};
+use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use common::config::PAGE_SIZE;
 use fs::file::File;
 use object::{BinaryFormat, Object};
@@ -52,4 +54,85 @@ pub fn add_test_child(elf_file: &[u8], args: &[&str]) -> Result<()> {
     TASK_MAP.lock().insert(task.id as _, task);
 
     Ok(())
+}
+
+/// 等待队列 (父进程 id, 子进程 id)
+pub static WAITING_PID: Mutex<Vec<(u64, u64, Waker)>> = Mutex::new(Vec::new());
+
+/// 等待程序结束
+///
+/// (父进程 pid, 等待的子进程 pid, Blocking)
+pub struct WaitPid(pub u64, pub u64, pub bool);
+
+impl Future for WaitPid {
+    type Output = Option<(u64, i32)>;
+
+    fn poll(
+        self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<Self::Output> {
+        let task_map = TASK_MAP.lock();
+        let finded = task_map
+            .iter()
+            .find(|(_, target)| {
+                target.exit.is_some() && target.ppid == self.0 as _ && target.pid == self.1 as _
+            })
+            .map(|(&tid, task)| (tid, task.exit.unwrap()));
+
+        match finded {
+            Some(res) => Poll::Ready(Some(res)),
+            None => {
+                if self.2 {
+                    return Poll::Ready(None);
+                }
+                WAITING_PID
+                    .lock()
+                    .push((self.0, self.1, cx.waker().clone()));
+                Poll::Pending
+            }
+        }
+    }
+}
+
+/// 等待程序结束
+///
+/// (父进程 pid, poll once)
+pub struct WaitAnyChild(pub u64, pub bool);
+
+impl Future for WaitAnyChild {
+    type Output = Option<(u64, i32)>;
+
+    fn poll(
+        self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<Self::Output> {
+        let task_map = TASK_MAP.lock();
+        let finded = task_map
+            .iter()
+            .find(|(_, target)| target.exit.is_some() && target.ppid == self.0 as _)
+            .map(|(&tid, task)| (tid, task.exit.unwrap()));
+
+        match finded {
+            Some(res) => Poll::Ready(Some(res)),
+            None => {
+                if self.1 {
+                    return Poll::Ready(None);
+                }
+                WAITING_PID
+                    .lock()
+                    .push((self.0, -1 as _, cx.waker().clone()));
+                Poll::Pending
+            }
+        }
+    }
+}
+
+pub fn wake_hangs(task: &Sel4Task) {
+    let mut queue = WAITING_PID.lock();
+    let finded = queue
+        .iter()
+        .position(|x| x.0 == task.ppid as _ && (x.1 == u64::MAX || x.1 == task.pid as _));
+    if let Some(idx) = finded {
+        queue.remove(idx).2.wake();
+    }
 }

@@ -37,6 +37,8 @@ pub struct Sel4Task {
     pub pid: usize,
     /// 父进程 ID
     pub ppid: usize,
+    /// 进程组 ID
+    pub pgid: usize,
     /// 任务 ID (线程 ID)
     pub id: usize,
     /// 进程控制块（Capability)
@@ -117,6 +119,7 @@ impl Sel4Task {
         Ok(Sel4Task {
             id: tid,
             pid: tid,
+            pgid: 0,
             ppid: 1,
             tcb,
             cnode,
@@ -137,6 +140,7 @@ impl Sel4Task {
         Ok(Sel4Task {
             pid: self.pid,
             ppid: self.ppid,
+            pgid: self.pgid,
             id: tid,
             tcb: self.tcb,
             cnode: self.cnode,

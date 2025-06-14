@@ -15,7 +15,7 @@ use syscalls::Errno;
 use zerocopy::IntoBytes;
 
 use crate::{
-    child_test::TASK_MAP,
+    child_test::{TASK_MAP, WaitAnyChild, WaitPid, wake_hangs},
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     utils::{obj::alloc_page, page::map_page_self},
@@ -26,6 +26,12 @@ use super::SysResult;
 /// 获取进程 id
 #[inline]
 pub fn sys_getpid(task: &Sel4Task) -> SysResult {
+    Ok(task.pid)
+}
+
+/// 获取线程 ID
+#[inline]
+pub fn sys_gettid(task: &Sel4Task) -> SysResult {
     Ok(task.pid)
 }
 
@@ -45,11 +51,12 @@ pub(super) fn sys_set_tid_addr(task: &mut Sel4Task, addr: usize) -> SysResult {
 pub(super) fn sys_exit(task: &mut Sel4Task, exit_code: i32) -> SysResult {
     debug!("sys_exit @ exit_code: {} ", exit_code);
     task.exit = Some(exit_code);
+    wake_hangs(task);
     Ok(0)
 }
 
 #[inline]
-pub(super) fn sys_wait4(
+pub(super) async fn sys_wait4(
     task: &Sel4Task,
     ctx: &mut UserContext,
     pid: isize,
@@ -61,10 +68,32 @@ pub(super) fn sys_wait4(
     if options.contains(WaitOption::WUNTRACED) {
         panic!("option({:?}  {}) is not supported", options, option);
     }
-    let mut task_map = TASK_MAP.lock();
-    let finded = task_map
+
+    if TASK_MAP
+        .lock()
         .iter()
-        .find(|(_, target)| target.exit.is_some() && target.ppid == task.pid);
+        .find(|x| x.1.ppid == task.pid)
+        .is_none()
+    {
+        return Err(Errno::ECHILD);
+    }
+
+    let finded = if pid == -1 {
+        WaitAnyChild(task.pid as _, options.contains(WaitOption::WHOHANG)).await
+    } else if pid > 0 {
+        WaitPid(
+            task.pid as _,
+            pid as _,
+            options.contains(WaitOption::WHOHANG),
+        )
+        .await
+    } else {
+        TASK_MAP
+            .lock()
+            .iter()
+            .find(|(_, target)| target.exit.is_some() && target.ppid == task.pid)
+            .map(|(&tid, task)| (tid, task.exit.unwrap()))
+    };
 
     if finded.is_none() {
         if options.contains(WaitOption::WHOHANG) {
@@ -73,10 +102,10 @@ pub(super) fn sys_wait4(
         *ctx.pc_mut() -= 4;
         return Ok(pid as _);
     }
-    let (idx, exit_code) = finded.map(|x| (*x.0, x.1.exit.unwrap())).unwrap();
+    let (idx, exit_code) = finded.map(|x| (x.0, x.1)).unwrap();
     task.write_bytes(status as _, (exit_code << 8).as_bytes());
 
-    task_map.remove(&idx);
+    TASK_MAP.lock().remove(&idx);
     Ok(idx as _)
 }
 

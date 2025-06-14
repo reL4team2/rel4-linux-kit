@@ -4,19 +4,16 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::{
-    config::{DEFAULT_SERVE_EP, PAGE_SIZE},
-    page::PhysPage,
+use common::{config::PAGE_SIZE, page::PhysPage};
+use sel4::{
+    Fault, MessageInfo, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer,
 };
-use sel4::{Fault, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer};
 use spin::Lazy;
 use syscalls::Errno;
 
 use crate::{
     child_test::TASK_MAP,
-    rasync::yield_now,
     syscall::handle_syscall,
-    timer::handle_timer,
     utils::obj::{alloc_notification, alloc_page},
 };
 
@@ -33,7 +30,7 @@ pub static GLOBAL_NOTIFY: Lazy<Notification> = Lazy::new(alloc_notification);
 /// 函数描述：
 /// - 异常指令为 0xdeadbeef 时，说明是系统调用
 /// - 异常指令为其他值时，说明是用户异常
-pub fn handle_user_exception(tid: u64, exception: UserException) {
+pub async fn handle_user_exception(tid: u64, exception: UserException) {
     let mut task = TASK_MAP.lock().remove(&tid).unwrap();
 
     let ins = task.read_ins(exception.inner().get_FaultIP() as _);
@@ -44,7 +41,7 @@ pub fn handle_user_exception(tid: u64, exception: UserException) {
             .tcb
             .tcb_read_all_registers(true)
             .expect("can't read task context");
-        let result = handle_syscall(&mut task, &mut user_ctx);
+        let result = handle_syscall(&mut task, &mut user_ctx).await;
         debug!("\t SySCall Ret: {:x?}", result);
         let ret_v = match result {
             Ok(v) => v,
@@ -100,37 +97,15 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
 }
 
 /// 循环等待并处理异常
-pub async fn waiting_and_handle() {
-    loop {
-        yield_now().await;
-        let (message, tid) = DEFAULT_SERVE_EP.recv(());
-        match tid {
-            u64::MAX => handle_timer(),
-            _ => {
-                assert!(message.label() < 8, "Unexpected IPC Message");
+pub async fn waiting_and_handle(tid: u64, message: MessageInfo) {
+    assert!(message.label() < 8, "Unexpected IPC Message");
 
-                let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
-                match fault {
-                    Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
-                    Fault::UserException(ue) => handle_user_exception(tid, ue),
-                    _ => {
-                        log::error!("Unhandled fault: {:#x?}", fault);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// 等待所有任务结束
-pub async fn waiting_for_end() {
-    loop {
-        yield_now().await;
-        let mut task_map = TASK_MAP.lock();
-        let next_task = task_map.values_mut().find(|x| x.exit.is_none());
-        if next_task.is_none() {
-            sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
-            common::root::shutdown();
+    let fault = with_ipc_buffer(|buffer| Fault::new(buffer, &message));
+    match fault {
+        Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
+        Fault::UserException(ue) => handle_user_exception(tid, ue).await,
+        _ => {
+            log::error!("Unhandled fault: {:#x?}", fault);
         }
     }
 }

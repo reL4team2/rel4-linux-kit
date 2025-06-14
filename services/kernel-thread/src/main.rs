@@ -7,10 +7,12 @@
 #![feature(never_type)]
 #![feature(const_trait_impl)]
 
+use ::fs::file::File;
+use common::{config::DEFAULT_SERVE_EP, root::shutdown};
 use futures::task::LocalSpawnExt;
 use libc_core::fcntl::OpenFlags;
 
-use crate::utils::blk::get_blk_dev;
+use crate::{child_test::TASK_MAP, timer::handle_timer, utils::blk::get_blk_dev};
 
 #[macro_use]
 extern crate log;
@@ -68,6 +70,9 @@ fn main() {
 
     // 初始化文件系统
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
+    {
+        File::open("/tmp", OpenFlags::DIRECTORY | OpenFlags::CREAT).unwrap();
+    }
 
     // 初始化设备
     device::init();
@@ -78,19 +83,33 @@ fn main() {
     // 初始化定时器
     timer::init();
 
-    // {
-    //     let file = ::fs::file::File::open("/busybox", OpenFlags::RDONLY).unwrap();
-    //     let mut data = vec![0u8; file.file_size().unwrap()];
-    //     file.read(&mut data).unwrap();
-    //     child_test::add_test_child(&data, &["echo", "123"]).unwrap();
-    // }
     // test_task!("busybox", "sh", "/init.sh");
-    test_task!("runtest.exe", "-w", "entry-static.exe", "basename");
+    test_task!("runtest.exe", "-w", "entry-static.exe", "fscanf");
+    // test_task!("entry-static.exe", "clock_gettime");
+    // test_task!("busybox", "sh", "/run-static.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
-    spawn_async!(pool, exception::waiting_and_handle());
-    spawn_async!(pool, exception::waiting_for_end());
+    let spawner = pool.spawner();
     loop {
+        {
+            // 所有的任务都执行完毕
+            if TASK_MAP
+                .lock()
+                .iter()
+                .find(|x| x.1.exit.is_none())
+                .is_none()
+            {
+                sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
+                shutdown();
+            }
+        }
+        let (message, tid) = DEFAULT_SERVE_EP.recv(());
+        match tid {
+            u64::MAX => handle_timer(),
+            _ => spawner
+                .spawn_local(exception::waiting_and_handle(tid, message))
+                .unwrap(),
+        };
         let _ = pool.run_all_until_stalled();
     }
 }
