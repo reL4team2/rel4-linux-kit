@@ -83,12 +83,7 @@ fn main() {
     // 初始化定时器
     timer::init();
 
-    /*
-        ./runtest.exe -w entry-static.exe pthread_robust_detach
-    ./runtest.exe -w entry-static.exe pthread_cond_smasher
-    ./runtest.exe -w entry-static.exe pthread_condattr_setclock
-    */
-    // test_task!("busybox", "sh", "/init.sh");
+    test_task!("busybox", "sh", "/init.sh");
     // test_task!(
     //     "runtest.exe",
     //     "-w",
@@ -96,7 +91,7 @@ fn main() {
     //     "pthread_cond_smasher"
     // );
     // test_task!("entry-static.exe", "clock_gettime");
-    test_task!("busybox", "sh", "/run-static.sh");
+    // test_task!("busybox", "sh", "/run-static.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
     let spawner = pool.spawner();

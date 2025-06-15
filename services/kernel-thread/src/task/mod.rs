@@ -9,7 +9,7 @@ mod signal;
 
 use alloc::{sync::Arc, vec::Vec};
 use common::{
-    config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, PAGE_SIZE},
+    config::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, LINUX_APP_CNODE_RADIX_BITS, PAGE_SIZE},
     page::PhysPage,
 };
 use core::{
@@ -101,18 +101,21 @@ impl Sel4Task {
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         let vspace = alloc_vspace();
         let tcb = alloc_tcb();
-        let cnode = alloc_cnode(CNODE_RADIX_BITS);
+        let cnode = alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
         slot::ASID_POOL.cap().asid_pool_assign(vspace).unwrap();
 
         // 构建 CSpace 需要的结构
         cnode
-            .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
+            .absolute_cptr_from_bits_with_depth(1, LINUX_APP_CNODE_RADIX_BITS)
             .copy(&LeafSlot::from_cap(tcb).abs_cptr(), CapRights::all())
             .unwrap();
 
         // Copy EndPoint to child
         cnode
-            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP.bits(), CNODE_RADIX_BITS)
+            .absolute_cptr_from_bits_with_depth(
+                DEFAULT_PARENT_EP.bits(),
+                LINUX_APP_CNODE_RADIX_BITS,
+            )
             .mint(
                 &LeafSlot::from(DEFAULT_SERVE_EP).abs_cptr(),
                 CapRights::all(),
@@ -141,16 +144,19 @@ impl Sel4Task {
     pub fn create_thread(&self) -> Result<Self, sel4::Error> {
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
         let tcb = alloc_tcb();
-        let cnode = alloc_cnode(CNODE_RADIX_BITS);
+        let cnode = alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
         // 构建 CSpace 需要的结构
         cnode
-            .absolute_cptr_from_bits_with_depth(1, CNODE_RADIX_BITS)
+            .absolute_cptr_from_bits_with_depth(1, LINUX_APP_CNODE_RADIX_BITS)
             .copy(&LeafSlot::from_cap(tcb).abs_cptr(), CapRights::all())
             .unwrap();
 
         // Copy EndPoint to child
         cnode
-            .absolute_cptr_from_bits_with_depth(DEFAULT_PARENT_EP.bits(), CNODE_RADIX_BITS)
+            .absolute_cptr_from_bits_with_depth(
+                DEFAULT_PARENT_EP.bits(),
+                LINUX_APP_CNODE_RADIX_BITS,
+            )
             .mint(
                 &LeafSlot::from(DEFAULT_SERVE_EP).abs_cptr(),
                 CapRights::all(),

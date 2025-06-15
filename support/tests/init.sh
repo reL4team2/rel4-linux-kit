@@ -33,4 +33,6 @@ echo Hello World!
 ./write
 ./yield
 
+./busybox ash run-static.sh
+
 echo Exec Done

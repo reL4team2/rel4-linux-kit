@@ -46,8 +46,13 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     let mut mem_untypes = bootinfo.untyped_list()[bootinfo.kernel_untyped_range()]
         .iter()
         .enumerate()
-        .map(|(idx, ud)| (Untyped::from_bits((mem_untyped_start + idx) as _), ud))
-        .collect::<Vec<(Untyped, &UntypedDesc)>>();
+        .map(|(idx, ud)| {
+            (
+                Untyped::from_bits((mem_untyped_start + idx) as _),
+                ud.clone(),
+            )
+        })
+        .collect::<Vec<(Untyped, UntypedDesc)>>();
     let device_untypes = bootinfo.untyped_list()[bootinfo.device_untyped_range()]
         .iter()
         .enumerate()
@@ -63,7 +68,8 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // TODO: 使用合适的 CSpace 边缘处理模式
     // 可能的做法是单独搞一个 ObjectAllocator 来分配 CSpace
     common::slot::init(bootinfo.empty().range().start..usize::MAX, None);
-    OBJ_ALLOCATOR.lock().init(mem_untypes.pop().unwrap().0);
+    let len = mem_untypes.len();
+    OBJ_ALLOCATOR.lock().init(mem_untypes.remove(len - 4).0);
 
     // 重建 Capability 空间，构建为多级 CSpace
     cspace::rebuild_cspace();
@@ -151,6 +157,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         fault_ep,
         badge: 0,
         channels: Vec::new(),
+        untyped: mem_untypes,
     };
     with_ipc_buffer_mut(|ib| root_task_handler.waiting_and_handle(ib))
 }
@@ -160,4 +167,5 @@ pub struct RootTaskHandler {
     fault_ep: Cap<Endpoint>,
     badge: u64,
     channels: Vec<(usize, Vec<SmallPage>)>,
+    untyped: Vec<(Cap<sel4::cap_type::Untyped>, UntypedDesc)>,
 }

@@ -65,15 +65,22 @@ impl ObjectAllocator {
         blueprint: sel4::ObjectBlueprint,
     ) -> sel4::cap::Unspecified {
         let leaf_slot = self.allocate_slot();
-
-        self.ut
-            .untyped_retype(
+        loop {
+            let cap_alloc = self.ut.untyped_retype(
                 &blueprint,
                 &leaf_slot.cnode_abs_cptr(),
                 leaf_slot.offset_of_cnode(),
                 1,
-            )
-            .unwrap();
+            );
+            if cap_alloc == Ok(()) {
+                break;
+            } else if cap_alloc == Err(sel4::Error::NotEnoughMemory) {
+                LeafSlot::from_cap(self.ut).delete().unwrap();
+                crate::root::alloc_untyped(self.ut.into()).unwrap();
+            } else {
+                cap_alloc.unwrap();
+            }
+        }
         leaf_slot.cap()
     }
 

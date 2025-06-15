@@ -1,5 +1,5 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
+use common::config::{DEFAULT_PARENT_EP, LINUX_APP_CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
 use libc_core::elf::AuxType;
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
@@ -117,7 +117,7 @@ impl Sel4Task {
         self.tcb.tcb_configure(
             DEFAULT_PARENT_EP.cptr(),
             self.cnode,
-            CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
+            CNodeCapData::new(0, sel4::WORD_SIZE - LINUX_APP_CNODE_RADIX_BITS),
             self.vspace,
             0,
             LeafSlot::new(0).cap(),
