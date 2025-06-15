@@ -2,12 +2,13 @@
 //!
 //!
 
-use core::time::Duration;
+use core::{pin::pin, time::Duration};
 
 use alloc::{string::String, sync::Arc, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
 use flatten_objects::FlattenObjects;
 use fs::file::File;
+use futures::future::{Either, select};
 use libc_core::{
     fcntl::{AT_FDCWD, OpenFlags},
     futex::FutexFlags,
@@ -57,9 +58,9 @@ pub(super) fn sys_set_tid_addr(task: &Sel4Task, addr: usize) -> SysResult {
 }
 
 #[inline]
-pub(super) fn sys_exit(task: &Sel4Task, exit_code: i32) -> SysResult {
+pub(super) fn sys_exit(task: &Sel4Task, exit_code: u32) -> SysResult {
     debug!("sys_exit @ exit_code: {} ", exit_code);
-    task.exit_with(exit_code as _);
+    task.exit_with(exit_code << 7);
     Ok(0)
 }
 
@@ -304,12 +305,19 @@ pub(super) async fn sys_futex(
     match flags {
         FutexFlags::Wait => {
             if uaddr == value as _ {
+                let wait_func = wait_futex(task.clone(), uaddr_ptr as _);
                 if value2 != 0 {
                     let timespec_bytes = task.read_bytes(value2, size_of::<TimeSpec>()).unwrap();
                     let timespec = TimeSpec::ref_from_bytes(&timespec_bytes).unwrap();
-                    log::error!("timeout : {:#x?}", timespec);
+                    let next = current_time() + (*timespec).into();
+                    let timeout_func = wait_time(next, task.tid);
+                    match select(pin!(wait_func), pin!(timeout_func)).await {
+                        Either::Left((res, _)) => res,
+                        Either::Right((res, _)) => res,
+                    }
+                } else {
+                    wait_func.await
                 }
-                wait_futex(task, uaddr_ptr as _).await
             } else {
                 Err(Errno::EAGAIN)
             }

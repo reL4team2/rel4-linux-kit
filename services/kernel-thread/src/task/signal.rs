@@ -59,7 +59,7 @@ impl Sel4Task {
                 // Then use default handler. Exit or do nothing.
                 if matches!(signal, SignalNum::CANCEL | SignalNum::SEGV | SignalNum::ILL) {
                     drop(task_signal);
-                    self.exit_with(128 + signal.num() as u32);
+                    self.exit_with(signal.num() as u32);
                 }
                 return;
             }

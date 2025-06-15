@@ -107,6 +107,7 @@ impl Future for WaitForTime {
 /// ## 参数
 /// - `duration` 目标等待的时间
 /// - `tid`      等待的线程 id
-pub async fn wait_time(duration: Duration, tid: usize) -> Result<(), Errno> {
-    WaitForTime(duration, tid, Arc::new(Mutex::new(None))).await
+pub async fn wait_time(duration: Duration, tid: usize) -> Result<usize, Errno> {
+    WaitForTime(duration, tid, Arc::new(Mutex::new(None))).await?;
+    Ok(0)
 }

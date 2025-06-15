@@ -86,6 +86,10 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::writev => sys_writev(task, a0, a1 as _, a2),
         Sysno::prlimit64 => sys_prlimit64(task, a0, a1, a2 as _, a3 as _),
         Sysno::mprotect => Ok(0),
+        Sysno::get_robust_list => {
+            log::warn!("get_robust_list not implementation");
+            Ok(0)
+        }
         Sysno::getuid | Sysno::getgid | Sysno::ioctl | Sysno::geteuid | Sysno::getegid => Ok(0),
         _ => Err(Errno::EPERM),
     }

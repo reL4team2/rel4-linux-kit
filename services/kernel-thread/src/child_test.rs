@@ -1,8 +1,7 @@
-use core::task::{Poll, Waker};
-
 use crate::{consts::task::DEF_STACK_TOP, task::Sel4Task};
 use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use common::config::PAGE_SIZE;
+use core::task::{Poll, Waker};
 use fs::file::File;
 use libc_core::fcntl::OpenFlags;
 use object::{BinaryFormat, Object};
@@ -208,14 +207,14 @@ pub fn futex_wake(
     res
 }
 
-pub fn futex_signal_task(_futex_table: Arc<Mutex<FutexTable>>, _tid: usize, _code: Errno) {
-    // futex_table.lock().retain_mut(|x| {
-    //     if x.1 == tid {
-    //         *x.3.lock() = Err(code);
-    //         x.2.wake_by_ref();
-    //     }
-    //     x.1 != tid
-    // });
+pub fn futex_signal_task(futex_table: Arc<Mutex<FutexTable>>, tid: usize, code: Errno) {
+    futex_table.lock().retain_mut(|x| {
+        if x.1 == tid {
+            *x.3.lock() = Err(code);
+            x.2.wake_by_ref();
+        }
+        x.1 != tid
+    });
 }
 
 pub fn futex_requeue(
