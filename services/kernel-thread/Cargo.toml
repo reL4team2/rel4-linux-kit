@@ -23,13 +23,13 @@ futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 spin = { workspace = true }
 log = "0.4"
 syscalls = { workspace = true }
-bitflags = "2.6"
+bitflags = "2.9.1"
 memory_addr = "0.3"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 
 common = { workspace = true }
-libc-types = { workspace = true }
+libc-core = { workspace = true }
 
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
 flatten_objects = "0.2.2"
@@ -39,3 +39,8 @@ srv-gate = { workspace = true }
 
 uart-thread = { workspace = true }
 lwext4-thread = { workspace = true }
+
+fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+allocfs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+ext4fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+vfscore = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }

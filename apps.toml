@@ -20,7 +20,7 @@ dma = [["DMA_ADDR_START", "0x2000"]]
 cfg = ["blk_ipc"]
 
 [[tasks]]
-deps = ["fs-thread", "uart-thread"]
+deps = ["uart-thread", "block-thread"]
 name = "kernel-thread"
 file = "kernel-thread"
 

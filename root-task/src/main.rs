@@ -46,8 +46,13 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     let mut mem_untypes = bootinfo.untyped_list()[bootinfo.kernel_untyped_range()]
         .iter()
         .enumerate()
-        .map(|(idx, ud)| (Untyped::from_bits((mem_untyped_start + idx) as _), ud))
-        .collect::<Vec<(Untyped, &UntypedDesc)>>();
+        .map(|(idx, ud)| {
+            (
+                Untyped::from_bits((mem_untyped_start + idx) as _),
+                ud.clone(),
+            )
+        })
+        .collect::<Vec<(Untyped, UntypedDesc)>>();
     let device_untypes = bootinfo.untyped_list()[bootinfo.device_untyped_range()]
         .iter()
         .enumerate()
@@ -63,7 +68,8 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // TODO: 使用合适的 CSpace 边缘处理模式
     // 可能的做法是单独搞一个 ObjectAllocator 来分配 CSpace
     common::slot::init(bootinfo.empty().range().start..usize::MAX, None);
-    OBJ_ALLOCATOR.lock().init(mem_untypes.pop().unwrap().0);
+    let len = mem_untypes.len();
+    OBJ_ALLOCATOR.lock().init(mem_untypes.remove(len - 4).0);
 
     // 重建 Capability 空间，构建为多级 CSpace
     cspace::rebuild_cspace();
@@ -115,23 +121,23 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
 
         // 映射 DMA 内存，应该随机分配任意内存即可
         for (start, size) in t.dma {
-            // // 申请多个页表
-            // // TODO: 检查页表是否连续
-            // let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
+            // 申请多个页表
+            // TODO: 检查页表是否连续
+            let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
 
-            // // 映射多个页表
-            // pages_cap.into_iter().enumerate().for_each(|(i, page)| {
-            //     debug_println!(
-            //         "[RootTask] Mapping DMA {:#x} -> {:#x}",
-            //         start + i * PAGE_SIZE,
-            //         page.frame_get_address().unwrap()
-            //     );
-            //     tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
-            // });
-            for i in 0..size / PAGE_SIZE {
-                let page_cap = OBJ_ALLOCATOR.lock().alloc_page();
-                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page_cap));
-            }
+            // 映射多个页表
+            pages_cap.into_iter().enumerate().for_each(|(i, page)| {
+                debug_println!(
+                    "[RootTask] Mapping DMA {:#x} -> {:#x}",
+                    start + i * PAGE_SIZE,
+                    page.frame_get_address().unwrap()
+                );
+                tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page));
+            });
+            // for i in 0..size / PAGE_SIZE {
+            //     let page_cap = OBJ_ALLOCATOR.lock().alloc_page();
+            //     tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page_cap));
+            // }
         }
 
         // FIXME: 将分配内存的逻辑写成一个通用的逻辑
@@ -151,6 +157,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         fault_ep,
         badge: 0,
         channels: Vec::new(),
+        untyped: mem_untypes,
     };
     with_ipc_buffer_mut(|ib| root_task_handler.waiting_and_handle(ib))
 }
@@ -160,4 +167,5 @@ pub struct RootTaskHandler {
     fault_ep: Cap<Endpoint>,
     badge: u64,
     channels: Vec<(usize, Vec<SmallPage>)>,
+    untyped: Vec<(Cap<sel4::cap_type::Untyped>, UntypedDesc)>,
 }

@@ -15,7 +15,7 @@ log = "0.4"
 
 # ext4 依赖
 lwext4_rust = { git = "https://github.com/Azure-stars/lwext4_rust.git", default-features = false, rev = "ee5131c" }
-libc-types = { workspace = true }
+libc-core = { workspace = true }
 
 flatten_objects = { workspace = true }
 syscalls = { workspace = true }

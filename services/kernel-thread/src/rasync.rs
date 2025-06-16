@@ -7,12 +7,6 @@ use core::{
     task::{Context, Poll},
 };
 
-macro_rules! spawn_async {
-    ($pool:expr, $f:expr) => {
-        let _ = $pool.spawner().spawn_local($f);
-    };
-}
-
 /// 一个简单的异步 Yield 实现
 pub struct YieldNow {
     yielded: bool,

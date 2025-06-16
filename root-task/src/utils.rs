@@ -11,7 +11,7 @@ use sel4::{UntypedDesc, cap::Untyped};
 /// Display the boot information in the console.
 pub fn display_bootinfo(
     bootinfo: &sel4::BootInfoPtr,
-    mem_untypes: &[(Untyped, &UntypedDesc)],
+    mem_untypes: &[(Untyped, UntypedDesc)],
     dev_untypes: &[(Untyped, &UntypedDesc)],
 ) {
     log::info!(

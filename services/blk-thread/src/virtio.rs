@@ -19,7 +19,6 @@ pub fn translate_address(vaddr: usize) -> usize {
         Some(v) => v * PAGE_SIZE + offset,
         None => {
             let paddr = translate_addr(vaddr);
-
             map.insert(vp_index, paddr / PAGE_SIZE);
             paddr
         }
@@ -33,7 +32,6 @@ unsafe impl Hal for HalImpl {
     fn dma_alloc(pages: usize, _direction: BufferDirection) -> (PhysAddr, NonNull<u8>) {
         let vaddr = DMA_ADDR.load(Ordering::Acquire);
         DMA_ADDR.store(vaddr + pages * PAGE_SIZE, Ordering::Release);
-
         (
             translate_address(vaddr),
             NonNull::new(vaddr as *mut u8).unwrap(),

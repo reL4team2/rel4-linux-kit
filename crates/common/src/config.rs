@@ -11,7 +11,7 @@ pub const SERVICE_BOOT_STACK_TOP: usize = 0x1_0000_0000;
 pub const SERVICE_BOOT_STACK_SIZE: usize = 0x1_0000;
 
 /// 服务任务默认的堆大小
-pub const SERVICE_HEAP_SIZE: usize = 0x20_0000;
+pub const SERVICE_HEAP_SIZE: usize = 0x40_0000;
 
 /// VIRTIO_MMIO 使用的地址
 pub const VIRTIO_MMIO_ADDR: usize = 0xa003e00;
@@ -42,6 +42,9 @@ pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 
 /// 默认 CSpace 一级占用的 bits
 pub const CNODE_RADIX_BITS: usize = 12;
+
+/// Linux App 使用的 CNode bits
+pub const LINUX_APP_CNODE_RADIX_BITS: usize = 10;
 
 /// 默认的物理页大小
 pub const PAGE_SIZE: usize = 0x1000;

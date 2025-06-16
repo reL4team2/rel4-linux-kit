@@ -133,6 +133,13 @@ impl RootTaskHandler {
 
                     LeafSlot::new(0).delete().unwrap();
                 }
+                // 申请一个 Untyped Memory
+                RootEvent::AllocUntyped => {
+                    let (cap, desc) = self.untyped.pop().unwrap();
+                    log::debug!("alloc untyped: {:#x?}", 1 << desc.size_bits());
+                    ib.caps_or_badges_mut()[0] = cap.bits();
+                    sel4::reply(ib, rev_msg.extra_caps(1).build());
+                }
                 RootEvent::AllocPage => {
                     assert_eq!(message.length(), 1);
                     let addr = read_types!(ib, usize);

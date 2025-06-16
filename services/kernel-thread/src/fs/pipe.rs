@@ -11,6 +11,7 @@ use core::{
 };
 
 use alloc::{collections::vec_deque::VecDeque, sync::Arc};
+use libc_core::types::Stat;
 use spin::Mutex;
 use syscalls::Errno;
 
@@ -61,7 +62,7 @@ impl FileInterface for Pipe {
         todo!()
     }
 
-    fn stat(&self) -> Result<srv_gate::fs::Stat, Errno> {
+    fn stat(&self) -> Result<Stat, Errno> {
         todo!()
     }
 }

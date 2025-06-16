@@ -5,18 +5,18 @@
 use super::SysResult;
 use crate::{consts::task::DEF_HEAP_ADDR, task::Sel4Task, utils::obj::alloc_page};
 use common::{config::PAGE_SIZE, page::PhysPage};
-use libc_types::mman::MapFlags;
+use libc_core::mman::MapFlags;
 use syscalls::Errno;
 
 #[inline]
-pub(super) fn sys_brk(task: &mut Sel4Task, heap: usize) -> SysResult {
+pub(super) fn sys_brk(task: &Sel4Task, heap: usize) -> SysResult {
     debug!("BRK @ heap: {heap:#x}");
     Ok(task.brk(heap))
 }
 
 #[inline]
 pub(super) fn sys_mmap(
-    task: &mut Sel4Task,
+    task: &Sel4Task,
     start: usize,
     size: usize,
     prot: usize,
@@ -38,17 +38,16 @@ pub(super) fn sys_mmap(
     let start = task.find_free_area(start, size);
 
     if fd > 0 {
-        let fd = task
+        let file = task
             .file
             .file_ds
             .lock()
             .get(fd as _)
             .ok_or(Errno::EINVAL)?
             .clone();
-        let origin_off = fd.lock().seek(0, 1);
-        fd.lock().seek(0, 0);
-        let data = fd.lock().read_all().unwrap();
-        fd.lock().seek(origin_off as _, 0);
+        let file_len = file.file_size()?;
+        let mut data = vec![0u8; file_len];
+        file.readat(0, &mut data)?;
         for addr in (start..start + size).step_by(PAGE_SIZE) {
             task.map_page(addr, PhysPage::new(alloc_page()));
         }

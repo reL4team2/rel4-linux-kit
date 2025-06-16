@@ -5,9 +5,14 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![feature(never_type)]
+#![feature(extract_if)]
 #![feature(const_trait_impl)]
 
+use common::{config::DEFAULT_SERVE_EP, root::shutdown};
 use futures::task::LocalSpawnExt;
+use libc_core::fcntl::OpenFlags;
+
+use crate::{child_test::TASK_MAP, timer::handle_timer, utils::blk::get_blk_dev};
 
 #[macro_use]
 extern crate log;
@@ -46,9 +51,11 @@ pub mod utils;
 
 macro_rules! test_task {
 ($file:expr $(,$args:expr)*) => {{
-        let mut file =
-            fs::file::File::open(concat!("/", $file), consts::fd::DEF_OPEN_FLAGS).unwrap();
-        child_test::add_test_child(&file.read_all().unwrap(), &[$file $(,$args)*]).unwrap();
+        let file =
+            ::fs::file::File::open(concat!("/", $file), OpenFlags::RDONLY).unwrap();
+        let mut data = vec![0u8; file.file_size().unwrap()];
+        file.read(&mut data).unwrap();
+        child_test::add_test_child(&data, &[$file $(,$args)*]).unwrap();
         sel4::debug_println!("loading file: {}", $file);
     }};
 }
@@ -62,7 +69,10 @@ fn main() {
     utils::obj::init();
 
     // 初始化文件系统
-    fs::init();
+    ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
+    ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/tmp");
+    ::fs::dentry::mount_fs(fs::devfs::DevFS::new(), "/dev");
+    ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/dev/shm");
 
     // 初始化设备
     device::init();
@@ -74,11 +84,32 @@ fn main() {
     timer::init();
 
     test_task!("busybox", "sh", "/init.sh");
+    // test_task!(
+    //     "runtest.exe",
+    //     "-w",
+    //     "entry-static.exe",
+    //     "pthread_cond_smasher"
+    // );
+    // test_task!("entry-static.exe", "clock_gettime");
+    // test_task!("busybox", "sh", "/run-static.sh");
 
     let mut pool = sel4_async_single_threaded_executor::LocalPool::new();
-    spawn_async!(pool, exception::waiting_and_handle());
-    spawn_async!(pool, exception::waiting_for_end());
+    let spawner = pool.spawner();
     loop {
+        {
+            // 所有的任务都执行完毕
+            if !TASK_MAP.lock().iter().any(|x| x.1.exit.lock().is_none()) {
+                sel4::debug_println!("\n\n **** rel4-linux-kit **** \nsystem run done😸🎆🎆🎆");
+                shutdown();
+            }
+        }
+        let (message, tid) = DEFAULT_SERVE_EP.recv(());
+        match tid {
+            u64::MAX => handle_timer(),
+            _ => spawner
+                .spawn_local(exception::waiting_and_handle(tid, message))
+                .unwrap(),
+        };
         let _ = pool.run_all_until_stalled();
     }
 }
