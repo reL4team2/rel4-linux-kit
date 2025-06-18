@@ -15,32 +15,52 @@ default = []
 [dependencies]
 sel4 = { workspace = true }
 sel4-logging = { workspace = true }
-sel4-kit = { workspace = true }
-sel4-runtime = { path = "../../crates/sel4-runtime" }
 sel4-async-single-threaded-executor = { workspace = true }
-futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 
+# 通用组件
+futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 spin = { workspace = true }
 log = "0.4"
 syscalls = { workspace = true }
 bitflags = "2.9.1"
-memory_addr = "0.3"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
-
-common = { workspace = true }
-libc-core = { workspace = true }
-
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
-flatten_objects = "0.2.2"
-
 hashbrown = { workspace = true }
-srv-gate = { workspace = true }
 
+# 本架构下 相关组件
+sel4-kit = { workspace = true }
+sel4-runtime = { path = "../../crates/sel4-runtime" }
+srv-gate = { workspace = true }
+common = { workspace = true }
 uart-thread = { workspace = true }
 lwext4-thread = { workspace = true }
 
+# ArceOS 组件
+memory_addr = "0.3"
+flatten_objects = "0.2.2"
+
+# ByteOS 组件
+libc-core = { workspace = true }
 fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
 allocfs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
 ext4fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
 vfscore = { git = "https://github.com/oscomp/ByteOS.git", rev = "3eedbfe" }
+
+[dependencies.smoltcp]
+version = "0.12.0"
+default-features = false
+features = [
+    "alloc",
+    "log",             # no std
+    "medium-ethernet",
+    "proto-ipv4",
+    "socket-raw",
+    "socket-icmp",
+    "socket-udp",
+    "socket-tcp",
+    "socket-dns",
+    # "fragmentation-buffer-size-65536", "proto-ipv4-fragmentation",
+    # "reassembly-buffer-size-65536", "reassembly-buffer-count-32",
+    # "assembler-max-segment-count-32",
+]

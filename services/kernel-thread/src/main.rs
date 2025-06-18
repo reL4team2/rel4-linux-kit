@@ -34,6 +34,7 @@ pub mod consts;
 pub mod device;
 pub mod exception;
 pub mod fs;
+pub mod net;
 pub mod syscall;
 pub mod task;
 pub mod timer;
@@ -77,19 +78,17 @@ fn main() {
     // 初始化设备
     device::init();
 
+    // 初始化网络
+    net::init();
+
     // 初始化异常处理 Mixed IPC/Notification
     exception::init();
 
     // 初始化定时器
     timer::init();
 
-    test_task!("busybox", "sh", "/init.sh");
-    // test_task!(
-    //     "runtest.exe",
-    //     "-w",
-    //     "entry-static.exe",
-    //     "pthread_cond_smasher"
-    // );
+    // test_task!("busybox", "sh", "/init.sh");
+    test_task!("runtest.exe", "-w", "entry-static.exe", "socket");
     // test_task!("entry-static.exe", "clock_gettime");
     // test_task!("busybox", "sh", "/run-static.sh");
 

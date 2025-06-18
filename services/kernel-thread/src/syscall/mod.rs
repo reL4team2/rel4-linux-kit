@@ -4,6 +4,7 @@
 pub mod fs;
 pub mod mm;
 pub mod signal;
+pub mod socket;
 pub mod sys;
 pub mod thread;
 
@@ -15,7 +16,10 @@ use sys::*;
 use syscalls::{Errno, Sysno};
 use thread::*;
 
-use crate::child_test::ArcTask;
+use crate::{
+    child_test::ArcTask,
+    syscall::socket::{sys_bind, sys_getsockname, sys_sendto, sys_socket},
+};
 
 /// SysCall Result
 ///
@@ -38,6 +42,13 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         return Err(Errno::ENOSYS);
     }
     match id.unwrap() {
+        // Socket 相关系统调用
+        Sysno::socket => sys_socket(task, a0, a1, a2),
+        Sysno::bind => sys_bind(task, a0, a1 as _, a2),
+        Sysno::getsockname => sys_getsockname(task, a0, a1 as _, a2),
+        Sysno::setsockopt => Ok(0),
+        Sysno::sendto => sys_sendto(task, a0, a1 as _, a2, a3, a4 as _, a5),
+        // 其他系统调用
         Sysno::brk => sys_brk(task, a0),
         Sysno::chdir => sys_chdir(task, a0 as _),
         Sysno::clone => sys_clone(task, a0 as _, a1, a2 as _, a3, a4 as _).await,
