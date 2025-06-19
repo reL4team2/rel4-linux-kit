@@ -75,41 +75,7 @@ pub struct Sel4Task {
 }
 
 impl Drop for Sel4Task {
-    fn drop(&mut self) {
-        let root_cnode = init_thread::slot::CNODE.cap();
-        root_cnode.absolute_cptr(self.tcb).revoke().unwrap();
-        root_cnode.absolute_cptr(self.tcb).delete().unwrap();
-        root_cnode.absolute_cptr(self.cnode).revoke().unwrap();
-        root_cnode.absolute_cptr(self.cnode).delete().unwrap();
-        recycle_slot(self.tcb.into());
-        recycle_slot(self.cnode.into());
-
-        if Arc::strong_count(&self.mem) == 1 {
-            root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
-            root_cnode.absolute_cptr(self.vspace).delete().unwrap();
-            recycle_slot(self.vspace.into());
-
-            self.mem.lock().mapped_pt.iter().for_each(|cap| {
-                root_cnode.absolute_cptr(*cap).revoke().unwrap();
-                root_cnode.absolute_cptr(*cap).delete().unwrap();
-                recycle_slot((*cap).into());
-            });
-            self.mem
-                .lock()
-                .mapped_page
-                .iter()
-                .for_each(|(_, phys_page)| {
-                    root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
-                    root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
-                    recycle_slot(phys_page.cap().into());
-                });
-            let capset = self.capset.lock();
-            capset.untyped_list().iter().for_each(|(untyped, _)| {
-                root_cnode.absolute_cptr(*untyped).revoke().unwrap();
-                recycle_untyped_unit(*untyped);
-            });
-        }
-    }
+    fn drop(&mut self) {}
 }
 
 static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -258,6 +224,10 @@ impl Sel4Task {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         if let Some(page) = self.mem.lock().mapped_page.remove(&vaddr) {
             page.cap().frame_unmap().unwrap();
+            let slot = LeafSlot::from_cap(page.cap());
+            slot.revoke().unwrap();
+            slot.delete().unwrap();
+            recycle_slot(slot);
         }
     }
 
@@ -373,6 +343,47 @@ impl Sel4Task {
                     .iter()
                     .find(|x| *x.0 == self.ppid as _)
                     .inspect(|parent| parent.1.add_signal(signal, self.tid));
+            }
+        }
+        // 释放资源
+        let root_cnode = init_thread::slot::CNODE.cap();
+        root_cnode.absolute_cptr(self.tcb).revoke().unwrap();
+        root_cnode.absolute_cptr(self.tcb).delete().unwrap();
+        root_cnode.absolute_cptr(self.cnode).revoke().unwrap();
+        root_cnode.absolute_cptr(self.cnode).delete().unwrap();
+        recycle_slot(self.tcb.into());
+        recycle_slot(self.cnode.into());
+
+        if Arc::strong_count(&self.mem) == 1 {
+            root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
+            root_cnode.absolute_cptr(self.vspace).delete().unwrap();
+            recycle_slot(self.vspace.into());
+
+            self.mem.lock().mapped_pt.iter().for_each(|cap| {
+                root_cnode.absolute_cptr(*cap).revoke().unwrap();
+                root_cnode.absolute_cptr(*cap).delete().unwrap();
+                recycle_slot((*cap).into());
+            });
+            self.mem
+                .lock()
+                .mapped_page
+                .iter()
+                .for_each(|(_, phys_page)| {
+                    root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
+                    root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
+                    recycle_slot(phys_page.cap().into());
+                });
+            let capset = self.capset.lock();
+            capset.untyped_list().iter().for_each(|(untyped, _)| {
+                root_cnode.absolute_cptr(*untyped).revoke().unwrap();
+                recycle_untyped_unit(*untyped);
+            });
+        }
+
+        // 释放文件描述符
+        if Arc::strong_count(&self.file.file_ds) == 1 {
+            for i in 0..=512 {
+                self.file.file_ds.lock().remove(i);
             }
         }
     }

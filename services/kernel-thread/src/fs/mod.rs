@@ -5,3 +5,4 @@
 // pub mod ipc_fs;
 // pub mod pipe;
 pub mod devfs;
+pub mod pipe;

@@ -90,13 +90,11 @@ fn main() {
     // 初始化定时器
     timer::init();
 
-    test_task!("busybox", "sh", "/init.sh");
-    // test_task!(
-    //     "runtest.exe",
-    //     "-w",
-    //     "entry-static.exe",
-    //     "pthread_cond_smasher"
-    // );
+    // test_task!("./pipe");
+    // test_task!("busybox", "sh", "/init.sh");
+    // test_task!("busybox", "sh", "/iozone_testcode.sh");
+    test_task!("./libc-bench");
+    // test_task!("busybox", "which", "ls");
     // test_task!("entry-static.exe", "clock_gettime");
     // test_task!("busybox", "sh", "/run-static.sh");
 

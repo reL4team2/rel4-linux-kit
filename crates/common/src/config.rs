@@ -44,7 +44,7 @@ pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 pub const CNODE_RADIX_BITS: usize = 12;
 
 /// Linux App 使用的 CNode bits
-pub const LINUX_APP_CNODE_RADIX_BITS: usize = 7;
+pub const LINUX_APP_CNODE_RADIX_BITS: usize = 6;
 
 /// 默认的物理页大小
 pub const PAGE_SIZE: usize = 0x1000;

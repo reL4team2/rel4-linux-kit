@@ -8,6 +8,7 @@ pub mod sys;
 pub mod thread;
 
 use fs::*;
+use libc_core::fcntl::OpenFlags;
 use mm::*;
 use sel4::UserContext;
 use signal::*;
@@ -46,6 +47,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::dup3 => sys_dup3(task, a0, a1),
         Sysno::execve => sys_execve(task, ctx, a0 as _, a1 as _, a2 as _),
         Sysno::exit => sys_exit(task, a0 as _),
+        Sysno::faccessat => sys_faccessat(task, a0 as _, a1 as _, a2 as _, a3 as _),
         Sysno::fcntl => sys_fcntl(task, a0, a1 as _, a2 as _),
         Sysno::fstat => sys_fstat(task, a0, a1 as _),
         Sysno::fstatat => sys_fstatat(task, a0 as _, a1 as _, a2 as _, a3 as _),
@@ -57,6 +59,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::getppid => sys_getppid(task),
         Sysno::gettid => sys_gettid(task),
         Sysno::lseek => sys_lseek(task, a0 as _, a1 as _, a2 as _),
+        Sysno::ioctl => sys_ioctl(task, a0, a1, a2, a3, a4),
         Sysno::clock_gettime => sys_clock_gettime(task, a0 as _, a1 as _),
         Sysno::gettimeofday => sys_gettimeofday(task, a0 as _, a1),
         Sysno::kill => sys_kill(task, a0, a1),
@@ -67,8 +70,18 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::nanosleep => sys_nanosleep(task, a0 as _, a1 as _).await,
         Sysno::openat => sys_openat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::pipe2 => sys_pipe2(task, a0 as _, a1 as _),
-        Sysno::read => sys_read(task, a0, a1 as _, a2),
-        Sysno::readv => sys_readv(task, a0, a1 as _, a2),
+        Sysno::read => sys_read(task, a0, a1 as _, a2).await,
+        Sysno::readv => sys_readv(task, a0, a1 as _, a2).await,
+        Sysno::renameat => sys_renameat2(
+            task,
+            a0 as _,
+            a1 as _,
+            a2 as _,
+            a3 as _,
+            OpenFlags::RDWR.bits(),
+        ),
+        Sysno::sendfile => sys_sendfile(task, a0, a1, a2, a3),
+        Sysno::ppoll => sys_ppoll(task, a0 as _, a1 as _, a2 as _, a3).await,
         Sysno::pread64 => sys_pread64(task, a0, a1 as _, a2, a3),
         Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0 as _, a1 as _, a2 as _),
@@ -90,7 +103,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
             log::warn!("get_robust_list not implementation");
             Ok(0)
         }
-        Sysno::getuid | Sysno::getgid | Sysno::ioctl | Sysno::geteuid | Sysno::getegid => Ok(0),
+        Sysno::getuid | Sysno::getgid | Sysno::geteuid | Sysno::getegid => Ok(0),
         _ => Err(Errno::EPERM),
     }
 }

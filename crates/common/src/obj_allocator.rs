@@ -61,16 +61,24 @@ impl ObjectAllocator {
     }
 
     pub fn extend_slot(&self, slot: LeafSlot) {
-        self.untyped()
-            .untyped_retype(
+        loop {
+            let cap_alloc = self.untyped().untyped_retype(
                 &sel4::ObjectBlueprint::CNode { size_bits: 12 },
                 &sel4::init_thread::slot::CNODE
                     .cap()
                     .absolute_cptr_for_self(),
                 slot.cnode_idx(),
                 1,
-            )
-            .expect("can't allocate notification");
+            );
+            if cap_alloc == Ok(()) {
+                break;
+            } else if cap_alloc == Err(sel4::Error::NotEnoughMemory) {
+                LeafSlot::from_cap(self.untyped()).delete().unwrap();
+                crate::root::alloc_untyped(self.untyped().into()).unwrap();
+            } else {
+                cap_alloc.unwrap();
+            }
+        }
     }
 
     /// Allocate the slot at the new cspace.

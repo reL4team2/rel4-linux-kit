@@ -2,6 +2,7 @@
 //!
 //! 目前标准输入输出等都使用一个结构体，通过设置不同的位置来确保只读，只写
 use fs::INodeInterface;
+use libc_core::types::StatMode;
 use sel4::debug_print;
 use syscalls::Errno;
 
@@ -44,5 +45,19 @@ impl INodeInterface for StdConsole {
         // debug_println!("{}", );
         buffer.iter().for_each(|x| debug_print!("{}", *x as char));
         Ok(buffer.len())
+    }
+
+    fn stat(&self, stat: &mut libc_core::types::Stat) -> vfscore::VfsResult<()> {
+        stat.dev = 0;
+        stat.ino = 1; // TODO: convert path to number(ino)
+        stat.mode = StatMode::CHAR; // TODO: add access mode
+        stat.nlink = 1;
+        stat.uid = 1000;
+        stat.gid = 1000;
+        stat.size = 0;
+        stat.blksize = 512;
+        stat.blocks = 0;
+        stat.rdev = 0; // TODO: add device id
+        Ok(())
     }
 }

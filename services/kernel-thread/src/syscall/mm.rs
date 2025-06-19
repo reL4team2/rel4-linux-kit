@@ -4,8 +4,9 @@
 
 use super::SysResult;
 use crate::{consts::task::DEF_HEAP_ADDR, task::Sel4Task};
-use common::config::PAGE_SIZE;
+use common::{config::PAGE_SIZE, slot::recycle_slot};
 use libc_core::mman::MapFlags;
+use sel4_kit::slot_manager::LeafSlot;
 use syscalls::Errno;
 
 #[inline]
@@ -64,6 +65,10 @@ pub(super) fn sys_munmap(task: &Sel4Task, start: usize, len: usize) -> SysResult
     task.mem.lock().mapped_page.retain(|vaddr, x| {
         if (start..start + len).contains(vaddr) {
             x.cap().frame_unmap().unwrap();
+            let slot = LeafSlot::from_cap(x.cap());
+            slot.revoke().unwrap();
+            slot.delete().unwrap();
+            recycle_slot(slot);
             false
         } else {
             true

@@ -2,11 +2,14 @@
 //!
 //!
 
+use core::time::Duration;
+
 use alloc::{string::String, sync::Arc};
-use fs::{SeekFrom, file::File, pipe::create_pipe};
+use fs::{FileType, SeekFrom, file::File};
 use libc_core::{
     consts::UTIME_NOW,
     fcntl::{AT_FDCWD, AT_SYMLINK_NOFOLLOW, FcntlCmd, OpenFlags},
+    poll::{PollEvent, PollFd},
     types::{IoVec, Stat, StatFS, TimeSpec},
 };
 use num_enum::TryFromPrimitive;
@@ -14,7 +17,7 @@ use sel4_kit::arch::current_time;
 use syscalls::Errno;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::task::Sel4Task;
+use crate::{fs::pipe::create_pipe, task::Sel4Task, timer::wait_time};
 
 use super::SysResult;
 
@@ -124,25 +127,48 @@ pub(super) fn sys_pipe2(task: &Sel4Task, fdsp: *const u32, flags: u64) -> SysRes
     let tx = file_table
         .add(File::new_dev(txp))
         .map_err(|_| Errno::EMFILE)? as u32;
-
     task.write_bytes(fdsp as _, [rx, tx].as_bytes());
 
     Ok(0)
 }
 
-pub(super) fn sys_read(task: &Sel4Task, fd: usize, bufp: *const u8, count: usize) -> SysResult {
+pub(super) async fn sys_read(
+    task: &Sel4Task,
+    fd: usize,
+    bufp: *const u8,
+    count: usize,
+) -> SysResult {
     if count == 0 {
         return Err(Errno::EINVAL);
     }
-    let mut file_table = task.file.file_ds.lock();
-    let file = file_table.get_mut(fd).ok_or(Errno::EBADF)?;
+    let file = task
+        .file
+        .file_ds
+        .lock()
+        .get_mut(fd)
+        .ok_or(Errno::EBADF)?
+        .clone();
     let mut buffer = vec![0u8; count];
-    let rlen = file.read(&mut buffer)?;
+    let rlen = loop {
+        let res = file.read(&mut buffer);
+        if let Ok(rlen) = res {
+            break rlen;
+        } else if let Err(Errno::EAGAIN) = res {
+            wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
+        } else {
+            res?;
+        }
+    };
     task.write_bytes(bufp as _, &buffer);
     Ok(rlen)
 }
 
-pub(super) fn sys_readv(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: usize) -> SysResult {
+pub(super) async fn sys_readv(
+    task: &Sel4Task,
+    fd: usize,
+    iov: *const IoVec,
+    iocnt: usize,
+) -> SysResult {
     let mut rsize = 0;
     let iovec_bytes = task
         .read_bytes(iov as _, size_of::<IoVec>() * iocnt)
@@ -150,7 +176,7 @@ pub(super) fn sys_readv(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: us
 
     let iovec = <[IoVec]>::ref_from_bytes_with_elems(&iovec_bytes, iocnt).unwrap();
     for item in iovec.iter() {
-        let rlen_once = sys_read(task, fd, item.base as _, item.len)?;
+        let rlen_once = sys_read(task, fd, item.base as _, item.len).await?;
         rsize += rlen_once;
     }
 
@@ -368,4 +394,169 @@ pub(super) fn sys_utimensat(
         .utimes(&mut times)?;
 
     Ok(0)
+}
+
+pub(super) fn sys_sendfile(
+    task: &Sel4Task,
+    out_fd: usize,
+    in_fd: usize,
+    offset: usize,
+    count: usize,
+) -> SysResult {
+    debug!(
+        "sys_sendfile @ out_fd: {}  in_fd: {}  offset: {:#x}   count: {:#x}",
+        out_fd, in_fd, offset, count
+    );
+    let outfile = task
+        .file
+        .file_ds
+        .lock()
+        .get(out_fd)
+        .ok_or(Errno::EINVAL)?
+        .clone();
+    let infile = task
+        .file
+        .file_ds
+        .lock()
+        .get(in_fd)
+        .ok_or(Errno::EINVAL)?
+        .clone();
+
+    let curr_off = if offset != 0 {
+        offset
+    } else {
+        infile.seek(SeekFrom::CURRENT(0))?
+    };
+    let rlen = core::cmp::min(infile.file_size()? - curr_off, count);
+    let mut buffer = vec![0u8; rlen];
+
+    if offset == 0 {
+        infile.read(&mut buffer)?;
+        let _ = task.file.file_ds.lock().add_or_replace_at(in_fd, infile);
+    } else {
+        infile.readat(offset, &mut buffer)?;
+    }
+    outfile.write(&buffer)
+}
+
+pub(super) async fn sys_ppoll(
+    task: &Sel4Task,
+    poll_fds_ptr: *const PollFd,
+    nfds: usize,
+    timeout_ptr: *const TimeSpec,
+    sigmask_ptr: usize,
+) -> SysResult {
+    debug!(
+        "sys_ppoll @ poll_fds_ptr: {:p}, nfds: {}, timeout_ptr: {:p}, sigmask_ptr: {:#X}",
+        poll_fds_ptr, nfds, timeout_ptr, sigmask_ptr
+    );
+    let mut poll_fds_bytes = task
+        .read_bytes(poll_fds_ptr as _, size_of::<PollFd>() * nfds)
+        .unwrap();
+    let poll_fds = <[PollFd]>::mut_from_bytes_with_elems(&mut poll_fds_bytes, nfds).unwrap();
+    let etime = if !timeout_ptr.is_null() {
+        let timeout_bytes = task
+            .read_bytes(timeout_ptr as _, size_of::<TimeSpec>())
+            .ok_or(Errno::EINVAL)?;
+        current_time() + TimeSpec::read_from_bytes(&timeout_bytes).unwrap().into()
+    } else {
+        Duration::MAX
+    };
+    let n = loop {
+        let mut num = 0;
+        for i in 0..nfds {
+            poll_fds[i].revents = task
+                .file
+                .file_ds
+                .lock()
+                .get(poll_fds[i].fd as _)
+                .map_or(PollEvent::NONE, |x| {
+                    x.poll(poll_fds[i].events.clone()).unwrap()
+                });
+            if poll_fds[i].revents != PollEvent::NONE {
+                num += 1;
+            }
+        }
+
+        if current_time() >= etime || num > 0 {
+            break num;
+        }
+
+        wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
+    };
+    task.write_bytes(poll_fds_ptr as _, poll_fds.as_bytes());
+    Ok(n)
+}
+
+pub(super) fn sys_faccessat(
+    task: &Sel4Task,
+    dir_fd: isize,
+    filename: *const u8,
+    _mode: usize,
+    flags: usize,
+) -> SysResult {
+    let open_flags = OpenFlags::from_bits_truncate(flags);
+    let path = task.fd_resolve(dir_fd, filename)?;
+    log::debug!("sys_faccessat @ open path: {}", path);
+    File::open(path, open_flags)?;
+    Ok(0)
+}
+
+pub(super) fn sys_renameat2(
+    task: &Sel4Task,
+    olddir_fd: isize,
+    oldpath: *const u8,
+    newdir_fd: isize,
+    newpath: *const u8,
+    flags: usize,
+) -> SysResult {
+    debug!(
+        "sys_renameat2 @ olddir_fd: {}, oldpath: {:p}, newdir_fd: {}, newpath: {:p}, flags: {}",
+        olddir_fd, oldpath, newdir_fd, newpath, flags
+    );
+    let flags = OpenFlags::from_bits_truncate(flags);
+
+    let old_file = task.fd_open(olddir_fd, oldpath, OpenFlags::RDONLY)?;
+
+    let old_file_type = old_file.file_type()?;
+
+    if old_file_type == FileType::File {
+        let new_file = task.fd_open(newdir_fd, newpath, OpenFlags::CREAT | flags)?;
+        let file_size = old_file.file_size()?;
+        let mut buffer = vec![0u8; file_size];
+        old_file.read(&mut buffer)?;
+        new_file.write(&buffer)?;
+        new_file.truncate(buffer.len())?;
+    } else if old_file_type == FileType::Directory {
+        task.fd_open(
+            newdir_fd,
+            newpath,
+            OpenFlags::CREAT | OpenFlags::DIRECTORY | flags,
+        )?;
+    } else {
+        panic!("can't handle the file: {:?} now", old_file_type);
+    }
+
+    Ok(0)
+}
+
+pub(super) fn sys_ioctl(
+    task: &Sel4Task,
+    fd: usize,
+    request: usize,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+) -> SysResult {
+    debug!(
+        "[task {}] ioctl: fd: {}, request: {:#x}, args: {:#x} {:#x} {:#x}",
+        task.tid, fd, request, arg1, arg2, arg3
+    );
+    task.file
+        .file_ds
+        .lock()
+        .get(fd)
+        .ok_or(Errno::EINVAL)?
+        .ioctl(request, arg1)
+        .map_err(|_| Errno::ENOTTY)
 }

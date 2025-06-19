@@ -2,7 +2,7 @@
 //!
 //!
 
-use core::{pin::pin, time::Duration};
+use core::pin::pin;
 
 use alloc::{string::String, sync::Arc, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage};
@@ -219,7 +219,7 @@ pub(super) async fn sys_clone(
         .tcb_write_all_registers(true, &mut regs)
         .unwrap();
     TASK_MAP.lock().insert(new_task_id as _, Arc::new(new_task));
-    wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
+    // wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
     Ok(new_task_id)
 }
 
