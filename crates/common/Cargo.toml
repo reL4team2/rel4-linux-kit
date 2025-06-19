@@ -7,7 +7,7 @@ edition = "2024"
 
 [features]
 alloc = []
-default = ["alloc"]
+default = ["alloc", "sel4-kit/alloc"]
 
 [dependencies]
 sel4 = { workspace = true }

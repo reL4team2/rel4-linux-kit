@@ -189,6 +189,8 @@ impl<T: CapType> From<LeafSlot> for Cap<T> {
 #[derive(Debug)]
 pub struct SlotManager {
     empty_slots: Range<usize>,
+    #[cfg(feature = "alloc")]
+    recycled_slots: alloc::vec::Vec<LeafSlot>, // 可回收的 slot 数量
 }
 
 impl SlotManager {
@@ -196,12 +198,18 @@ impl SlotManager {
     ///
     /// 随后在 [SlotManager::init_empty_slots] 中更新
     pub const fn empty() -> SlotManager {
-        Self { empty_slots: 0..0 }
+        Self {
+            empty_slots: 0..0,
+            recycled_slots: alloc::vec::Vec::new(),
+        }
     }
 
     /// 从 empty slots 创建 Slot Manager
     pub const fn new(empty_slots: Range<usize>) -> Self {
-        Self { empty_slots }
+        Self {
+            empty_slots,
+            recycled_slots: alloc::vec::Vec::new(),
+        }
     }
 
     /// 初始化空的 slot 范围
@@ -214,6 +222,10 @@ impl SlotManager {
     /// 申请一个新的空 Slot
     #[inline]
     pub fn alloc_slot(&mut self) -> LeafSlot {
+        #[cfg(feature = "alloc")]
+        if let Some(slot) = self.recycled_slots.pop() {
+            return slot;
+        }
         let idx = self.empty_slots.next().unwrap();
         LeafSlot::new(idx)
     }
@@ -246,6 +258,17 @@ impl SlotManager {
     /// - [usize] 当前尚未使用的 Slot 数量
     pub fn available(&self) -> usize {
         self.empty_slots.end - self.empty_slots.start
+    }
+
+    #[cfg(feature = "alloc")]
+    /// 回收一个 [LeafSlot]
+    ///
+    /// 将 [LeafSlot] 放入回收池中，便于下次申请时复用
+    ///
+    /// # 参数
+    /// - `slot` 需要回收的 [LeafSlot]
+    pub fn recycle_slot(&mut self, slot: LeafSlot) {
+        self.recycled_slots.push(slot);
     }
 }
 

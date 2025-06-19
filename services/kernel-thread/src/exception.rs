@@ -10,11 +10,7 @@ use sel4::{
 };
 use spin::Lazy;
 
-use crate::{
-    child_test::TASK_MAP,
-    syscall::handle_syscall,
-    utils::obj::{alloc_notification, alloc_page},
-};
+use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_notification};
 
 /// 全局通知
 ///
@@ -75,9 +71,9 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
     log::debug!("trigger fault: {:#x?}", vmfault);
     let vaddr = vmfault.addr() as usize / PAGE_SIZE * PAGE_SIZE;
-    let page_cap = PhysPage::new(alloc_page());
     let mut task_map = TASK_MAP.lock();
     let task = task_map.get_mut(&tid).unwrap();
+    let page_cap = PhysPage::new(task.capset.lock().alloc_page());
     task.map_page(vaddr, page_cap);
 
     task.tcb.tcb_resume().unwrap();

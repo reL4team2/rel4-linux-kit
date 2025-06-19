@@ -1,5 +1,5 @@
 use sel4::{
-    CapTypeForObjectOfFixedSize,
+    Cap, CapTypeForObjectOfFixedSize,
     cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace},
     cap_type,
     init_thread::slot,
@@ -40,6 +40,11 @@ impl ObjectAllocator {
 }
 
 impl ObjectAllocator {
+    #[inline]
+    pub fn alloc_untyped(&mut self, size_bits: usize) -> Cap<cap_type::Untyped> {
+        self.allocate_and_retyped_variable_sized(size_bits)
+    }
+
     /// TODO: 申请多个位置，且判断位置是否超出
     pub fn allocate_slot(&mut self) -> LeafSlot {
         let leaf_slot = super::slot::alloc_slot();

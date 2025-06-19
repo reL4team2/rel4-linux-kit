@@ -20,7 +20,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "allocfs"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=3eedbfe#3eedbfef8cf28f644b5dea8a02918558fabddec2"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
 dependencies = [
  "libc-core",
  "log",
@@ -253,7 +253,7 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 [[package]]
 name = "ext4fs"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=3eedbfe#3eedbfef8cf28f644b5dea8a02918558fabddec2"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
 dependencies = [
  "libc-core",
  "log",
@@ -293,7 +293,7 @@ checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
 [[package]]
 name = "fs"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=3eedbfe#3eedbfef8cf28f644b5dea8a02918558fabddec2"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
 dependencies = [
  "bitflags",
  "libc-core",
@@ -555,7 +555,7 @@ dependencies = [
 [[package]]
 name = "lwext4_rust"
 version = "0.2.0"
-source = "git+https://github.com/Azure-stars/lwext4_rust.git?rev=ee5131c#ee5131ca3fbb03f39ea0878431aadb521d191122"
+source = "git+https://github.com/Azure-stars/lwext4_rust.git?rev=2e56b0a#2e56b0aa2680b210892a46375fefca2bdf6e2865"
 dependencies = [
  "log",
 ]
@@ -1169,7 +1169,7 @@ dependencies = [
 [[package]]
 name = "sync"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=3eedbfe#3eedbfef8cf28f644b5dea8a02918558fabddec2"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
 dependencies = [
  "spin",
 ]
@@ -1302,7 +1302,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vfscore"
 version = "0.1.0"
-source = "git+https://github.com/oscomp/ByteOS.git?rev=3eedbfe#3eedbfef8cf28f644b5dea8a02918558fabddec2"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
 dependencies = [
  "downcast-rs",
  "libc-core",

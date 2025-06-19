@@ -28,7 +28,7 @@ use crate::{
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     timer::wait_time,
-    utils::{obj::alloc_page, page::map_page_self},
+    utils::page::map_page_self,
 };
 
 use super::SysResult;
@@ -199,7 +199,7 @@ pub(super) async fn sys_clone(
     if !flags.contains(CloneFlags::CLONE_VM) {
         let old_mem_info = task.mem.lock();
         for (vaddr, page) in old_mem_info.mapped_page.iter() {
-            let new_page = alloc_page();
+            let new_page = task.capset.lock().alloc_page();
             map_page_self(PAGE_COPY_TEMP, new_page);
             unsafe {
                 let mut page_locker = page.lock();

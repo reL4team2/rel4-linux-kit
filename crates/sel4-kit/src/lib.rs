@@ -7,6 +7,9 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub mod arch;
 pub mod ipc;
 pub mod ipc_buffer;

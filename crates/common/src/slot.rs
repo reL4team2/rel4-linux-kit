@@ -37,6 +37,15 @@ pub fn alloc_slots(num: usize) -> LeafSlot {
     SLOT_MANAGER.lock().alloc_slots(num).next().unwrap()
 }
 
+/// 释放一个 [LeafSlot]
+///
+/// # 参数
+/// - `slot` 需要释放的 [LeafSlot]
+#[cfg(feature = "alloc")]
+pub fn recycle_slot(slot: LeafSlot) {
+    SLOT_MANAGER.lock().recycle_slot(slot);
+}
+
 /// 初始化接收 Slot
 pub fn init_recv_slot() {
     with_ipc_buffer_mut(|ipc_buffer| {

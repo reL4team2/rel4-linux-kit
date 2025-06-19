@@ -10,7 +10,9 @@ mod signal;
 use alloc::{sync::Arc, vec::Vec};
 use common::{
     config::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, LINUX_APP_CNODE_RADIX_BITS, PAGE_SIZE},
+    mem::CapMemSet,
     page::PhysPage,
+    slot::recycle_slot,
 };
 use core::{
     cmp,
@@ -26,12 +28,12 @@ use sel4::{
 };
 use sel4_kit::slot_manager::LeafSlot;
 use signal::TaskSignal;
-use spin::Mutex;
+use spin::mutex::Mutex;
 use zerocopy::IntoBytes;
 
 use crate::{
     child_test::{FutexTable, TASK_MAP, futex_wake, wake_hangs},
-    utils::obj::{alloc_cnode, alloc_page, alloc_pt, alloc_tcb, alloc_vspace},
+    utils::obj::{alloc_untyped_unit, recycle_untyped_unit},
 };
 
 /// Sel4Task 结构体
@@ -44,6 +46,8 @@ pub struct Sel4Task {
     pub pgid: usize,
     /// 任务 ID (线程 ID)
     pub tid: usize,
+    /// 资源内存分配器
+    pub capset: Arc<Mutex<CapMemSet>>,
     /// 进程控制块（Capability)
     pub tcb: sel4::cap::Tcb,
     /// 能力空间入口 (CSpace Root)
@@ -79,15 +83,29 @@ impl Drop for Sel4Task {
         root_cnode.absolute_cptr(self.cnode).delete().unwrap();
         root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
         root_cnode.absolute_cptr(self.vspace).delete().unwrap();
+        recycle_slot(self.tcb.into());
+        recycle_slot(self.vspace.into());
+        recycle_slot(self.cnode.into());
 
         if Arc::strong_count(&self.mem) == 1 {
             self.mem.lock().mapped_pt.iter().for_each(|cap| {
                 root_cnode.absolute_cptr(*cap).revoke().unwrap();
                 root_cnode.absolute_cptr(*cap).delete().unwrap();
+                recycle_slot((*cap).into());
             });
-            self.mem.lock().mapped_page.values().for_each(|phys_page| {
-                root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
-                root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
+            self.mem
+                .lock()
+                .mapped_page
+                .iter()
+                .for_each(|(_, phys_page)| {
+                    root_cnode.absolute_cptr(phys_page.cap()).revoke().unwrap();
+                    root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
+                    recycle_slot(phys_page.cap().into());
+                });
+            let capset = self.capset.lock();
+            capset.untyped_list().iter().for_each(|(untyped, _)| {
+                root_cnode.absolute_cptr(*untyped).revoke().unwrap();
+                recycle_untyped_unit(*untyped);
             });
         }
     }
@@ -99,9 +117,11 @@ impl Sel4Task {
     /// 创建一个新的任务
     pub fn new() -> Result<Self, sel4::Error> {
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
-        let vspace = alloc_vspace();
-        let tcb = alloc_tcb();
-        let cnode = alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
+        let mut capset = CapMemSet::new(Some(alloc_untyped_unit));
+
+        let vspace = capset.alloc_vspace();
+        let tcb = capset.alloc_tcb();
+        let cnode = capset.alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
         slot::ASID_POOL.cap().asid_pool_assign(vspace).unwrap();
 
         // 构建 CSpace 需要的结构
@@ -130,6 +150,7 @@ impl Sel4Task {
             tcb,
             cnode,
             vspace,
+            capset: Arc::new(Mutex::new(capset)),
             futex_table: Arc::new(Mutex::new(Vec::new())),
             mem: Arc::new(Mutex::new(TaskMemInfo::default())),
             signal: Mutex::new(TaskSignal::default()),
@@ -142,9 +163,11 @@ impl Sel4Task {
 
     /// 创建一个新的线程
     pub fn create_thread(&self) -> Result<Self, sel4::Error> {
+        let capset = self.capset.clone();
         let tid = ID_COUNTER.fetch_add(1, Ordering::SeqCst) as usize;
-        let tcb = alloc_tcb();
-        let cnode = alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
+        let tcb = capset.lock().alloc_tcb();
+        let cnode = capset.lock().alloc_cnode(LINUX_APP_CNODE_RADIX_BITS);
+
         // 构建 CSpace 需要的结构
         cnode
             .absolute_cptr_from_bits_with_depth(1, LINUX_APP_CNODE_RADIX_BITS)
@@ -171,6 +194,7 @@ impl Sel4Task {
             tcb,
             cnode,
             vspace: self.vspace,
+            capset: self.capset.clone(),
             mem: self.mem.clone(),
             exit: Mutex::new(None),
             futex_table: self.futex_table.clone(),
@@ -215,7 +239,7 @@ impl Sel4Task {
                     return;
                 }
                 Err(Error::FailedLookup) => {
-                    let pt_cap = alloc_pt();
+                    let pt_cap = self.capset.lock().alloc_pt();
                     pt_cap
                         .pt_map(self.vspace, vaddr, VmAttributes::DEFAULT)
                         .unwrap();
@@ -247,7 +271,7 @@ impl Sel4Task {
         assert!(start % 0x1000 == 0);
 
         for vaddr in (start..end).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(alloc_page());
+            let page_cap = PhysPage::new(self.capset.lock().alloc_page());
             self.map_page(vaddr, page_cap);
         }
     }
@@ -281,7 +305,6 @@ impl Sel4Task {
             let mut data = seg.data().unwrap();
             let mut vaddr = seg.address() as usize;
             let vaddr_end = vaddr + seg.size() as usize;
-            log::debug!("load memory: {:#x} - {:#x}", vaddr, vaddr_end);
 
             while vaddr < vaddr_end {
                 let voffset = vaddr % PAGE_SIZE;
@@ -295,7 +318,7 @@ impl Sel4Task {
                         page_cap.cap().frame_unmap().unwrap();
                         page_cap
                     }
-                    None => PhysPage::new(alloc_page()),
+                    None => PhysPage::new(self.capset.lock().alloc_page()),
                 };
 
                 // 将 elf 中特定段的内容写入对应的物理页中

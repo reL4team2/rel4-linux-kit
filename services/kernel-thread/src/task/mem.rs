@@ -2,10 +2,11 @@
 //!
 //!
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::{config::PAGE_SIZE, page::PhysPage};
+use common::{config::PAGE_SIZE, page::PhysPage, slot::recycle_slot};
 use core::cmp;
+use sel4_kit::slot_manager::LeafSlot;
 
-use crate::{consts::task::DEF_HEAP_ADDR, utils::obj::alloc_page};
+use crate::consts::task::DEF_HEAP_ADDR;
 
 use super::Sel4Task;
 
@@ -44,7 +45,7 @@ impl Sel4Task {
         mem_info.heap = value;
         drop(mem_info);
         for vaddr in (origin..value).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(alloc_page());
+            let page_cap = PhysPage::new(self.capset.lock().alloc_page());
             self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
         }
         value
@@ -162,11 +163,13 @@ impl Sel4Task {
     ///
     /// 如果有已经映射的内存, 清理
     pub fn clear_maped(&self) {
-        self.mem
-            .lock()
-            .mapped_page
-            .values()
-            .for_each(|x| x.cap().frame_unmap().unwrap());
+        self.mem.lock().mapped_page.values().for_each(|x| {
+            x.cap().frame_unmap().unwrap();
+            let slot = LeafSlot::from_cap(x.cap());
+            slot.revoke().unwrap();
+            slot.delete().unwrap();
+            recycle_slot(slot);
+        });
         self.mem.lock().mapped_page.clear();
     }
 }
