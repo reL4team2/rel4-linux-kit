@@ -4,7 +4,7 @@
 
 use super::SysResult;
 use crate::{consts::task::DEF_HEAP_ADDR, task::Sel4Task};
-use common::{config::PAGE_SIZE, page::PhysPage};
+use common::config::PAGE_SIZE;
 use libc_core::mman::MapFlags;
 use syscalls::Errno;
 
@@ -48,14 +48,12 @@ pub(super) fn sys_mmap(
         let mut data = vec![0u8; file_len];
         file.readat(0, &mut data)?;
         for addr in (start..start + size).step_by(PAGE_SIZE) {
-            let phys_page = PhysPage::new(task.capset.lock().alloc_page());
-            task.map_page(addr, phys_page);
+            task.map_blank_page(addr);
         }
         task.write_bytes(start, &data);
     } else {
         for addr in (start..start + size).step_by(PAGE_SIZE) {
-            let phys_page = PhysPage::new(task.capset.lock().alloc_page());
-            task.map_page(addr, phys_page);
+            task.map_blank_page(addr);
         }
     }
     Ok(start)

@@ -45,8 +45,7 @@ impl Sel4Task {
         mem_info.heap = value;
         drop(mem_info);
         for vaddr in (origin..value).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(self.capset.lock().alloc_page());
-            self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
+            self.map_blank_page(vaddr);
         }
         value
     }

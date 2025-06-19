@@ -67,7 +67,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // 从 untyped object Retype 为特定的 object
     // TODO: 使用合适的 CSpace 边缘处理模式
     // 可能的做法是单独搞一个 ObjectAllocator 来分配 CSpace
-    common::slot::init(bootinfo.empty().range().start..usize::MAX, None);
+    common::slot::init(bootinfo.empty().range().start..0x1000);
     let len = mem_untypes.len();
     OBJ_ALLOCATOR.lock().init(mem_untypes.remove(len - 4).0);
 

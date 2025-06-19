@@ -252,6 +252,15 @@ impl SlotManager {
         }
     }
 
+    /// 获取下一可用范围开始的位置
+    ///
+    /// # 返回值
+    ///
+    /// 下一个可用范围的开始，可以用于 [Self::extend]
+    pub fn next_range_start(&self) -> usize {
+        self.empty_slots.end
+    }
+
     /// 获取 [SlotManager] 中可用的大小
     ///
     /// # 返回值

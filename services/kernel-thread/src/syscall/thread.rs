@@ -147,7 +147,7 @@ pub(super) async fn sys_clone(
     new_task.signal.lock().mask = task.signal.lock().mask;
     new_task.ppid = task.pid;
 
-    let mut regs = task.tcb.tcb_read_all_registers(false).unwrap();
+    let mut regs = task.tcb.tcb_read_all_registers(true).unwrap();
     *regs.c_param_mut(0) = 0;
     *regs.pc_mut() += 4;
     if stack != 0 {
@@ -199,7 +199,7 @@ pub(super) async fn sys_clone(
     if !flags.contains(CloneFlags::CLONE_VM) {
         let old_mem_info = task.mem.lock();
         for (vaddr, page) in old_mem_info.mapped_page.iter() {
-            let new_page = task.capset.lock().alloc_page();
+            let new_page = new_task.capset.lock().alloc_page();
             map_page_self(PAGE_COPY_TEMP, new_page);
             unsafe {
                 let mut page_locker = page.lock();

@@ -12,7 +12,11 @@ use common::{config::DEFAULT_SERVE_EP, root::shutdown};
 use futures::task::LocalSpawnExt;
 use libc_core::fcntl::OpenFlags;
 
-use crate::{child_test::TASK_MAP, timer::handle_timer, utils::blk::get_blk_dev};
+use crate::{
+    child_test::TASK_MAP,
+    timer::handle_timer,
+    utils::{blk::get_blk_dev, obj::OBJ_ALLOCATOR},
+};
 
 #[macro_use]
 extern crate log;
@@ -62,6 +66,9 @@ macro_rules! test_task {
 
 #[sel4_runtime::main]
 fn main() {
+    common::slot::init_slot_edge_handler(|slot| {
+        OBJ_ALLOCATOR.extend_slot(slot);
+    });
     // 初始化 LOG
     logging::init();
 

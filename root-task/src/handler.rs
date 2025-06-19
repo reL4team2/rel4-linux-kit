@@ -135,8 +135,7 @@ impl RootTaskHandler {
                 }
                 // 申请一个 Untyped Memory
                 RootEvent::AllocUntyped => {
-                    let (cap, desc) = self.untyped.pop().unwrap();
-                    log::debug!("alloc untyped: {:#x?}", 1 << desc.size_bits());
+                    let (cap, _) = self.untyped.pop().unwrap();
                     ib.caps_or_badges_mut()[0] = cap.bits();
                     sel4::reply(ib, rev_msg.extra_caps(1).build());
                 }

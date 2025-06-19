@@ -8,6 +8,7 @@ use core::{
 };
 
 use alloc::{sync::Arc, vec::Vec};
+use common::slot::alloc_slot;
 use sel4::{CapRights, cap::Notification};
 use sel4_kit::{
     arch::{GENERIC_TIMER_PCNT_IRQ, current_time, set_timer},
@@ -16,7 +17,7 @@ use sel4_kit::{
 use spin::{Lazy, Mutex};
 use syscalls::Errno;
 
-use crate::{exception::GLOBAL_NOTIFY, utils::obj::alloc_slot};
+use crate::exception::GLOBAL_NOTIFY;
 
 static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
 static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {

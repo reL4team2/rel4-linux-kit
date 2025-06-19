@@ -81,13 +81,14 @@ impl Drop for Sel4Task {
         root_cnode.absolute_cptr(self.tcb).delete().unwrap();
         root_cnode.absolute_cptr(self.cnode).revoke().unwrap();
         root_cnode.absolute_cptr(self.cnode).delete().unwrap();
-        root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
-        root_cnode.absolute_cptr(self.vspace).delete().unwrap();
         recycle_slot(self.tcb.into());
-        recycle_slot(self.vspace.into());
         recycle_slot(self.cnode.into());
 
         if Arc::strong_count(&self.mem) == 1 {
+            root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
+            root_cnode.absolute_cptr(self.vspace).delete().unwrap();
+            recycle_slot(self.vspace.into());
+
             self.mem.lock().mapped_pt.iter().for_each(|cap| {
                 root_cnode.absolute_cptr(*cap).revoke().unwrap();
                 root_cnode.absolute_cptr(*cap).delete().unwrap();
@@ -260,6 +261,17 @@ impl Sel4Task {
         }
     }
 
+    /// 映射一个空白页到虚拟地址空间
+    /// # 参数
+    ///
+    /// - `vaddr` 需要映射的虚拟地址，计算时会向下 4K 对齐
+    pub fn map_blank_page(&self, mut vaddr: usize) -> PhysPage {
+        vaddr = vaddr / PAGE_SIZE * PAGE_SIZE;
+        let page_cap = PhysPage::new(self.capset.lock().alloc_page());
+        self.map_page(vaddr, page_cap.clone());
+        page_cap
+    }
+
     /// 映射一个区域的内存
     ///
     /// - `start` 是起始地址
@@ -271,8 +283,7 @@ impl Sel4Task {
         assert!(start % 0x1000 == 0);
 
         for vaddr in (start..end).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(self.capset.lock().alloc_page());
-            self.map_page(vaddr, page_cap);
+            self.map_blank_page(vaddr);
         }
     }
 
@@ -308,17 +319,17 @@ impl Sel4Task {
 
             while vaddr < vaddr_end {
                 let voffset = vaddr % PAGE_SIZE;
-                let page_cap = match self
+                let finded = self
                     .mem
                     .lock()
                     .mapped_page
-                    .remove(&(vaddr / PAGE_SIZE * PAGE_SIZE))
-                {
+                    .remove(&(vaddr / PAGE_SIZE * PAGE_SIZE));
+                let page_cap = match finded {
                     Some(page_cap) => {
                         page_cap.cap().frame_unmap().unwrap();
                         page_cap
                     }
-                    None => PhysPage::new(self.capset.lock().alloc_page()),
+                    None => self.map_blank_page(vaddr),
                 };
 
                 // 将 elf 中特定段的内容写入对应的物理页中

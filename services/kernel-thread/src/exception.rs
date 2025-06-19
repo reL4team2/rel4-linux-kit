@@ -4,7 +4,7 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
-use common::{config::PAGE_SIZE, page::PhysPage};
+use common::config::PAGE_SIZE;
 use sel4::{
     Fault, MessageInfo, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer,
 };
@@ -73,8 +73,7 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
     let vaddr = vmfault.addr() as usize / PAGE_SIZE * PAGE_SIZE;
     let mut task_map = TASK_MAP.lock();
     let task = task_map.get_mut(&tid).unwrap();
-    let page_cap = PhysPage::new(task.capset.lock().alloc_page());
-    task.map_page(vaddr, page_cap);
+    task.map_blank_page(vaddr);
 
     task.tcb.tcb_resume().unwrap();
     drop(task_map);
