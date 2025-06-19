@@ -60,7 +60,7 @@ pub(super) fn sys_set_tid_addr(task: &Sel4Task, addr: usize) -> SysResult {
 #[inline]
 pub(super) fn sys_exit(task: &Sel4Task, exit_code: u32) -> SysResult {
     debug!("sys_exit @ exit_code: {} ", exit_code);
-    task.exit_with(exit_code << 7);
+    task.exit_with(exit_code << 8);
     Ok(0)
 }
 

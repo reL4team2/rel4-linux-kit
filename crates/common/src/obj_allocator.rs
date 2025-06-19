@@ -23,7 +23,7 @@ impl ObjectAllocator {
     }
 
     fn untyped(&self) -> Untyped {
-        self.ut.lock().clone()
+        *self.ut.lock()
     }
 
     /// Allocate cap with Generic definition and size_bits before rebuilding the cspace
