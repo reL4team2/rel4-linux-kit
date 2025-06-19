@@ -36,7 +36,6 @@ pub(super) fn sys_mmap(
         return Ok(start);
     }
     let start = task.find_free_area(start, size);
-
     if fd > 0 {
         let file = task
             .file
@@ -49,12 +48,14 @@ pub(super) fn sys_mmap(
         let mut data = vec![0u8; file_len];
         file.readat(0, &mut data)?;
         for addr in (start..start + size).step_by(PAGE_SIZE) {
-            task.map_page(addr, PhysPage::new(task.capset.lock().alloc_page()));
+            let phys_page = PhysPage::new(task.capset.lock().alloc_page());
+            task.map_page(addr, phys_page);
         }
         task.write_bytes(start, &data);
     } else {
         for addr in (start..start + size).step_by(PAGE_SIZE) {
-            task.map_page(addr, PhysPage::new(task.capset.lock().alloc_page()));
+            let phys_page = PhysPage::new(task.capset.lock().alloc_page());
+            task.map_page(addr, phys_page);
         }
     }
     Ok(start)

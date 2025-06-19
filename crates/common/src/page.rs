@@ -15,8 +15,10 @@ use core::{
 };
 use sel4::{CapRights, VmAttributes, cap::Granule, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
+use spin::Lazy;
 
-use crate::config::{DEFAULT_PAGE_PLACEHOLDER, PAGE_SIZE};
+use crate::config::PAGE_SIZE;
+use crate::slot::alloc_slot;
 
 /// 空白页占位结构，保证数据 4k 对齐
 #[repr(C, align(4096))]
@@ -62,11 +64,12 @@ impl PhysPage {
 
     /// 锁定物理页表，返回一个物理页锁，可以在这个对象上进行读写
     pub fn lock(&self) -> PhysPageLocker {
+        static PLACE_HOLDER_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
         while PAGE_MAP_LOCK.load(Ordering::SeqCst) {
             spin_loop();
         }
         PAGE_MAP_LOCK.store(true, Ordering::SeqCst);
-        let slot = LeafSlot::new(DEFAULT_PAGE_PLACEHOLDER as _);
+        let slot = *PLACE_HOLDER_SLOT;
         slot.copy_from(&self.cap.into(), CapRights::all()).unwrap();
         let addr = unsafe { FREE_PAGE_PLACEHOLDER.addr() };
         let cap: Granule = slot.cap();

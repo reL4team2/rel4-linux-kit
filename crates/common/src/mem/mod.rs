@@ -25,18 +25,14 @@ impl CapMemSet {
     }
 
     pub fn check_available(&mut self, size: usize) {
-        if let Some((untyped, available)) = self.untypes.last() {
+        if let Some((_, available)) = self.untypes.last() {
             if *available > size {
-                log::error!("alloc cap {:#x}: {} > {}", untyped.bits(), available, size);
-
                 return;
             }
         }
         if let Some(func) = self.alloc_func {
             let (untyped, available) = func();
             if available >= size {
-                log::error!("alloc cap {:#x}: {} > {}", untyped.bits(), available, size);
-
                 self.untypes.push((untyped, available));
                 return;
             }

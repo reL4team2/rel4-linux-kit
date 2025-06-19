@@ -52,6 +52,5 @@ pub fn alloc_untyped_unit() -> (Cap<cap_type::Untyped>, usize) {
 
 /// 回收一个未类型化的单元
 pub fn recycle_untyped_unit(cap: Cap<cap_type::Untyped>) {
-    LeafSlot::from_cap(cap).revoke().unwrap();
     RECYCLED_UNTYPED.lock().push(cap);
 }
