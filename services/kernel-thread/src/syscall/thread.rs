@@ -5,7 +5,7 @@
 use core::pin::pin;
 
 use alloc::{string::String, sync::Arc, vec::Vec};
-use common::{config::PAGE_SIZE, page::PhysPage};
+use common::{config::PAGE_SIZE, page::PhysPage, slot::alloc_slot};
 use flatten_objects::FlattenObjects;
 use fs::file::File;
 use futures::future::{Either, select};
@@ -17,8 +17,8 @@ use libc_core::{
     types::TimeSpec,
 };
 use object::Object;
-use sel4::UserContext;
-use sel4_kit::arch::current_time;
+use sel4::{CapRights, UserContext};
+use sel4_kit::{arch::current_time, slot_manager::LeafSlot};
 use spin::mutex::Mutex;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
@@ -199,6 +199,15 @@ pub(super) async fn sys_clone(
     if !flags.contains(CloneFlags::CLONE_VM) {
         let old_mem_info = task.mem.lock();
         for (vaddr, page) in old_mem_info.mapped_page.iter() {
+            // 不复制共享的内存
+            if task
+                .shm
+                .lock()
+                .iter()
+                .any(|x| x.contains(*vaddr))
+            {
+                continue;
+            }
             let new_page = new_task.capset.lock().alloc_page();
             map_page_self(PAGE_COPY_TEMP, new_page);
             unsafe {
@@ -212,6 +221,27 @@ pub(super) async fn sys_clone(
             new_page.frame_unmap().unwrap();
             new_task.map_page(*vaddr, PhysPage::new(new_page));
         }
+        new_task.shm = task.shm.clone();
+        // 处理 Share Memory
+        task.shm.lock().iter().for_each(|maped_shared_memory| {
+            if maped_shared_memory.start >= DEF_STACK_TOP - 16 * PAGE_SIZE {
+                // 不复制栈内存
+                return;
+            }
+            maped_shared_memory.mem.trackers.iter().enumerate().for_each(
+                |(i, page)| {
+                    let new_slot = alloc_slot();
+                    new_slot
+                        .copy_from(&LeafSlot::from_cap(*page), CapRights::all())
+                        .unwrap();
+                    new_task.map_page(
+                        maped_shared_memory.start + i * PAGE_SIZE,
+                        PhysPage::new(new_slot.cap()),
+                    );
+                },
+            );
+        });
+
     }
 
     new_task

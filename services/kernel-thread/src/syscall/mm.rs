@@ -3,10 +3,24 @@
 //!
 
 use super::SysResult;
-use crate::{consts::task::DEF_HEAP_ADDR, task::Sel4Task};
-use common::{config::PAGE_SIZE, slot::recycle_slot};
+use crate::{
+    consts::task::DEF_HEAP_ADDR,
+    task::{
+        shm::{MapedSharedMemory, SharedMemory, SHARED_MEMORY}, Sel4Task
+    },
+    utils::obj::alloc_untyped_unit,
+};
+use alloc::{sync::Arc, vec::Vec};
+use common::{
+    config::PAGE_SIZE,
+    mem::CapMemSet,
+    page::PhysPage,
+    slot::{alloc_slot, recycle_slot},
+};
 use libc_core::mman::MapFlags;
+use sel4::{Cap, CapRights, cap_type};
 use sel4_kit::slot_manager::LeafSlot;
+use spin::Mutex;
 use syscalls::Errno;
 
 #[inline]
@@ -75,4 +89,83 @@ pub(super) fn sys_munmap(task: &Sel4Task, start: usize, len: usize) -> SysResult
         }
     });
     Ok(0)
+}
+
+pub(super) fn sys_shmget(
+    _task: &Sel4Task,
+    mut key: usize,
+    size: usize,
+    shmflg: usize,
+) -> SysResult {
+    debug!(
+        "sys_shmget @ key: {}, size: {}, shmflg: {:#o}",
+        key, size, shmflg
+    );
+    if key == 0 {
+        key = SHARED_MEMORY.lock().keys().cloned().max().unwrap_or(0) + 1;
+    }
+    let mem = SHARED_MEMORY.lock().get(&key).cloned();
+    if mem.is_some() {
+        return Ok(key);
+    }
+    if shmflg & 0o1000 > 0 {
+        let capset = Mutex::new(CapMemSet::new(Some(alloc_untyped_unit)));
+        let vector: Vec<Cap<cap_type::Granule>> = (0..size.div_ceil(PAGE_SIZE))
+            .map(|_| capset.lock().alloc_page())
+            .collect();
+        SHARED_MEMORY
+            .lock()
+            .insert(key, Arc::new(SharedMemory::new(capset, vector)));
+        return Ok(key);
+    }
+    Err(Errno::ENOENT)
+}
+
+pub(super) fn sys_shmat(task: &Sel4Task, shmid: usize, shmaddr: usize, shmflg: usize) -> SysResult {
+    debug!(
+        "sys_shmat @ shmid: {}, shmaddr: {}, shmflg: {:#o}",
+        shmid, shmaddr, shmflg
+    );
+
+    let trackers = SHARED_MEMORY.lock().get(&shmid).cloned();
+    if trackers.is_none() {
+        return Err(Errno::ENOENT);
+    }
+    let trackers = trackers.unwrap();
+
+    let vaddr = task.find_free_area(shmaddr, trackers.trackers.len() * PAGE_SIZE);
+    let vaddr = if shmaddr == 0 {
+        vaddr
+    } else {
+        shmaddr
+    };
+
+    for (i, page) in trackers.trackers.iter().enumerate() {
+        let new_slot = alloc_slot();
+        new_slot
+            .copy_from(&LeafSlot::from_cap(*page), CapRights::all())
+            .unwrap();
+        task.map_page(vaddr + i * PAGE_SIZE, PhysPage::new(new_slot.cap()));
+    }
+
+    task.shm.lock().push(Arc::new(MapedSharedMemory {
+            key: shmid,
+            mem: SHARED_MEMORY.lock().get(&shmid).unwrap().clone(),
+            start: vaddr,
+            size: trackers.trackers.len() * PAGE_SIZE,
+        }));
+
+    Ok(vaddr)
+}
+
+pub(super) fn sys_shmctl(_task: &Sel4Task, shmid: usize, cmd: usize, arg: usize) -> SysResult {
+    debug!("sys_shmctl @ shmid: {}, cmd: {}, arg: {}", shmid, cmd, arg);
+
+    if cmd == 0 {
+        if let Some(map) = SHARED_MEMORY.lock().get_mut(&shmid) {
+            *map.deleted.lock() = true;
+        }
+        return Ok(0);
+    }
+    Err(Errno::EPERM)
 }

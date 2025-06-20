@@ -5,6 +5,7 @@
 use core::time::Duration;
 
 use alloc::{string::String, sync::Arc};
+use bit_field::BitArray;
 use fs::{FileType, SeekFrom, file::File};
 use libc_core::{
     consts::UTIME_NOW,
@@ -464,16 +465,16 @@ pub(super) async fn sys_ppoll(
     };
     let n = loop {
         let mut num = 0;
-        for i in 0..nfds {
-            poll_fds[i].revents = task
+        for poll_fd in poll_fds.iter_mut().take(nfds) {
+            poll_fd.revents = task
                 .file
                 .file_ds
                 .lock()
-                .get(poll_fds[i].fd as _)
+                .get(poll_fd.fd as _)
                 .map_or(PollEvent::NONE, |x| {
-                    x.poll(poll_fds[i].events.clone()).unwrap()
+                    x.poll(poll_fd.events.clone()).unwrap()
                 });
-            if poll_fds[i].revents != PollEvent::NONE {
+            if poll_fd.revents != PollEvent::NONE {
                 num += 1;
             }
         }
@@ -572,4 +573,152 @@ pub(super) fn sys_ftruncate(task: &Sel4Task, fd: usize, len: usize) -> SysResult
         .ok_or(Errno::EINVAL)?
         .truncate(len)?;
     Ok(0)
+}
+
+#[allow(warnings)]
+pub(super) async fn sys_pselect(
+    task: &Sel4Task,
+    mut max_fdp1: usize,
+    readfds_ptr: *mut usize,
+    writefds_ptr: *mut usize,
+    exceptfds_ptr: *mut usize,
+    timeout_ptr: *mut TimeSpec,
+    sigmask: usize,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_pselect @ max_fdp1: {}, readfds: {:p}, writefds: {:p}, exceptfds: {:p}, tsptr: {:p}, sigmask: {:#X}",
+        task.tid, max_fdp1, readfds_ptr, writefds_ptr, exceptfds_ptr, timeout_ptr, sigmask
+    );
+
+    max_fdp1 = core::cmp::min(max_fdp1, 255);
+
+    let timeout = if timeout_ptr.is_null() {
+        Duration::MAX
+    } else {
+        let timeout_bytes = task
+            .read_bytes(timeout_ptr as _, size_of::<TimeSpec>())
+            .ok_or(Errno::EINVAL)?;
+        current_time() + TimeSpec::read_from_bytes(&timeout_bytes).unwrap().into()
+    };
+    let bytes = max_fdp1.div_ceil(8);
+    let mut ori_rfds = if !readfds_ptr.is_null() {
+        task.read_bytes(readfds_ptr as _, bytes).unwrap_or_default()
+    } else {
+        vec![0u8; bytes]
+    };
+    let mut ori_wfds = if !writefds_ptr.is_null() {
+        task.read_bytes(writefds_ptr as _, bytes)
+            .unwrap_or_default()
+    } else {
+        vec![0u8; bytes]
+    };
+    let mut ori_efds = if !exceptfds_ptr.is_null() {
+        task.read_bytes(exceptfds_ptr as _, bytes)
+            .unwrap_or_default()
+    } else {
+        vec![0u8; bytes]
+    };
+    let mut rfds_r = [0u8; 32];
+    let mut wfds_r = [0u8; 32];
+    let mut efds_r = [0u8; 32];
+    loop {
+        let mut num = 0;
+        let file_ds = task.file.file_ds.lock();
+        if !readfds_ptr.is_null() {
+            for i in 0..max_fdp1 {
+                if !ori_rfds.get_bit(i) {
+                    rfds_r.set_bit(i, false);
+                    continue;
+                }
+                if ori_rfds.get(i).is_none() {
+                    rfds_r.set_bit(i, false);
+                    continue;
+                }
+                let file = file_ds.get(i).unwrap();
+                match file.poll(PollEvent::IN) {
+                    Ok(res) => {
+                        if res.contains(PollEvent::IN) {
+                            num += 1;
+                            rfds_r.set_bit(i, true);
+                        } else {
+                            rfds_r.set_bit(i, false)
+                        }
+                    }
+                    Err(_) => rfds_r.set_bit(i, false),
+                }
+            }
+        }
+        if !writefds_ptr.is_null() {
+            for i in 0..max_fdp1 {
+                if !ori_wfds.get_bit(i) {
+                    continue;
+                }
+                if ori_wfds.get(i).is_none() {
+                    wfds_r.set_bit(i, false);
+                    continue;
+                }
+                let file = file_ds.get(i).unwrap();
+                match file.poll(PollEvent::OUT) {
+                    Ok(res) => {
+                        if res.contains(PollEvent::OUT) {
+                            num += 1;
+                            wfds_r.set_bit(i, true);
+                        } else {
+                            wfds_r.set_bit(i, false);
+                        }
+                    }
+                    Err(_) => wfds_r.set_bit(i, false),
+                }
+            }
+        }
+        if !exceptfds_ptr.is_null() {
+            for i in 0..max_fdp1 {
+                if !ori_efds.get_bit(i) {
+                    continue;
+                }
+                if ori_efds.get(i).is_none() {
+                    efds_r.set_bit(i, false);
+                    continue;
+                }
+                let file = file_ds.get(i).unwrap();
+                match file.poll(PollEvent::ERR) {
+                    Ok(res) => {
+                        if res.contains(PollEvent::ERR) {
+                            num += 1;
+                            efds_r.set_bit(i, true);
+                        } else {
+                            efds_r.set_bit(i, false)
+                        }
+                    }
+                    Err(_) => efds_r.set_bit(i, false),
+                }
+            }
+        }
+        drop(file_ds);
+        if num != 0 {
+            if !readfds_ptr.is_null() {
+                task.write_bytes(readfds_ptr as _, &rfds_r[..bytes]);
+            }
+            if !writefds_ptr.is_null() {
+                task.write_bytes(writefds_ptr as _, &wfds_r[..bytes]);
+            }
+            if !exceptfds_ptr.is_null() {
+                task.write_bytes(exceptfds_ptr as _, &efds_r[..bytes]);
+            }
+            return Ok(num);
+        }
+
+        if current_time() > timeout {
+            if !readfds_ptr.is_null() {
+                task.write_bytes(readfds_ptr as _, &rfds_r[..bytes]);
+            }
+            if !writefds_ptr.is_null() {
+                task.write_bytes(writefds_ptr as _, &wfds_r[..bytes]);
+            }
+            if !exceptfds_ptr.is_null() {
+                task.write_bytes(exceptfds_ptr as _, &efds_r[..bytes]);
+            }
+            return Ok(0);
+        }
+    }
 }

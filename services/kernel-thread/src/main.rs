@@ -92,8 +92,8 @@ fn main() {
     timer::init();
 
     // test_task!("./pipe");
-    // test_task!("busybox", "sh", "/init.sh");
-    test_task!("busybox", "sh", "/iozone_testcode.sh");
+    test_task!("busybox", "sh", "/init.sh");
+    // test_task!("busybox", "sh", "/iozone_testcode.sh");
     // test_task!("busybox", "sh", "/lmbench_testcode.sh");
     // test_task!("./libc-bench");
     // test_task!("busybox", "which", "ls");

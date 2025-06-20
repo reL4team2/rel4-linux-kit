@@ -5,6 +5,7 @@ mod file;
 mod info;
 mod init;
 mod mem;
+pub mod shm;
 mod signal;
 
 use alloc::{sync::Arc, vec::Vec};
@@ -33,6 +34,7 @@ use zerocopy::IntoBytes;
 
 use crate::{
     child_test::{FutexTable, TASK_MAP, futex_wake, wake_hangs},
+    task::shm::MapedSharedMemory,
     utils::obj::{alloc_untyped_unit, recycle_untyped_unit},
 };
 
@@ -56,6 +58,8 @@ pub struct Sel4Task {
     pub vspace: sel4::cap::VSpace,
     /// 任务内存映射信息
     pub mem: Arc<Mutex<TaskMemInfo>>,
+    /// 共享内存信息
+    pub shm: Arc<Mutex<Vec<Arc<MapedSharedMemory>>>>,
     /// 退出状态码
     pub exit: Mutex<Option<u32>>,
     /// Futex 表
@@ -119,6 +123,7 @@ impl Sel4Task {
             tcb,
             cnode,
             vspace,
+            shm: Arc::new(Mutex::new(Vec::new())),
             capset: Arc::new(Mutex::new(capset)),
             futex_table: Arc::new(Mutex::new(Vec::new())),
             mem: Arc::new(Mutex::new(TaskMemInfo::default())),
@@ -163,6 +168,7 @@ impl Sel4Task {
             tid,
             tcb,
             cnode,
+            shm: self.shm.clone(),
             vspace: self.vspace,
             capset: self.capset.clone(),
             mem: self.mem.clone(),

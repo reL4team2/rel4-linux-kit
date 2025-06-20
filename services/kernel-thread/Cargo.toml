@@ -28,6 +28,8 @@ memory_addr = "0.3"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 
+bit_field = "0.10.2"
+
 common = { workspace = true }
 libc-core = { workspace = true }
 
