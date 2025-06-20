@@ -15,7 +15,6 @@ use common::{
     },
     page::PhysPage,
 };
-use core::ops::DerefMut;
 use object::{File, Object};
 use sel4::{
     AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth,
@@ -127,7 +126,7 @@ impl Sel4Task {
                 // Map page tbale if the fault is Error::FailedLookup
                 // (It's indicates that here was not a page table).
                 Err(Error::FailedLookup) => {
-                    let pt_cap = OBJ_ALLOCATOR.lock().alloc_pt();
+                    let pt_cap = OBJ_ALLOCATOR.alloc_pt();
                     pt_cap
                         .pt_map(self.vspace, vaddr, VMAttributes::DEFAULT)
                         .unwrap();
@@ -158,7 +157,7 @@ impl Sel4Task {
                 // Map page tbale if the fault is Error::FailedLookup
                 // (It's indicates that here was not a page table).
                 Err(Error::FailedLookup) => {
-                    let pt_cap = OBJ_ALLOCATOR.lock().alloc_pt();
+                    let pt_cap = OBJ_ALLOCATOR.alloc_pt();
                     pt_cap
                         .pt_map(self.vspace, vaddr, VMAttributes::DEFAULT)
                         .unwrap();
@@ -210,7 +209,7 @@ impl Sel4Task {
     pub fn map_stack(&mut self, page_count: usize) {
         self.stack_bottom -= page_count * PAGE_SIZE;
         for i in 0..page_count {
-            let page_cap = PhysPage::new(OBJ_ALLOCATOR.lock().alloc_page());
+            let page_cap = PhysPage::new(OBJ_ALLOCATOR.alloc_page());
             self.map_page(self.stack_bottom + i * PAGE_SIZE, page_cap);
         }
     }
@@ -275,7 +274,7 @@ pub fn build_kernel_thread(
     file_data: &[u8],
 ) -> sel4::Result<Sel4Task> {
     // make 新线程的虚拟地址空间
-    let cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
+    let cnode = OBJ_ALLOCATOR.alloc_cnode(CNODE_RADIX_BITS);
     let mut mapped_page = BTreeMap::new();
     let (vspace, ipc_buffer_addr, ipc_buffer_cap) = make_child_vspace(
         cnode,
@@ -284,8 +283,8 @@ pub fn build_kernel_thread(
         slot::ASID_POOL.cap(),
     );
 
-    let tcb = OBJ_ALLOCATOR.lock().alloc_tcb();
-    let srv_ep = OBJ_ALLOCATOR.lock().alloc_endpoint();
+    let tcb = OBJ_ALLOCATOR.alloc_tcb();
+    let srv_ep = OBJ_ALLOCATOR.alloc_endpoint();
 
     let mut task = Sel4Task::new(
         tcb,
@@ -344,9 +343,8 @@ pub(crate) fn make_child_vspace<'a>(
     image: &'a impl Object<'a>,
     asid_pool: sel4::cap::AsidPool,
 ) -> (sel4::cap::VSpace, usize, SmallPage) {
-    let inner_cnode = OBJ_ALLOCATOR.lock().alloc_cnode(CNODE_RADIX_BITS);
-    let mut allocator = OBJ_ALLOCATOR.lock();
-    let allocator = allocator.deref_mut();
+    let inner_cnode = OBJ_ALLOCATOR.alloc_cnode(CNODE_RADIX_BITS);
+    let allocator = &OBJ_ALLOCATOR;
     let child_vspace = allocator.allocate_and_retyped_fixed_sized::<sel4::cap_type::VSpace>();
     // Build 2 level CSpace.
     // | unused (40 bits) | Level1 (12 bits) | Level0 (12 bits) |

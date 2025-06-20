@@ -52,12 +52,7 @@ impl ObjectAllocator {
 
     /// TODO: 申请多个位置，且判断位置是否超出
     pub fn allocate_slot(&self) -> LeafSlot {
-        let leaf_slot = super::slot::alloc_slot();
-
-        if leaf_slot.offset_of_cnode() == 0 {
-            self.extend_slot(leaf_slot);
-        }
-        leaf_slot
+        super::slot::alloc_slot()
     }
 
     pub fn extend_slot(&self, slot: LeafSlot) {

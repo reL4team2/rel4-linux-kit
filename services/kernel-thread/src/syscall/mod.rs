@@ -51,6 +51,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::fcntl => sys_fcntl(task, a0, a1 as _, a2 as _),
         Sysno::fstat => sys_fstat(task, a0, a1 as _),
         Sysno::fstatat => sys_fstatat(task, a0 as _, a1 as _, a2 as _, a3 as _),
+        Sysno::ftruncate => sys_ftruncate(task, a0, a1 as _),
         Sysno::statfs => sys_statfs(task, a0 as _, a1 as _),
         Sysno::futex => sys_futex(task.clone(), a0 as _, a1, a2, a3, a4, a5).await,
         Sysno::getcwd => sys_getcwd(task, a0 as _, a1),
@@ -98,7 +99,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::write => sys_write(task, a0, a1 as _, a2),
         Sysno::writev => sys_writev(task, a0, a1 as _, a2),
         Sysno::prlimit64 => sys_prlimit64(task, a0, a1, a2 as _, a3 as _),
-        Sysno::mprotect => Ok(0),
+        Sysno::mprotect | Sysno::sync | Sysno::fsync => Ok(0),
         Sysno::get_robust_list => {
             log::warn!("get_robust_list not implementation");
             Ok(0)

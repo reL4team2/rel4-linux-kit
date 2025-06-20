@@ -28,11 +28,10 @@ use sel4::{
 };
 use sel4_kit::slot_manager::LeafSlot;
 use sel4_root_task::{Never, root_task};
-use spin::Mutex;
 use task::*;
 
 /// Object 分配器，可以用来申请 Capability
-pub(crate) static OBJ_ALLOCATOR: Mutex<ObjectAllocator> = Mutex::new(ObjectAllocator::empty());
+pub(crate) static OBJ_ALLOCATOR: ObjectAllocator = ObjectAllocator::empty();
 
 #[root_task(heap_size = 0x12_0000)]
 fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
@@ -68,14 +67,19 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
     // TODO: 使用合适的 CSpace 边缘处理模式
     // 可能的做法是单独搞一个 ObjectAllocator 来分配 CSpace
     common::slot::init(bootinfo.empty().range().start..0x1000);
+
     let len = mem_untypes.len();
-    OBJ_ALLOCATOR.lock().init(mem_untypes.remove(len - 4).0);
+    OBJ_ALLOCATOR.init(mem_untypes.remove(len - 4).0);
 
     // 重建 Capability 空间，构建为多级 CSpace
     cspace::rebuild_cspace();
 
+    common::slot::init_slot_edge_handler(|slot| {
+        OBJ_ALLOCATOR.extend_slot(slot);
+    });
+
     // Used for fault and normal IPC ( Reuse )
-    let fault_ep = OBJ_ALLOCATOR.lock().alloc_endpoint();
+    let fault_ep = OBJ_ALLOCATOR.alloc_endpoint();
 
     // 开始创建任务
     let mut tasks: Vec<Sel4Task> = Vec::new();
@@ -102,7 +106,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                     (desc.paddr()..(desc.paddr() + (1 << desc.size_bits()))).contains(paddr)
                 })
                 .expect("[RootTask] can't find device memory");
-            let leaf_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+            let leaf_slot = OBJ_ALLOCATOR.allocate_slot();
             let blk_device_frame_cap = LargePage::from_bits(leaf_slot.raw() as _);
 
             blk_device_untyped_cap
@@ -123,7 +127,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         for (start, size) in t.dma {
             // 申请多个页表
             // TODO: 检查页表是否连续
-            let pages_cap = OBJ_ALLOCATOR.lock().alloc_pages(size / PAGE_SIZE);
+            let pages_cap = OBJ_ALLOCATOR.alloc_pages(size / PAGE_SIZE);
 
             // 映射多个页表
             pages_cap.into_iter().enumerate().for_each(|(i, page)| {

@@ -72,6 +72,8 @@ pub struct Sel4Task {
     pub file: TaskFileInfo,
     /// 任务初始信息，任务的初始信息记录在这里，方便进行初始化
     pub info: Mutex<TaskInfo>,
+    /// 资源计数器，用于跟踪线程数量
+    pub thread_counter: Mutex<Option<Arc<()>>>,
 }
 
 impl Drop for Sel4Task {
@@ -125,6 +127,7 @@ impl Sel4Task {
             clear_child_tid: Mutex::new(0),
             file: TaskFileInfo::default(),
             info: Mutex::new(TaskInfo::default()),
+            thread_counter: Mutex::new(Some(Arc::new(()))),
         })
     }
 
@@ -169,6 +172,7 @@ impl Sel4Task {
             clear_child_tid: Mutex::new(0),
             file: self.file.clone(),
             info: Mutex::new(self.info.lock().clone()),
+            thread_counter: Mutex::new(self.thread_counter.lock().clone()),
         })
     }
 
@@ -354,7 +358,7 @@ impl Sel4Task {
         recycle_slot(self.tcb.into());
         recycle_slot(self.cnode.into());
 
-        if Arc::strong_count(&self.mem) == 1 {
+        if Arc::strong_count(self.thread_counter.lock().as_ref().unwrap()) == 1 {
             root_cnode.absolute_cptr(self.vspace).revoke().unwrap();
             root_cnode.absolute_cptr(self.vspace).delete().unwrap();
             recycle_slot(self.vspace.into());
@@ -379,6 +383,7 @@ impl Sel4Task {
                 recycle_untyped_unit(*untyped);
             });
         }
+        *self.thread_counter.lock() = None;
 
         // 释放文件描述符
         if Arc::strong_count(&self.file.file_ds) == 1 {

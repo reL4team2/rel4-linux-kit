@@ -560,3 +560,16 @@ pub(super) fn sys_ioctl(
         .ioctl(request, arg1)
         .map_err(|_| Errno::ENOTTY)
 }
+
+pub(super) fn sys_ftruncate(task: &Sel4Task, fd: usize, len: usize) -> SysResult {
+    if fd == usize::MAX {
+        return Err(Errno::EPERM);
+    }
+    task.file
+        .file_ds
+        .lock()
+        .get(fd)
+        .ok_or(Errno::EINVAL)?
+        .truncate(len)?;
+    Ok(0)
+}

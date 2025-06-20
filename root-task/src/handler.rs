@@ -18,7 +18,7 @@ impl RootTaskHandler {
     /// 如果有返回 Capability 如何处理？
     pub fn waiting_and_handle(&mut self, ib: &mut IpcBuffer) -> ! {
         let rev_msg = MessageInfoBuilder::default();
-        let swap_slot = OBJ_ALLOCATOR.lock().allocate_slot();
+        let swap_slot = OBJ_ALLOCATOR.allocate_slot();
         loop {
             let (message, badge) = self.fault_ep.recv(());
             self.badge = badge;
@@ -39,11 +39,11 @@ impl RootTaskHandler {
                     static CHANNEL_ID: AtomicUsize = AtomicUsize::new(1);
                     let (addr, page_count) = read_types!(ib, usize, usize);
 
-                    let pages = OBJ_ALLOCATOR.lock().alloc_pages(page_count);
+                    let pages = OBJ_ALLOCATOR.alloc_pages(page_count);
                     pages
                         .iter()
                         .map(|x| {
-                            let slot = OBJ_ALLOCATOR.lock().allocate_slot();
+                            let slot = OBJ_ALLOCATOR.allocate_slot();
                             slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
                                 .unwrap();
                             slot
@@ -64,7 +64,7 @@ impl RootTaskHandler {
                         pages
                             .iter()
                             .map(|x| {
-                                let slot = OBJ_ALLOCATOR.lock().allocate_slot();
+                                let slot = OBJ_ALLOCATOR.allocate_slot();
                                 slot.copy_from(&LeafSlot::from_cap(*x), CapRights::all())
                                     .unwrap();
                                 slot
@@ -124,9 +124,7 @@ impl RootTaskHandler {
                 // 申请一个 Notification Capability
                 RootEvent::AllocNotification => {
                     // 在 0 的 slot 处创建一个 Capability
-                    OBJ_ALLOCATOR
-                        .lock()
-                        .retype_to_first(sel4::ObjectBlueprint::Notification);
+                    OBJ_ALLOCATOR.retype_to_first(sel4::ObjectBlueprint::Notification);
 
                     ib.caps_or_badges_mut()[0] = 0;
                     sel4::reply(ib, rev_msg.extra_caps(1).build());
@@ -143,7 +141,7 @@ impl RootTaskHandler {
                     assert_eq!(message.length(), 1);
                     let addr = read_types!(ib, usize);
 
-                    let page = OBJ_ALLOCATOR.lock().alloc_page();
+                    let page = OBJ_ALLOCATOR.alloc_page();
                     self.tasks[badge as usize].map_page(addr, PhysPage::new(page));
                     LeafSlot::new(0)
                         .copy_from(&LeafSlot::new(page.bits() as _), CapRights::all())

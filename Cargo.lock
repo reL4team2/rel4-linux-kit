@@ -271,9 +271,9 @@ checksum = "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
 
 [[package]]
 name = "flatten_objects"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a44a8ee8095192119780ad867a02cfb86c44f3cebd16b7161d84e1fb8e26482"
+checksum = "e362dae0b64fc12551b655a09484a643461a283a078fb8a9686d1f58fa46df9a"
 dependencies = [
  "bitmaps",
 ]
@@ -479,7 +479,9 @@ checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 
 [[package]]
 name = "libc-core"
-version = "0.2.2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ea006c1623d370b56a9c6e09a74b891cb3f440706132c1ba9f6a828a55dd8ea"
 dependencies = [
  "bitflags",
  "num_enum",

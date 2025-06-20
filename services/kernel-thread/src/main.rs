@@ -69,6 +69,7 @@ fn main() {
     common::slot::init_slot_edge_handler(|slot| {
         OBJ_ALLOCATOR.extend_slot(slot);
     });
+
     // 初始化 LOG
     logging::init();
 
@@ -92,8 +93,9 @@ fn main() {
 
     // test_task!("./pipe");
     // test_task!("busybox", "sh", "/init.sh");
-    // test_task!("busybox", "sh", "/iozone_testcode.sh");
-    test_task!("./libc-bench");
+    test_task!("busybox", "sh", "/iozone_testcode.sh");
+    // test_task!("busybox", "sh", "/lmbench_testcode.sh");
+    // test_task!("./libc-bench");
     // test_task!("busybox", "which", "ls");
     // test_task!("entry-static.exe", "clock_gettime");
     // test_task!("busybox", "sh", "/run-static.sh");
