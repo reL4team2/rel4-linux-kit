@@ -10,6 +10,8 @@ use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::main;
 use srv_gate::blk::BlockIfaceEvent;
 
+sel4_runtime::define_heap!(common::config::SERVICE_HEAP_SIZE);
+
 #[main]
 fn main() {
     let mut virtio_blk = VIRTIOBLK.lock();

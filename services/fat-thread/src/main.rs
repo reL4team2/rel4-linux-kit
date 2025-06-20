@@ -13,6 +13,8 @@ use sel4::{debug_print, debug_println, with_ipc_buffer_mut, MessageInfoBuilder};
 
 mod cursor;
 
+sel4_runtime::define_heap!(common::config::SERVICE_HEAP_SIZE);
+
 #[sel4_runtime::main]
 fn main() {
     log::info!("Booting...");

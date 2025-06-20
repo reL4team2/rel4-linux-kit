@@ -233,6 +233,22 @@ pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: u
     Ok(wsize)
 }
 
+pub(super) fn sys_pwrite64(
+    task: &Sel4Task,
+    fd: usize,
+    buf_ptr: *const u8,
+    count: usize,
+    offset: usize,
+) -> SysResult {
+    let buf = task.read_bytes(buf_ptr as _, count).unwrap();
+    task.file
+        .file_ds
+        .lock()
+        .get_mut(fd)
+        .ok_or(Errno::EBADF)?
+        .writeat(offset, &buf)
+}
+
 pub(super) fn sys_lseek(task: &Sel4Task, fd: usize, offset: usize, whence: usize) -> SysResult {
     let seek_from = match whence {
         0 => SeekFrom::SET(offset),
@@ -471,9 +487,7 @@ pub(super) async fn sys_ppoll(
                 .file_ds
                 .lock()
                 .get(poll_fd.fd as _)
-                .map_or(PollEvent::NONE, |x| {
-                    x.poll(poll_fd.events.clone()).unwrap()
-                });
+                .map_or(PollEvent::NONE, |x| x.poll(poll_fd.events.clone()).unwrap());
             if poll_fd.revents != PollEvent::NONE {
                 num += 1;
             }

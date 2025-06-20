@@ -6,7 +6,8 @@ use super::SysResult;
 use crate::{
     consts::task::DEF_HEAP_ADDR,
     task::{
-        shm::{MapedSharedMemory, SharedMemory, SHARED_MEMORY}, Sel4Task
+        Sel4Task,
+        shm::{MapedSharedMemory, SHARED_MEMORY, SharedMemory},
     },
     utils::obj::alloc_untyped_unit,
 };
@@ -134,11 +135,7 @@ pub(super) fn sys_shmat(task: &Sel4Task, shmid: usize, shmaddr: usize, shmflg: u
     let trackers = trackers.unwrap();
 
     let vaddr = task.find_free_area(shmaddr, trackers.trackers.len() * PAGE_SIZE);
-    let vaddr = if shmaddr == 0 {
-        vaddr
-    } else {
-        shmaddr
-    };
+    let vaddr = if shmaddr == 0 { vaddr } else { shmaddr };
 
     for (i, page) in trackers.trackers.iter().enumerate() {
         let new_slot = alloc_slot();
@@ -149,11 +146,11 @@ pub(super) fn sys_shmat(task: &Sel4Task, shmid: usize, shmaddr: usize, shmflg: u
     }
 
     task.shm.lock().push(Arc::new(MapedSharedMemory {
-            key: shmid,
-            mem: SHARED_MEMORY.lock().get(&shmid).unwrap().clone(),
-            start: vaddr,
-            size: trackers.trackers.len() * PAGE_SIZE,
-        }));
+        key: shmid,
+        mem: SHARED_MEMORY.lock().get(&shmid).unwrap().clone(),
+        start: vaddr,
+        size: trackers.trackers.len() * PAGE_SIZE,
+    }));
 
     Ok(vaddr)
 }

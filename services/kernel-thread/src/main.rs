@@ -61,8 +61,13 @@ macro_rules! test_task {
         file.read(&mut data).unwrap();
         child_test::add_test_child(&data, &[$file $(,$args)*]).unwrap();
         sel4::debug_println!("loading file: {}", $file);
+        drop(data);
     }};
 }
+
+const DEF_HEAP_SIZE: usize = 0x300_0000;
+
+sel4_runtime::define_heap!(DEF_HEAP_SIZE);
 
 #[sel4_runtime::main]
 fn main() {

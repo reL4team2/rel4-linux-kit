@@ -81,7 +81,14 @@ pub struct Sel4Task {
 }
 
 impl Drop for Sel4Task {
-    fn drop(&mut self) {}
+    fn drop(&mut self) {
+        // 释放文件描述符
+        if Arc::strong_count(&self.file.file_ds) == 1 {
+            for i in 0..=512 {
+                self.file.file_ds.lock().remove(i);
+            }
+        }
+    }
 }
 
 static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -390,12 +397,5 @@ impl Sel4Task {
             });
         }
         *self.thread_counter.lock() = None;
-
-        // 释放文件描述符
-        if Arc::strong_count(&self.file.file_ds) == 1 {
-            for i in 0..=512 {
-                self.file.file_ds.lock().remove(i);
-            }
-        }
     }
 }

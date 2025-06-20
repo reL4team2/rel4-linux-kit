@@ -200,12 +200,7 @@ pub(super) async fn sys_clone(
         let old_mem_info = task.mem.lock();
         for (vaddr, page) in old_mem_info.mapped_page.iter() {
             // 不复制共享的内存
-            if task
-                .shm
-                .lock()
-                .iter()
-                .any(|x| x.contains(*vaddr))
-            {
+            if task.shm.lock().iter().any(|x| x.contains(*vaddr)) {
                 continue;
             }
             let new_page = new_task.capset.lock().alloc_page();
@@ -221,15 +216,19 @@ pub(super) async fn sys_clone(
             new_page.frame_unmap().unwrap();
             new_task.map_page(*vaddr, PhysPage::new(new_page));
         }
-        new_task.shm = task.shm.clone();
         // 处理 Share Memory
         task.shm.lock().iter().for_each(|maped_shared_memory| {
+            new_task.shm.lock().push(maped_shared_memory.clone());
             if maped_shared_memory.start >= DEF_STACK_TOP - 16 * PAGE_SIZE {
                 // 不复制栈内存
                 return;
             }
-            maped_shared_memory.mem.trackers.iter().enumerate().for_each(
-                |(i, page)| {
+            maped_shared_memory
+                .mem
+                .trackers
+                .iter()
+                .enumerate()
+                .for_each(|(i, page)| {
                     let new_slot = alloc_slot();
                     new_slot
                         .copy_from(&LeafSlot::from_cap(*page), CapRights::all())
@@ -238,10 +237,8 @@ pub(super) async fn sys_clone(
                         maped_shared_memory.start + i * PAGE_SIZE,
                         PhysPage::new(new_slot.cap()),
                     );
-                },
-            );
+                });
         });
-
     }
 
     new_task

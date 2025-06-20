@@ -73,6 +73,10 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::pipe2 => sys_pipe2(task, a0 as _, a1 as _),
         Sysno::read => sys_read(task, a0, a1 as _, a2).await,
         Sysno::readv => sys_readv(task, a0, a1 as _, a2).await,
+        Sysno::pread64 => sys_pread64(task, a0, a1 as _, a2, a3),
+        Sysno::write => sys_write(task, a0, a1 as _, a2),
+        Sysno::writev => sys_writev(task, a0, a1 as _, a2),
+        Sysno::pwrite64 => sys_pwrite64(task, a0, a1 as _, a2, a3),
         Sysno::renameat => sys_renameat2(
             task,
             a0 as _,
@@ -87,7 +91,6 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::shmctl => sys_shmctl(task, a0 as _, a1 as _, a2 as _),
         Sysno::ppoll => sys_ppoll(task, a0 as _, a1 as _, a2 as _, a3).await,
         Sysno::pselect6 => sys_pselect(task, a0, a1 as _, a2 as _, a3 as _, a4 as _, a5).await,
-        Sysno::pread64 => sys_pread64(task, a0, a1 as _, a2, a3),
         Sysno::rt_sigaction => sys_sigaction(task, a0, a1 as _, a2 as _),
         Sysno::rt_sigprocmask => sys_sigprocmask(task, a0 as _, a1 as _, a2 as _),
         Sysno::rt_sigreturn => sys_sigreturn(task, ctx),
@@ -100,8 +103,6 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::unlinkat => sys_unlinkat(task, a0 as _, a1 as _, a2 as _),
         Sysno::utimensat => sys_utimensat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::wait4 => sys_wait4(task, ctx, a0 as _, a1 as _, a2 as _).await,
-        Sysno::write => sys_write(task, a0, a1 as _, a2),
-        Sysno::writev => sys_writev(task, a0, a1 as _, a2),
         Sysno::prlimit64 => sys_prlimit64(task, a0, a1, a2 as _, a3 as _),
         Sysno::mprotect | Sysno::sync | Sysno::fsync => Ok(0),
         Sysno::get_robust_list => {
