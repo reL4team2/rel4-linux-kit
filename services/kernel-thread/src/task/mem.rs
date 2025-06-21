@@ -3,7 +3,7 @@
 //!
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage, slot::recycle_slot};
-use core::{cmp, usize};
+use core::cmp;
 use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::task::{DEF_HEAP_ADDR, DEF_STACK_BOTTOM, DEF_STACK_TOP};

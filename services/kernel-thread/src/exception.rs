@@ -58,6 +58,11 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 
         // 检查信号
         task.check_signal(&mut user_ctx);
+
+        if task.exit.lock().is_some() {
+            return;
+        }
+
         // 恢复任务运行状态
         task.tcb.tcb_resume().unwrap();
     } else {

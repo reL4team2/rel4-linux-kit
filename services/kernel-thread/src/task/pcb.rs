@@ -34,3 +34,9 @@ impl ProcessControlBlock {
         }
     }
 }
+
+impl Default for ProcessControlBlock {
+    fn default() -> Self {
+        Self::new()
+    }
+}

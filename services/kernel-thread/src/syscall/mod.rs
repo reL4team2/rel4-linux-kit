@@ -76,8 +76,8 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::readv => sys_readv(task, a0, a1 as _, a2).await,
         Sysno::setitimer => sys_setitimer(task, a0, a1 as _, a2 as _),
         Sysno::pread64 => sys_pread64(task, a0, a1 as _, a2, a3),
-        Sysno::write => sys_write(task, a0, a1 as _, a2),
-        Sysno::writev => sys_writev(task, a0, a1 as _, a2),
+        Sysno::write => sys_write(task, a0, a1 as _, a2).await,
+        Sysno::writev => sys_writev(task, a0, a1 as _, a2).await,
         Sysno::pwrite64 => sys_pwrite64(task, a0, a1 as _, a2, a3),
         Sysno::renameat => sys_renameat2(
             task,

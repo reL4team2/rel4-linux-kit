@@ -7,7 +7,7 @@ use core::{
     time::Duration,
 };
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::vec::Vec;
 use common::slot::alloc_slot;
 use sel4::{CapRights, cap::Notification};
 use sel4_kit::{
@@ -17,7 +17,7 @@ use sel4_kit::{
 use spin::{Lazy, Mutex};
 use syscalls::Errno;
 
-use crate::{child_test::TASK_MAP, exception::GLOBAL_NOTIFY};
+use crate::{child_test::TASK_MAP, exception::GLOBAL_NOTIFY, task::PollWakeEvent};
 
 static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
 static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
@@ -87,7 +87,7 @@ pub fn handle_timer() {
 }
 
 /// 等待时间到达
-pub struct WaitForTime(pub Duration, usize, Arc<Mutex<Option<Errno>>>);
+pub struct WaitForTime(pub Duration, usize);
 
 impl Future for WaitForTime {
     type Output = Result<(), Errno>;
@@ -96,22 +96,30 @@ impl Future for WaitForTime {
         self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
-        let waker = cx.waker().clone();
-
         if current_time() > self.0 {
-            Poll::Ready(Ok(()))
-        } else if let Some(eno) = *self.2.lock() {
-            Poll::Ready(Err(eno))
-        } else {
-            TIME_QUEUE
-                .lock()
-                .push((self.0, TimerType::WaitTime(self.1, waker)));
-            TIME_QUEUE
-                .lock()
-                .sort_by(|(dura_a, ..), (dura_b, ..)| dura_a.cmp(dura_b));
-            set_timer(TIME_QUEUE.lock().first().unwrap().0);
-            Poll::Pending
+            return Poll::Ready(Ok(()));
         }
+
+        let waker = cx.waker().clone();
+        let curr_task = TASK_MAP.lock().get(&(self.1 as _)).unwrap().clone();
+
+        // 如果被 Signal 打断
+        if matches!(
+            curr_task.waker.lock().take(),
+            Some((PollWakeEvent::Signal(_), _))
+        ) {
+            return Poll::Ready(Err(Errno::EINTR));
+        }
+        *curr_task.waker.lock() = Some((PollWakeEvent::Blocking, cx.waker().clone()));
+
+        TIME_QUEUE
+            .lock()
+            .push((self.0, TimerType::WaitTime(self.1, waker)));
+        TIME_QUEUE
+            .lock()
+            .sort_by(|(dura_a, ..), (dura_b, ..)| dura_a.cmp(dura_b));
+        set_timer(TIME_QUEUE.lock().first().unwrap().0);
+        Poll::Pending
     }
 }
 
@@ -121,7 +129,7 @@ impl Future for WaitForTime {
 /// - `duration` 目标等待的时间
 /// - `tid`      等待的线程 id
 pub async fn wait_time(duration: Duration, tid: usize) -> Result<usize, Errno> {
-    WaitForTime(duration, tid, Arc::new(Mutex::new(None))).await?;
+    WaitForTime(duration, tid).await?;
     Ok(0)
 }
 

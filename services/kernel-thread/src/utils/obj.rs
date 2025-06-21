@@ -28,7 +28,7 @@ pub fn init() {
     OBJ_ALLOCATOR.init(Cap::from_bits(DEFAULT_CUSTOM_SLOT as _));
 }
 
-const ALLOC_SIZE_BITS: usize = 22; // 4MB
+const ALLOC_SIZE_BITS: usize = 21; // 2MB
 
 static RECYCLED_UNTYPED: Mutex<Vec<Cap<cap_type::Untyped>>> = Mutex::new(Vec::new());
 

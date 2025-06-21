@@ -97,7 +97,7 @@ pub(super) async fn sys_wait4(
             .lock()
             .iter()
             .find(|(_, target)| target.exit.lock().is_some() && target.ppid == task.pid)
-            .map(|(&tid, task)| (tid, task.exit.lock().unwrap()))
+            .map(|(&tid, task)| Ok((tid, task.exit.lock().unwrap())))
     };
 
     if finded.is_none() {
@@ -107,7 +107,7 @@ pub(super) async fn sys_wait4(
         *ctx.pc_mut() -= 4;
         return Ok(pid as _);
     }
-    let (idx, exit_code) = finded.map(|x| (x.0, x.1)).unwrap();
+    let (idx, exit_code) = finded.unwrap()?;
     task.write_bytes(status as _, exit_code.as_bytes());
 
     TASK_MAP.lock().remove(&idx);

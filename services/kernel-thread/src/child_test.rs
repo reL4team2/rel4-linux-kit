@@ -1,4 +1,7 @@
-use crate::{consts::task::DEF_STACK_TOP, task::Sel4Task};
+use crate::{
+    consts::task::DEF_STACK_TOP,
+    task::{PollWakeEvent, Sel4Task},
+};
 use alloc::{collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use common::config::PAGE_SIZE;
 use core::task::{Poll, Waker};
@@ -68,7 +71,7 @@ pub static WAITING_PID: Mutex<Vec<(u64, u64, Waker)>> = Mutex::new(Vec::new());
 pub struct WaitPid(pub u64, pub u64, pub bool);
 
 impl Future for WaitPid {
-    type Output = Option<(u64, u32)>;
+    type Output = Option<Result<(u64, u32), Errno>>;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
@@ -85,11 +88,23 @@ impl Future for WaitPid {
             .map(|(&tid, task)| (tid, task.exit.lock().unwrap()));
 
         match finded {
-            Some(res) => Poll::Ready(Some(res)),
+            Some(res) => Poll::Ready(Some(Ok(res))),
             None => {
                 if self.2 {
                     return Poll::Ready(None);
                 }
+                let curr_task = task_map.get(&self.0).unwrap();
+
+                // 如果被 Signal 打断
+                if matches!(
+                    curr_task.waker.lock().take(),
+                    Some((PollWakeEvent::Signal(_), _))
+                ) {
+                    return Poll::Ready(Some(Err(Errno::EINTR)));
+                }
+
+                *curr_task.waker.lock() = Some((PollWakeEvent::Blocking, cx.waker().clone()));
+
                 WAITING_PID
                     .lock()
                     .push((self.0, self.1, cx.waker().clone()));
@@ -105,7 +120,7 @@ impl Future for WaitPid {
 pub struct WaitAnyChild(pub u64, pub bool);
 
 impl Future for WaitAnyChild {
-    type Output = Option<(u64, u32)>;
+    type Output = Option<Result<(u64, u32), Errno>>;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
@@ -118,11 +133,19 @@ impl Future for WaitAnyChild {
             .map(|(&tid, task)| (tid, task.exit.lock().unwrap()));
 
         match finded {
-            Some(res) => Poll::Ready(Some(res)),
+            Some(res) => Poll::Ready(Some(Ok(res))),
             None => {
                 if self.1 {
                     return Poll::Ready(None);
                 }
+                let curr_task = task_map.get(&self.0).unwrap();
+                if matches!(
+                    curr_task.waker.lock().take(),
+                    Some((PollWakeEvent::Signal(_), _))
+                ) {
+                    return Poll::Ready(Some(Err(Errno::EINTR)));
+                }
+                *curr_task.waker.lock() = Some((PollWakeEvent::Blocking, cx.waker().clone()));
                 WAITING_PID
                     .lock()
                     .push((self.0, -1 as _, cx.waker().clone()));

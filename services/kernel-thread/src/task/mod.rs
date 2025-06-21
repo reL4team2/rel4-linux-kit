@@ -19,9 +19,11 @@ use common::{
 use core::{
     cmp,
     sync::atomic::{AtomicU64, Ordering},
+    task::Waker,
 };
 use file::TaskFileInfo;
 use info::TaskInfo;
+use libc_core::signal::SignalNum;
 use mem::TaskMemInfo;
 use object::{File, Object, ObjectSection, ObjectSegment};
 use sel4::{
@@ -81,6 +83,18 @@ pub struct Sel4Task {
     pub thread_counter: Mutex<Option<Arc<()>>>,
     /// 进程控制块
     pub pcb: Arc<ProcessControlBlock>,
+    /// 异步 await 时存储的结构
+    pub waker: Mutex<Option<(PollWakeEvent, Waker)>>,
+}
+
+/// 在 Poll 的时候唤醒协程的事件类型
+pub enum PollWakeEvent {
+    /// 被信号唤醒
+    Signal(SignalNum),
+    /// 被时钟唤醒
+    Timer,
+    /// 等待被唤醒
+    Blocking,
 }
 
 impl Drop for Sel4Task {
@@ -144,6 +158,7 @@ impl Sel4Task {
             info: Mutex::new(TaskInfo::default()),
             thread_counter: Mutex::new(Some(Arc::new(()))),
             pcb: Arc::new(ProcessControlBlock::new()),
+            waker: Mutex::new(None),
         })
     }
 
@@ -191,6 +206,7 @@ impl Sel4Task {
             info: Mutex::new(self.info.lock().clone()),
             thread_counter: Mutex::new(self.thread_counter.lock().clone()),
             pcb: self.pcb.clone(),
+            waker: Mutex::new(None),
         })
     }
 
@@ -401,6 +417,12 @@ impl Sel4Task {
                 recycle_untyped_unit(*untyped);
             });
         }
+        // 释放文件描述符
+        // if Arc::strong_count(&self.file.file_ds) == 1 {
+        //     for i in 0..=512 {
+        //         self.file.file_ds.lock().remove(i);
+        //     }
+        // }
         *self.thread_counter.lock() = None;
     }
 }

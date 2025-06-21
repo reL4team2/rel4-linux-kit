@@ -8,7 +8,6 @@ members = [
   "crates/common-macros",
   "crates/sel4-runtime",
   "crates/srv-gate",
-  "crates/libc-core",
   "services/blk-thread",
   # "services/fat-thread",
   "services/lwext4-thread",
@@ -53,7 +52,7 @@ common-macros = { path = "crates/common-macros" }
 srv-gate = { path = "crates/srv-gate" }
 flatten_objects = "0.2.3"
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
-libc-core = { version = "0.2.4", features = ["zerocopy"] }
+libc-core = { version = "0.2.5", features = ["zerocopy"] }
 
 spin = "0.9.8"
 syscalls = { git = "https://github.com/jasonwhite/syscalls.git", default-features = false }
@@ -62,6 +61,3 @@ linkme = { version = "0.3.32", features = ["used_linker"] }
 
 [patch."https://github.com/seL4/rust-sel4"]
 sel4 = { git = "https://github.com/yfblock/rust-sel4", rev = "1280281" }
-
-[patch.crates-io]
-libc-core = { path = "crates/libc-core" }

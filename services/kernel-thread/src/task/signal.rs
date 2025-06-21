@@ -9,7 +9,7 @@ use spin::Mutex;
 use syscalls::Errno;
 use zerocopy::{FromBytes, FromZeros};
 
-use crate::child_test::futex_signal_task;
+use crate::{child_test::futex_signal_task, task::PollWakeEvent};
 
 use super::Sel4Task;
 
@@ -21,7 +21,7 @@ pub struct TaskSignal {
     /// 信号处理函数
     pub actions: Arc<Mutex<[SigAction; 65]>>,
     /// 等待处理的信号
-    pub pedings: SigSet,
+    pedings: SigSet,
 }
 
 impl Default for TaskSignal {
@@ -43,9 +43,12 @@ impl Sel4Task {
     /// ## 说明
     /// 当前任务的上下文在检测到信号待处理的时候会进程存储
     pub fn check_signal(&self, ctx: &mut UserContext) {
-        let mut task_signal: spin::MutexGuard<'_, TaskSignal> = self.signal.lock();
-        let sigmask = task_signal.mask;
-        if let Some(signal) = task_signal.pedings.pop_one(Some(sigmask)) {
+        if let Some(signal) = self.pop_signal() {
+            if signal == SignalNum::KILL {
+                self.exit_with(signal.num() as u32 + 128);
+                return;
+            }
+            let mut task_signal = self.signal.lock();
             // 保存处理信号前的上下文，信号处理结束后恢复
             let actions = task_signal.actions.lock();
             let action = actions[signal.num()].clone();
@@ -93,13 +96,42 @@ impl Sel4Task {
             return;
         }
         self.signal.lock().pedings.insert(signal);
+        // 如果当前信号被屏蔽，那么并不会打断任何操作
+        if self.signal.lock().mask.has(signal) {
+            return;
+        }
         futex_signal_task(self.futex_table.clone(), self.tid, Errno::EINTR);
+
+        if let Some((event, waker)) = self.waker.lock().as_mut() {
+            *event = PollWakeEvent::Signal(signal);
+            waker.wake_by_ref();
+        }
 
         if from != self.tid {
             let mut ctx = self.tcb.tcb_read_all_registers(true).unwrap();
             self.check_signal(&mut ctx);
             self.tcb.tcb_resume().unwrap();
         }
+    }
+
+    /// 弹出一个待处理的信号
+    pub fn pop_signal(&self) -> Option<SignalNum> {
+        let sigmask = self.signal.lock().mask;
+        let pendings = &mut self.signal.lock().pedings;
+        if pendings.has(SignalNum::KILL) {
+            pendings.remove(SignalNum::KILL);
+            return Some(SignalNum::KILL);
+        }
+        pendings.pop_one(Some(sigmask))
+    }
+
+    /// 检查当前任务是否有未屏蔽的信号待处理
+    pub fn has_unmasked_signal(&self) -> bool {
+        let pendings = self.signal.lock().pedings;
+        if pendings.has(SignalNum::KILL) {
+            return true;
+        }
+        !pendings.is_empty(Some(self.signal.lock().mask))
     }
 
     /// 将 [UserContext] 写入栈

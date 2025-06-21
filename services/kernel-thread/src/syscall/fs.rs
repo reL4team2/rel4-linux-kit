@@ -154,6 +154,9 @@ pub(super) async fn sys_read(
         let res = file.read(&mut buffer);
         if let Ok(rlen) = res {
             break rlen;
+        }
+        if task.has_unmasked_signal() {
+            return Err(Errno::EINTR);
         } else if let Err(Errno::EAGAIN) = res {
             wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
         } else {
@@ -209,16 +212,32 @@ pub(super) fn sys_unlinkat(task: &Sel4Task, fd: isize, path: *const u8, _flags: 
     Ok(0)
 }
 
-pub(super) fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) -> SysResult {
+pub(super) async fn sys_write(task: &Sel4Task, fd: usize, buf: *const u8, len: usize) -> SysResult {
     let buf = task.read_bytes(buf as _, len).unwrap();
-
     let mut file_table = task.file.file_ds.lock();
     let file = file_table.get_mut(fd).ok_or(Errno::EBADF)?;
 
-    file.write(&buf)
+    loop {
+        let res = file.write(&buf);
+        if let Ok(wlen) = res {
+            break Ok(wlen);
+        }
+        if task.has_unmasked_signal() {
+            return Err(Errno::EINTR);
+        } else if let Err(Errno::EAGAIN) = res {
+            wait_time(current_time() + Duration::new(0, 1000000), task.tid).await?;
+        } else {
+            res?;
+        }
+    }
 }
 
-pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: usize) -> SysResult {
+pub(super) async fn sys_writev(
+    task: &Sel4Task,
+    fd: usize,
+    iov: *const IoVec,
+    iocnt: usize,
+) -> SysResult {
     let mut wsize = 0;
     let iovec_bytes = task
         .read_bytes(iov as _, size_of::<IoVec>() * iocnt)
@@ -226,7 +245,7 @@ pub(super) fn sys_writev(task: &Sel4Task, fd: usize, iov: *const IoVec, iocnt: u
 
     let iovec = <[IoVec]>::ref_from_bytes_with_elems(&iovec_bytes, iocnt).unwrap();
     for item in iovec.iter() {
-        sys_write(task, fd, item.base as _, item.len)?;
+        sys_write(task, fd, item.base as _, item.len).await?;
         wsize += item.len;
     }
 

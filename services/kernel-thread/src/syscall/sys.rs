@@ -136,12 +136,13 @@ pub(super) fn sys_prlimit64(
     Ok(0)
 }
 
-pub(super) fn sys_getrusage(task: &Sel4Task, who: usize, usage_ptr: *mut Rusage) -> SysResult {
-    debug!("sys_getrusgae @ who: {}, usage_ptr: {:p}", who, usage_ptr);
-    let time = current_time().into();
-    let mut rusage = Rusage::default();
-    rusage.stime = time;
-    rusage.utime = time;
-    task.write_bytes(usage_ptr as _, rusage.as_bytes());
-    Ok(0)
+pub(super) fn sys_getrusage(_task: &Sel4Task, _who: usize, _usage_ptr: *mut Rusage) -> SysResult {
+    // debug!("sys_getrusgae @ who: {}, usage_ptr: {:p}", who, usage_ptr);
+    // let time = current_time().into();
+    // let mut rusage = Rusage::default();
+    // rusage.stime = time;
+    // rusage.utime = time;
+    // task.write_bytes(usage_ptr as _, rusage.as_bytes());
+    // Ok(0)
+    Err(Errno::EPERM)
 }
