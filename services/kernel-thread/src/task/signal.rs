@@ -89,6 +89,9 @@ impl Sel4Task {
     /// 添加信号可能会打断某些行为
     #[inline]
     pub fn add_signal(&self, signal: SignalNum, from: usize) {
+        if self.exit.lock().is_some() {
+            return;
+        }
         self.signal.lock().pedings.insert(signal);
         futex_signal_task(self.futex_table.clone(), self.tid, Errno::EINTR);
 

@@ -11,7 +11,7 @@ use sel4::UserContext;
 use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::task::Sel4Task;
+use crate::{child_test::TASK_MAP, task::Sel4Task};
 
 use super::SysResult;
 
@@ -55,8 +55,11 @@ pub(super) fn sys_sigaction(
 }
 
 pub(super) fn sys_kill(task: &Sel4Task, pid: usize, sig: usize) -> SysResult {
-    assert_eq!(pid, task.pid);
-    task.add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?, task.tid);
+    TASK_MAP
+        .lock()
+        .get(&(pid as _))
+        .ok_or(Errno::ESRCH)?
+        .add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?, task.tid);
     Ok(0)
 }
 

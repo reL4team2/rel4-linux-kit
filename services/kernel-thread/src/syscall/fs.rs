@@ -644,7 +644,7 @@ pub(super) async fn sys_pselect(
                     rfds_r.set_bit(i, false);
                     continue;
                 }
-                if ori_rfds.get(i).is_none() {
+                if file_ds.get(i).is_none() {
                     rfds_r.set_bit(i, false);
                     continue;
                 }
@@ -667,7 +667,7 @@ pub(super) async fn sys_pselect(
                 if !ori_wfds.get_bit(i) {
                     continue;
                 }
-                if ori_wfds.get(i).is_none() {
+                if file_ds.get(i).is_none() {
                     wfds_r.set_bit(i, false);
                     continue;
                 }
@@ -690,7 +690,7 @@ pub(super) async fn sys_pselect(
                 if !ori_efds.get_bit(i) {
                     continue;
                 }
-                if ori_efds.get(i).is_none() {
+                if file_ds.get(i).is_none() {
                     efds_r.set_bit(i, false);
                     continue;
                 }
@@ -734,5 +734,6 @@ pub(super) async fn sys_pselect(
             }
             return Ok(0);
         }
+        wait_time(timeout, task.tid).await;
     }
 }

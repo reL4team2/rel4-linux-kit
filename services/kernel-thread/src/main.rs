@@ -85,6 +85,7 @@ fn main() {
     ::fs::dentry::mount_fs(ext4fs::Ext4FileSystem::new(get_blk_dev()), "/");
     ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/tmp");
     ::fs::dentry::mount_fs(fs::devfs::DevFS::new(), "/dev");
+    ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/var");
     ::fs::dentry::mount_fs(allocfs::AllocFS::new(), "/dev/shm");
 
     // 初始化设备

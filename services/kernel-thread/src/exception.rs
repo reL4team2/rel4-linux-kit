@@ -108,6 +108,9 @@ pub fn handle_vcpu_fault(tid: u64, vcpufault: VCpuFault) {
     if ec == 0b111100 && il == 1 {
         *user_ctx.pc_mut() += 4;
     } else {
+        log::error!("Unhandled fault: {:#x?}", vcpufault);
+        log::error!("{:#x?}", user_ctx);
+
         panic!("unspecific fault")
     }
     task.tcb

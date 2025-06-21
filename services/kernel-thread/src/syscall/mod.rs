@@ -105,7 +105,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::utimensat => sys_utimensat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::wait4 => sys_wait4(task, ctx, a0 as _, a1 as _, a2 as _).await,
         Sysno::prlimit64 => sys_prlimit64(task, a0, a1, a2 as _, a3 as _),
-        Sysno::mprotect | Sysno::sync | Sysno::fsync => Ok(0),
+        Sysno::mprotect | Sysno::msync | Sysno::sync | Sysno::fsync => Ok(0),
         Sysno::get_robust_list => {
             log::warn!("get_robust_list not implementation");
             Ok(0)
