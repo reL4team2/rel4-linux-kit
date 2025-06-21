@@ -5,6 +5,7 @@ mod file;
 mod info;
 mod init;
 mod mem;
+mod pcb;
 pub mod shm;
 mod signal;
 
@@ -34,7 +35,7 @@ use zerocopy::IntoBytes;
 
 use crate::{
     child_test::{FutexTable, TASK_MAP, futex_wake, wake_hangs},
-    task::shm::MapedSharedMemory,
+    task::{pcb::ProcessControlBlock, shm::MapedSharedMemory},
     utils::obj::{alloc_untyped_unit, recycle_untyped_unit},
 };
 
@@ -78,6 +79,8 @@ pub struct Sel4Task {
     pub info: Mutex<TaskInfo>,
     /// 资源计数器，用于跟踪线程数量
     pub thread_counter: Mutex<Option<Arc<()>>>,
+    /// 进程控制块
+    pub pcb: Arc<ProcessControlBlock>,
 }
 
 impl Drop for Sel4Task {
@@ -140,6 +143,7 @@ impl Sel4Task {
             file: TaskFileInfo::default(),
             info: Mutex::new(TaskInfo::default()),
             thread_counter: Mutex::new(Some(Arc::new(()))),
+            pcb: Arc::new(ProcessControlBlock::new()),
         })
     }
 
@@ -186,6 +190,7 @@ impl Sel4Task {
             file: self.file.clone(),
             info: Mutex::new(self.info.lock().clone()),
             thread_counter: Mutex::new(self.thread_counter.lock().clone()),
+            pcb: self.pcb.clone(),
         })
     }
 

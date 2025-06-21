@@ -3,10 +3,10 @@
 //!
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::{config::PAGE_SIZE, page::PhysPage, slot::recycle_slot};
-use core::cmp;
+use core::{cmp, usize};
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::consts::task::DEF_HEAP_ADDR;
+use crate::consts::task::{DEF_HEAP_ADDR, DEF_STACK_BOTTOM, DEF_STACK_TOP};
 
 use super::Sel4Task;
 
@@ -76,6 +76,8 @@ impl Sel4Task {
     /// 说明：
     /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
     pub fn read_bytes(&self, mut vaddr: usize, len: usize) -> Option<Vec<u8>> {
+        self.check_addr(vaddr, len);
+
         let mut data = Vec::new();
         let mem_info = self.mem.lock();
         let vaddr_end = vaddr + len;
@@ -156,6 +158,24 @@ impl Sel4Task {
             vaddr += rsize;
         }
         Some(())
+    }
+
+    /// 检测地址是否在栈上，如果在栈上且没有映射内存，那么直接映射内存
+    ///
+    /// # 参数
+    /// - `vaddr` 需要检测内存的开始
+    /// - `size`  需要检测内存的大小
+    pub fn check_addr(&self, vaddr: usize, size: usize) {
+        let bottom = vaddr / PAGE_SIZE * PAGE_SIZE;
+        let top = (vaddr + size).div_ceil(PAGE_SIZE) * PAGE_SIZE;
+        for vaddr in (bottom..top).step_by(PAGE_SIZE) {
+            if self.mem.lock().mapped_page.contains_key(&vaddr) {
+                continue;
+            }
+            if (DEF_STACK_BOTTOM..DEF_STACK_TOP).contains(&vaddr) {
+                self.map_blank_page(vaddr);
+            }
+        }
     }
 
     /// 清理映射的内存

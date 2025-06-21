@@ -14,6 +14,7 @@ use libc_core::{
     futex::FutexFlags,
     sched::{CloneFlags, WaitOption},
     signal::SignalNum,
+    time::ITimerVal,
     types::TimeSpec,
 };
 use object::Object;
@@ -27,7 +28,7 @@ use crate::{
     child_test::{ArcTask, TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex},
     consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
-    timer::wait_time,
+    timer::{set_process_timer, wait_time},
     utils::page::map_page_self,
 };
 
@@ -395,4 +396,39 @@ pub(super) fn sys_tkill(task: &Sel4Task, tid: usize, signum: usize) -> SysResult
 
     target.add_signal(target_signal, task.tid);
     Ok(0)
+}
+
+pub(super) fn sys_setitimer(
+    task: &Sel4Task,
+    which: usize,
+    times_ptr: *mut ITimerVal,
+    old_timer_ptr: *mut ITimerVal,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_setitimer @ which: {} times_ptr: {:p} old_timer_ptr: {:p}",
+        task.tid, which, times_ptr, old_timer_ptr
+    );
+
+    if which == 0 {
+        let pcb = task.pcb.clone();
+        if !old_timer_ptr.is_null() {
+            task.write_bytes(old_timer_ptr as _, pcb.itimer.lock()[0].timer.as_bytes());
+        }
+        if !times_ptr.is_null() {
+            let current_timval = current_time();
+            let new_timer_bytes = task
+                .read_bytes(times_ptr as _, size_of::<ITimerVal>())
+                .ok_or(Errno::EINVAL)?;
+
+            let new_timer = ITimerVal::ref_from_bytes(&new_timer_bytes).unwrap();
+            pcb.itimer.lock()[0].timer = new_timer.clone();
+            pcb.itimer.lock()[0].next = current_timval + new_timer.value.into();
+
+            set_process_timer(task.pid, pcb.itimer.lock()[0].next);
+        }
+        Ok(0)
+    } else {
+        log::error!("not support case for setitimer");
+        Err(Errno::EPERM)
+    }
 }

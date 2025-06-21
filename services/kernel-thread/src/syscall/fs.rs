@@ -734,6 +734,6 @@ pub(super) async fn sys_pselect(
             }
             return Ok(0);
         }
-        wait_time(timeout, task.tid).await;
+        wait_time(current_time() + Duration::from_micros(10), task.tid).await;
     }
 }

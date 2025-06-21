@@ -17,7 +17,7 @@ use sel4_kit::{
 use spin::{Lazy, Mutex};
 use syscalls::Errno;
 
-use crate::exception::GLOBAL_NOTIFY;
+use crate::{child_test::TASK_MAP, exception::GLOBAL_NOTIFY};
 
 static TIMER_IRQ_SLOT: Lazy<LeafSlot> = Lazy::new(alloc_slot);
 static TIMER_IRQ_NOTIFY: Lazy<Notification> = Lazy::new(|| {
@@ -45,8 +45,15 @@ pub fn init() {
         .unwrap();
 }
 
+enum TimerType {
+    /// (tid, Waker)
+    WaitTime(usize, Waker),
+    /// (pid)
+    ITimer(usize),
+}
+
 /// 时间等待队列 (目标时间，任务 id, Waker)
-static TIME_QUEUE: Mutex<Vec<(Duration, usize, Waker)>> = Mutex::new(Vec::new());
+static TIME_QUEUE: Mutex<Vec<(Duration, TimerType)>> = Mutex::new(Vec::new());
 
 /// 处理时钟中断
 ///
@@ -55,9 +62,12 @@ pub fn handle_timer() {
     // 处理已经到时间的定时器
     let curr_time = current_time();
 
-    TIME_QUEUE.lock().retain(|(duration, _, waker)| {
+    TIME_QUEUE.lock().retain(|(duration, timer_ty)| {
         if curr_time >= *duration {
-            waker.wake_by_ref();
+            match timer_ty {
+                TimerType::WaitTime(_tid, waker) => waker.wake_by_ref(),
+                TimerType::ITimer(pid) => handle_process_timer(curr_time, *pid),
+            };
         }
         curr_time < *duration
     });
@@ -93,7 +103,9 @@ impl Future for WaitForTime {
         } else if let Some(eno) = *self.2.lock() {
             Poll::Ready(Err(eno))
         } else {
-            TIME_QUEUE.lock().push((self.0, self.1, waker));
+            TIME_QUEUE
+                .lock()
+                .push((self.0, TimerType::WaitTime(self.1, waker)));
             TIME_QUEUE
                 .lock()
                 .sort_by(|(dura_a, ..), (dura_b, ..)| dura_a.cmp(dura_b));
@@ -111,4 +123,28 @@ impl Future for WaitForTime {
 pub async fn wait_time(duration: Duration, tid: usize) -> Result<usize, Errno> {
     WaitForTime(duration, tid, Arc::new(Mutex::new(None))).await?;
     Ok(0)
+}
+
+/// 设置进程定时器
+pub fn set_process_timer(pid: usize, next: Duration) {
+    TIME_QUEUE.lock().push((next, TimerType::ITimer(pid)));
+    TIME_QUEUE
+        .lock()
+        .sort_by(|(dura_a, ..), (dura_b, ..)| dura_a.cmp(dura_b));
+    log::debug!(
+        "set next timer curr: {:?}  next: {:?}",
+        current_time(),
+        next
+    );
+    set_timer(TIME_QUEUE.lock().first().unwrap().0);
+}
+
+/// 处理进程 Timer 时间
+pub fn handle_process_timer(curr_time: Duration, pid: usize) {
+    log::debug!("handle process tiemr: {:?}, pid: {}", curr_time, pid);
+    let _ = TASK_MAP
+        .lock()
+        .values()
+        .find(|x| x.pid == pid)
+        .inspect(|x| x.add_signal(libc_core::signal::SignalNum::ALRM, pid));
 }

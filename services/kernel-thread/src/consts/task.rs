@@ -11,6 +11,9 @@ pub const DEF_STACK_TOP: usize = 0x2_0000_0000;
 /// 默认栈大小
 pub const DEF_STACK_SIZE: usize = 0x1_0000;
 
+/// 默认栈底地质
+pub const DEF_STACK_BOTTOM: usize = 0x1_F000_0000;
+
 /// 用户空间起始地址
 pub const USPACE_BASE: usize = 0x1000;
 

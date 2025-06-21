@@ -55,11 +55,15 @@ pub(super) fn sys_sigaction(
 }
 
 pub(super) fn sys_kill(task: &Sel4Task, pid: usize, sig: usize) -> SysResult {
-    TASK_MAP
+    let target = TASK_MAP
         .lock()
         .get(&(pid as _))
         .ok_or(Errno::ESRCH)?
-        .add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?, task.tid);
+        .clone();
+    if sig == 0 {
+        return Ok(0);
+    }
+    target.add_signal(SignalNum::from_num(sig).ok_or(Errno::EINVAL)?, task.tid);
     Ok(0)
 }
 
