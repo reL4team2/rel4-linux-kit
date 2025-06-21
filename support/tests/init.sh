@@ -33,4 +33,10 @@ echo Hello World!
 ./write
 ./yield
 
+./busybox ash run-static.sh
+./busybox sh busybox_testcode.sh
+./busybox sh lua_testcode.sh
+./busybox sh iozone_testcode.sh
+./libc-bench
+./busybox sh lmbench_testcode.sh
 echo Exec Done

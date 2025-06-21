@@ -5,6 +5,7 @@ edition = "2024"
 
 [features]
 mcs = []
+alloc = []
 
 [dependencies]
 sel4 = { workspace = true, features = ["state"] }

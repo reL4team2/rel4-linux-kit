@@ -21,7 +21,7 @@ qemu_args := -drive file=mount.img,if=none,format=raw,id=x0
 qemu_args += -device virtio-blk-device,drive=x0
 qemu_args += -device virtio-net-device,netdev=net0
 qemu_args += -netdev user,id=net0,hostfwd=tcp::5555-:5555,hostfwd=udp::5555-:5555
-
+# qemu_args += --trace "virtio_*" --trace "virtqueue_*"
 # qemu_args += -netdev user,id=net0,hostfwd=tcp::6379-:6379
 # qemu_args += -device virtio-net-device,netdev=net0
 # qemu_args += -object filter-dump,id=net0,netdev=net0,file=packets.pcap
@@ -61,9 +61,7 @@ qemu_cmd := \
 		-kernel $(image)
 
 testcases:
-	wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
-	mkdir -p testcases
-	cp -r .env/aarch64/* testcases
+	wget -qO- https://github.com/reL4team2/rel4-linux-kit/releases/download/toolchain/testcases.tgz | tar -zxf - -C .
 
 disk_img: testcases
 	mkdir -p mount

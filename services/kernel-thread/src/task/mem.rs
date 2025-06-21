@@ -2,10 +2,11 @@
 //!
 //!
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::{config::PAGE_SIZE, page::PhysPage};
+use common::{config::PAGE_SIZE, page::PhysPage, slot::recycle_slot};
 use core::cmp;
+use sel4_kit::slot_manager::LeafSlot;
 
-use crate::{consts::task::DEF_HEAP_ADDR, utils::obj::alloc_page};
+use crate::consts::task::{DEF_HEAP_ADDR, DEF_STACK_BOTTOM, DEF_STACK_TOP};
 
 use super::Sel4Task;
 
@@ -35,7 +36,7 @@ impl Sel4Task {
     ///
     /// ### 说明
     /// 如果 `value` 的值为 0，则返回当前的堆地址，否则就将堆扩展到指定的地址
-    pub fn brk(&mut self, value: usize) -> usize {
+    pub fn brk(&self, value: usize) -> usize {
         let mut mem_info = self.mem.lock();
         if value == 0 {
             return mem_info.heap;
@@ -44,8 +45,7 @@ impl Sel4Task {
         mem_info.heap = value;
         drop(mem_info);
         for vaddr in (origin..value).step_by(PAGE_SIZE) {
-            let page_cap = PhysPage::new(alloc_page());
-            self.map_page(vaddr / PAGE_SIZE * PAGE_SIZE, page_cap);
+            self.map_blank_page(vaddr);
         }
         value
     }
@@ -76,6 +76,8 @@ impl Sel4Task {
     /// 说明：
     /// - 如果地址空间不存在或者地址未映射，返回 [Option::None]
     pub fn read_bytes(&self, mut vaddr: usize, len: usize) -> Option<Vec<u8>> {
+        self.check_addr(vaddr, len);
+
         let mut data = Vec::new();
         let mem_info = self.mem.lock();
         let vaddr_end = vaddr + len;
@@ -158,15 +160,35 @@ impl Sel4Task {
         Some(())
     }
 
+    /// 检测地址是否在栈上，如果在栈上且没有映射内存，那么直接映射内存
+    ///
+    /// # 参数
+    /// - `vaddr` 需要检测内存的开始
+    /// - `size`  需要检测内存的大小
+    pub fn check_addr(&self, vaddr: usize, size: usize) {
+        let bottom = vaddr / PAGE_SIZE * PAGE_SIZE;
+        let top = (vaddr + size).div_ceil(PAGE_SIZE) * PAGE_SIZE;
+        for vaddr in (bottom..top).step_by(PAGE_SIZE) {
+            if self.mem.lock().mapped_page.contains_key(&vaddr) {
+                continue;
+            }
+            if (DEF_STACK_BOTTOM..DEF_STACK_TOP).contains(&vaddr) {
+                self.map_blank_page(vaddr);
+            }
+        }
+    }
+
     /// 清理映射的内存
     ///
     /// 如果有已经映射的内存, 清理
     pub fn clear_maped(&self) {
-        self.mem
-            .lock()
-            .mapped_page
-            .values()
-            .for_each(|x| x.cap().frame_unmap().unwrap());
+        self.mem.lock().mapped_page.values().for_each(|x| {
+            x.cap().frame_unmap().unwrap();
+            let slot = LeafSlot::from_cap(x.cap());
+            slot.revoke().unwrap();
+            slot.delete().unwrap();
+            recycle_slot(slot);
+        });
         self.mem.lock().mapped_page.clear();
     }
 }

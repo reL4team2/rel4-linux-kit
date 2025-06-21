@@ -6,6 +6,7 @@ extern crate uart_thread;
 
 use alloc::{string::String, vec::Vec};
 use sel4::{debug_print, debug_println};
+use sel4_runtime::define_heap;
 use srv_gate::UART_IMPLS;
 
 fn command(cmd: &str) {
@@ -29,6 +30,8 @@ fn command(cmd: &str) {
         }
     }
 }
+
+define_heap!(common::config::SERVICE_HEAP_SIZE);
 
 #[sel4_runtime::main]
 fn main() {

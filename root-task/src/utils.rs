@@ -11,7 +11,7 @@ use sel4::{UntypedDesc, cap::Untyped};
 /// Display the boot information in the console.
 pub fn display_bootinfo(
     bootinfo: &sel4::BootInfoPtr,
-    mem_untypes: &[(Untyped, &UntypedDesc)],
+    mem_untypes: &[(Untyped, UntypedDesc)],
     dev_untypes: &[(Untyped, &UntypedDesc)],
 ) {
     log::info!(
@@ -73,7 +73,7 @@ pub fn footprint<'a>(image: &'a impl Object<'a>) -> Range<usize> {
 
 // 将ELF的虚地址空间 map 到页表中，但不分配物理页
 pub fn map_intermediate_translation_tables(
-    allocator: &mut ObjectAllocator,
+    allocator: &ObjectAllocator,
     vspace: sel4::cap::VSpace,
     footprint: Range<usize>,
 ) {
@@ -99,7 +99,7 @@ pub fn map_intermediate_translation_tables(
 
 /// 将 ELF image 映射到物理页
 pub fn map_image<'a>(
-    allocator: &mut ObjectAllocator,
+    allocator: &ObjectAllocator,
     mapped_page: &mut BTreeMap<usize, PhysPage>,
     vspace: sel4::cap::VSpace,
     footprint: Range<usize>,

@@ -11,7 +11,7 @@ pub const SERVICE_BOOT_STACK_TOP: usize = 0x1_0000_0000;
 pub const SERVICE_BOOT_STACK_SIZE: usize = 0x1_0000;
 
 /// 服务任务默认的堆大小
-pub const SERVICE_HEAP_SIZE: usize = 0x20_0000;
+pub const SERVICE_HEAP_SIZE: usize = 0x10_0000;
 
 /// VIRTIO_MMIO 使用的地址
 pub const VIRTIO_MMIO_ADDR: usize = 0xa003e00;
@@ -43,6 +43,9 @@ pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 /// 默认 CSpace 一级占用的 bits
 pub const CNODE_RADIX_BITS: usize = 12;
 
+/// Linux App 使用的 CNode bits
+pub const LINUX_APP_CNODE_RADIX_BITS: usize = 6;
+
 /// 默认的物理页大小
 pub const PAGE_SIZE: usize = 0x1000;
 
@@ -66,10 +69,6 @@ pub const IPC_DATA_LEN: usize = 120 * 8;
 
 /// 通过 [sel4::cap::Endpoint] 发送数据时，reg 的大小
 pub const REG_LEN: usize = size_of::<Word>();
-
-/// 默认的 Page 用来映射的 Slot
-/// TODO: 找一个更加合适的位置来放置，防止产生冲突
-pub const DEFAULT_PAGE_PLACEHOLDER: u64 = 0;
 
 /// 默认的线程的提示
 pub const DEFAULT_THREAD_NOTIFICATION: u64 = 17;

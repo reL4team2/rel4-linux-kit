@@ -10,9 +10,12 @@ use common::{
     root::join_channel,
 };
 use flatten_objects::FlattenObjects;
+use libc_core::types::Stat;
 use sel4::{IpcBuffer, MessageInfoBuilder, with_ipc_buffer_mut};
 use sel4_runtime::utils::alloc_free_addr;
-use srv_gate::fs::{FSIface, FSIfaceEvent, Stat};
+use srv_gate::fs::{FSIface, FSIfaceEvent};
+
+sel4_runtime::define_heap!(common::config::SERVICE_HEAP_SIZE);
 
 #[sel4_runtime::main]
 fn main() {

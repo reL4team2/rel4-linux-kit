@@ -7,14 +7,17 @@ edition = "2024"
 
 [features]
 alloc = []
-default = ["alloc"]
+default = ["alloc", "sel4-kit/alloc"]
 
 [dependencies]
 sel4 = { workspace = true }
 sel4-logging = { workspace = true }
 common-macros = { workspace = true }
 sel4-kit = { workspace = true }
+object = { version = "0.36.1", default-features = false, features = ["read"] }
+bitflags = "2.9.1"
 num_enum = { version = "0.7.3", default-features = false }
 spin = { workspace = true }
 syscalls = { workspace = true }
 zerocopy = { version = "0.8.20", default-features = false }
+log = "0.4"

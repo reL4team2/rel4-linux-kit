@@ -4,25 +4,34 @@
 
 use core::time::Duration;
 
+use libc_core::{
+    resource::{Rlimit, Rusage},
+    types::{TimeSpec, TimeVal},
+    utsname::UTSName,
+};
 use sel4_kit::arch::current_time;
-use srv_gate::fs::TimeSpec;
+use syscalls::Errno;
 use zerocopy::{FromBytes, IntoBytes};
 
-use crate::{task::Sel4Task, timer::flush_timer};
+use crate::{task::Sel4Task, timer::wait_time};
 
-use super::{
-    SysResult,
-    types::sys::{TimeVal, UtsName},
-};
+use super::SysResult;
 
-pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UtsName) -> SysResult {
-    let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UtsName>()).unwrap();
-    let utsname = UtsName::mut_from_bytes(&mut utsname_bytes).unwrap();
-    let sysname = b"rel4-linux";
-    let nodename = b"rel4-beta1";
-    let release = b"vb0.1";
-    let version = b"vb0.1";
-    let machine = b"aarch64";
+pub(super) fn sys_uname(task: &Sel4Task, buf: *mut UTSName) -> SysResult {
+    let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UTSName>()).unwrap();
+    let utsname = UTSName::mut_from_bytes(&mut utsname_bytes).unwrap();
+    // let sysname = b"rel4-linux";
+    // let nodename = b"rel4-beta1";
+    // let release = b"vb0.1";
+    // let version = b"vb0.1";
+    // let machine = b"aarch64";
+
+    let sysname = b"Linux";
+    let nodename = b"debian";
+    let release = b"5.10.0-7-aarch64";
+    let version = b"#1 SMP Debian 5.10.40-1 (2021-05-28)";
+    let machine = b"aarch64 qemu";
+
     utsname.sysname[..sysname.len()].copy_from_slice(sysname);
     utsname.nodename[..nodename.len()].copy_from_slice(nodename);
     utsname.release[..release.len()].copy_from_slice(release);
@@ -32,24 +41,49 @@ pub(super) fn sys_uname(task: &mut Sel4Task, buf: *mut UtsName) -> SysResult {
     Ok(0)
 }
 
-pub(super) fn sys_gettimeofday(
-    task: &mut Sel4Task,
-    tv: *mut TimeVal,
-    _timeone: usize,
-) -> SysResult {
-    let tv_now = TimeVal::now();
+pub(super) fn sys_gettimeofday(task: &Sel4Task, tv: *mut TimeVal, _timeone: usize) -> SysResult {
+    let tv_now: TimeVal = current_time().into();
     task.write_bytes(tv as _, tv_now.as_bytes());
     Ok(0)
 }
 
-pub(super) fn sys_nanosleep(
-    task: &mut Sel4Task,
+pub(super) fn sys_clock_gettime(
+    task: &Sel4Task,
+    clock_id: usize,
+    times_ptr: *mut TimeSpec,
+) -> SysResult {
+    debug!(
+        "[task {}] sys_clock_gettime @ clock_id: {}, times_ptr: {:p}",
+        task.pid, clock_id, times_ptr
+    );
+
+    let dura = match clock_id {
+        0 => current_time(), // CLOCK_REALTIME
+        1 => current_time(), // CLOCK_MONOTONIC
+        2 => {
+            warn!("CLOCK_PROCESS_CPUTIME_ID not implemented");
+            Duration::ZERO
+        }
+        3 => {
+            warn!("CLOCK_THREAD_CPUTIME_ID not implemented");
+            Duration::ZERO
+        }
+        _ => return Err(Errno::EINVAL),
+    };
+    log::debug!("dura: {:#x?}", dura);
+    let timespec: TimeSpec = dura.into();
+    task.write_bytes(times_ptr as _, timespec.as_bytes());
+    Ok(0)
+}
+
+pub(super) async fn sys_nanosleep(
+    task: &Sel4Task,
     req_ptr: *const TimeSpec,
     rem_ptr: *mut TimeSpec,
 ) -> SysResult {
     debug!(
         "[task {}] sys_nanosleep @ req_ptr: {:p}, rem_ptr: {:p}",
-        task.id, req_ptr, rem_ptr
+        task.tid, req_ptr, rem_ptr
     );
     let curr_time = current_time();
     let nano_bytes = task
@@ -58,11 +92,57 @@ pub(super) fn sys_nanosleep(
     let req = TimeSpec::ref_from_bytes(&nano_bytes).unwrap();
     debug!("nano sleep {} nseconds", req.sec * 1_000_000_000 + req.nsec);
 
-    task.timer = curr_time + Duration::new(req.sec as _, req.nsec as _);
-    flush_timer(task.timer);
+    wait_time(
+        curr_time + Duration::new(req.sec as _, req.nsec as _),
+        task.tid,
+    )
+    .await?;
 
     if !rem_ptr.is_null() {
         task.write_bytes(rem_ptr as _, TimeSpec::default().as_bytes());
     }
+
     Ok(0)
+}
+
+pub(super) fn sys_prlimit64(
+    task: &Sel4Task,
+    pid: usize,
+    resource: usize,
+    new_limit: *const Rlimit,
+    old_limit: *mut Rlimit,
+) -> SysResult {
+    debug!(
+        "sys_getrlimit @ pid: {}, resource: {}, new_limit: {:p}, old_limit: {:p}",
+        pid, resource, new_limit, old_limit
+    );
+    match resource {
+        7 => {
+            if !old_limit.is_null() {
+                task.write_bytes(old_limit as _, task.file.rlimit.lock().as_bytes());
+            }
+            if !new_limit.is_null() {
+                let rlimit_bytes = task
+                    .read_bytes(new_limit as _, size_of::<Rlimit>())
+                    .ok_or(Errno::EINVAL)?;
+                let rlimit = Rlimit::read_from_bytes(&rlimit_bytes).unwrap();
+                *task.file.rlimit.lock() = rlimit;
+            }
+        }
+        _ => {
+            warn!("need to finish prlimit64: resource {}", resource)
+        }
+    }
+    Ok(0)
+}
+
+pub(super) fn sys_getrusage(_task: &Sel4Task, _who: usize, _usage_ptr: *mut Rusage) -> SysResult {
+    // debug!("sys_getrusgae @ who: {}, usage_ptr: {:p}", who, usage_ptr);
+    // let time = current_time().into();
+    // let mut rusage = Rusage::default();
+    // rusage.stime = time;
+    // rusage.utime = time;
+    // task.write_bytes(usage_ptr as _, rusage.as_bytes());
+    // Ok(0)
+    Err(Errno::EPERM)
 }

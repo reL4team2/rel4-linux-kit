@@ -19,6 +19,7 @@ pub enum RootEvent {
     TranslateAddr,
     CreateChannel,
     JoinChannel,
+    AllocUntyped,
 }
 
 macro_rules! call_ep {
@@ -105,6 +106,20 @@ pub fn alloc_page(target_slot: LeafSlot, addr: usize) -> Result<LeafSlot, sel4::
     let msg = MessageInfoBuilder::default()
         .length(1)
         .label(RootEvent::AllocPage.into())
+        .build();
+
+    let recv_msg = call_ep!(msg);
+    assert!(recv_msg.extra_caps() == 1);
+    recv_slot.move_to(target_slot)?;
+
+    Ok(target_slot)
+}
+
+pub fn alloc_untyped(target_slot: LeafSlot) -> Result<LeafSlot, sel4::Error> {
+    let recv_slot = with_ipc_buffer_mut(|ib| LeafSlot::new(ib.recv_slot().path().bits() as _));
+
+    let msg = MessageInfoBuilder::default()
+        .label(RootEvent::AllocUntyped.into())
         .build();
 
     let recv_msg = call_ep!(msg);

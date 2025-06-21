@@ -6,9 +6,7 @@ use crate::OBJ_ALLOCATOR;
 
 /// 重建 CSpace 空间
 pub fn rebuild_cspace() {
-    let cnode = OBJ_ALLOCATOR
-        .lock()
-        .allocate_variable_sized_origin::<cap_type::CNode>(CNODE_RADIX_BITS);
+    let cnode = OBJ_ALLOCATOR.allocate_variable_sized_origin::<cap_type::CNode>(CNODE_RADIX_BITS);
     cnode
         .absolute_cptr_from_bits_with_depth(0, CNODE_RADIX_BITS)
         .mint(

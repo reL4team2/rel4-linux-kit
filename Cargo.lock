@@ -18,6 +18,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
+name = "allocfs"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
+dependencies = [
+ "libc-core",
+ "log",
+ "sync",
+ "syscalls",
+ "vfscore",
+]
+
+[[package]]
 name = "arm_pl011"
 version = "0.1.0"
 source = "git+https://github.com/Byte-OS/arm_pl011.git?rev=8a66e24#8a66e24c7e6ac2a01841cd29c5e1690323aa1d8d"
@@ -52,10 +64,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitflags"
-version = "2.6.0"
+name = "bit_field"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+checksum = "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
+
+[[package]]
+name = "bitflags"
+version = "2.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
 name = "bitmaps"
@@ -122,8 +140,11 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "common-macros",
+ "log",
  "num_enum",
+ "object",
  "sel4",
  "sel4-kit",
  "sel4-logging",
@@ -218,6 +239,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast-rs"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,6 +257,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "ext4fs"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
+dependencies = [
+ "libc-core",
+ "log",
+ "lwext4_rust",
+ "sync",
+ "syscalls",
+ "vfscore",
+]
+
+[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -237,9 +277,9 @@ checksum = "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
 
 [[package]]
 name = "flatten_objects"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a44a8ee8095192119780ad867a02cfb86c44f3cebd16b7161d84e1fb8e26482"
+checksum = "e362dae0b64fc12551b655a09484a643461a283a078fb8a9686d1f58fa46df9a"
 dependencies = [
  "bitmaps",
 ]
@@ -255,6 +295,19 @@ name = "foldhash"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
+
+[[package]]
+name = "fs"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
+dependencies = [
+ "bitflags",
+ "libc-core",
+ "log",
+ "sync",
+ "syscalls",
+ "vfscore",
+]
 
 [[package]]
 name = "futures"
@@ -391,12 +444,16 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 name = "kernel-thread"
 version = "0.1.0"
 dependencies = [
+ "allocfs",
+ "bit_field",
  "bitflags",
  "common",
+ "ext4fs",
  "flatten_objects",
+ "fs",
  "futures",
  "hashbrown",
- "libc-types",
+ "libc-core",
  "log",
  "lwext4-thread",
  "memory_addr",
@@ -411,6 +468,7 @@ dependencies = [
  "srv-gate",
  "syscalls",
  "uart-thread",
+ "vfscore",
  "zerocopy 0.8.25",
 ]
 
@@ -427,12 +485,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
 
 [[package]]
-name = "libc-types"
-version = "0.1.0"
-source = "git+https://github.com/Byte-OS/ByteOS?rev=0617152#06171525001d73f8660c9fb23b11690b32cefe3d"
+name = "libc-core"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "215807d7b64acc60f6d84ce0ab94303183601e4276b2fdbfe3cc6a27c1d82b95"
 dependencies = [
  "bitflags",
  "num_enum",
+ "zerocopy 0.8.25",
 ]
 
 [[package]]
@@ -488,7 +548,7 @@ dependencies = [
  "blk-thread",
  "common",
  "flatten_objects",
- "libc-types",
+ "libc-core",
  "log",
  "lwext4_rust",
  "sel4",
@@ -502,7 +562,7 @@ dependencies = [
 [[package]]
 name = "lwext4_rust"
 version = "0.2.0"
-source = "git+https://github.com/Azure-stars/lwext4_rust.git?rev=ee5131c#ee5131ca3fbb03f39ea0878431aadb521d191122"
+source = "git+https://github.com/Azure-stars/lwext4_rust.git?rev=2e56b0a#2e56b0aa2680b210892a46375fefca2bdf6e2865"
 dependencies = [
  "log",
 ]
@@ -1085,6 +1145,7 @@ name = "srv-gate"
 version = "0.1.0"
 dependencies = [
  "common",
+ "libc-core",
  "linkme",
  "log",
  "num_enum",
@@ -1113,10 +1174,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sync"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
+dependencies = [
+ "spin",
+]
+
+[[package]]
 name = "syscalls"
 version = "0.6.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d0e35dc7d73976a53c7e6d7d177ef804a0c0ee774ec77bcc520c2216fd7cbe"
+source = "git+https://github.com/jasonwhite/syscalls.git#92624de3dee33427fde46da083809d7e86a721ec"
 
 [[package]]
 name = "test-demo"
@@ -1237,6 +1305,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vfscore"
+version = "0.1.0"
+source = "git+https://github.com/oscomp/ByteOS.git?rev=25949f7#25949f7c1d253014855e792ac92dc1617edaefd2"
+dependencies = [
+ "downcast-rs",
+ "libc-core",
+ "syscalls",
+]
 
 [[package]]
 name = "virtio-drivers"

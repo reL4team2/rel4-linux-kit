@@ -9,6 +9,8 @@ use sel4::{MessageInfoBuilder, with_ipc_buffer_mut};
 use srv_gate::uart::UartIfaceEvent;
 use uart_thread::PL011DRV;
 
+sel4_runtime::define_heap!(common::config::SERVICE_HEAP_SIZE);
+
 #[sel4_runtime::main]
 fn main() {
     log::info!("Booting...");

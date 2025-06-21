@@ -5,7 +5,8 @@
 use core::cmp;
 
 use alloc::{boxed::Box, string::String};
-use srv_gate::{FS_IMPLS, fs::Stat};
+use libc_core::types::Stat;
+use srv_gate::FS_IMPLS;
 
 use super::vfs::{FileInterface, FileMetaData, FileResult, FileSystem};
 

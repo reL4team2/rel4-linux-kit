@@ -32,6 +32,9 @@ wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/rel
 运行时会自动下载测例，然后创建 testcases 文件夹，后续需要添加测例，可以给 testcases 文件夹中添加内容实现。
 
 ```shell
+tools/app-parser.py kernel-thread block-thread uart-thread
+make disk_img
+
 make run
 
 ## if you want to get a clean output.

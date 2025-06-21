@@ -11,6 +11,8 @@ pub mod ipc_saver;
 pub mod ipcrw;
 pub mod log_impl;
 pub mod macros;
+#[cfg(feature = "alloc")]
+pub mod mem;
 pub mod page;
 pub mod root;
 pub mod slot;

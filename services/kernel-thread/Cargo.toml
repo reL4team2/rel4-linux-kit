@@ -15,7 +15,7 @@ default = []
 [dependencies]
 sel4 = { workspace = true }
 sel4-logging = { workspace = true }
-sel4-kit = { workspace = true }
+sel4-kit = { workspace = true, features = ["alloc"] }
 sel4-runtime = { path = "../../crates/sel4-runtime" }
 sel4-async-single-threaded-executor = { workspace = true }
 futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
@@ -23,13 +23,15 @@ futures = { version = "0.3.28", default-features = false, features = ["alloc"] }
 spin = { workspace = true }
 log = "0.4"
 syscalls = { workspace = true }
-bitflags = "2.6"
+bitflags = "2.9.1"
 memory_addr = "0.3"
 num_enum = { version = "0.7", default-features = false }
 object = { version = "0.36.1", default-features = false, features = ["read"] }
 
+bit_field = "0.10.2"
+
 common = { workspace = true }
-libc-types = { workspace = true }
+libc-core = { workspace = true }
 
 zerocopy = { version = "0.8.20", features = ["alloc", "derive"] }
 flatten_objects = "0.2.2"
@@ -39,3 +41,8 @@ srv-gate = { workspace = true }
 
 uart-thread = { workspace = true }
 lwext4-thread = { workspace = true }
+
+fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "25949f7" }
+allocfs = { git = "https://github.com/oscomp/ByteOS.git", rev = "25949f7" }
+ext4fs = { git = "https://github.com/oscomp/ByteOS.git", rev = "25949f7" }
+vfscore = { git = "https://github.com/oscomp/ByteOS.git", rev = "25949f7" }

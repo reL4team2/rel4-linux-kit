@@ -1,43 +1,7 @@
-use core::time::Duration;
-
 use crate::__prelude::*;
 use common::ipc_trait;
+use libc_core::types::Stat;
 use syscalls::Errno;
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
-
-#[repr(C)]
-#[derive(Default, Clone, Copy, Debug, IntoBytes, Immutable, FromBytes, KnownLayout)]
-pub struct TimeSpec {
-    pub sec: usize,  // 秒
-    pub nsec: usize, // 纳秒, 范围在0~999999999
-}
-
-impl From<TimeSpec> for Duration {
-    fn from(value: TimeSpec) -> Self {
-        Self::new(value.sec as _, value.nsec as _)
-    }
-}
-
-#[repr(C)]
-#[derive(Debug, Default, Clone, IntoBytes, Immutable)]
-#[cfg(not(target_arch = "x86_64"))]
-pub struct Stat {
-    pub dev: u64,        // 设备号
-    pub ino: u64,        // inode
-    pub mode: u32,       // 设备mode
-    pub nlink: u32,      // 文件links
-    pub uid: u32,        // 文件uid
-    pub gid: u32,        // 文件gid
-    pub rdev: u64,       // 文件rdev
-    pub __pad: u64,      // 保留
-    pub size: u64,       // 文件大小
-    pub blksize: u32,    // 占用块大小
-    pub __pad2: u32,     // 保留
-    pub blocks: u64,     // 占用块数量
-    pub atime: TimeSpec, // 最后访问时间
-    pub mtime: TimeSpec, // 最后修改时间
-    pub ctime: TimeSpec, // 最后创建时间
-}
 
 #[ipc_trait(event = FS_EVENT)]
 pub trait FSIface: Sync + Send {
@@ -56,13 +20,14 @@ pub trait FSIface: Sync + Send {
 mod _impl {
     use core::cmp;
 
-    use super::{FSIface, FSIfaceEvent, Stat};
+    use super::{FSIface, FSIfaceEvent};
     use crate::def_fs_impl;
     use common::{
         config::{IPC_DATA_LEN, REG_LEN},
         generate_ipc_send,
         root::find_service,
     };
+    use libc_core::types::Stat;
     use sel4::{MessageInfoBuilder, cap::Endpoint, with_ipc_buffer, with_ipc_buffer_mut};
     use syscalls::Errno;
 
@@ -176,7 +141,7 @@ mod _impl {
                 let ptr = ib.msg_bytes().as_ptr() as *const Stat;
                 unsafe { ptr.as_ref().unwrap().clone() }
             });
-            stat
+            stat.clone()
         }
 
         fn getdents64(&mut self, inode: u64, offset: usize, buf: &mut [u8]) -> (usize, usize) {

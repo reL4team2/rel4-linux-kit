@@ -1,18 +1,19 @@
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::config::{CNODE_RADIX_BITS, DEFAULT_PARENT_EP, PAGE_SIZE, STACK_ALIGN_SIZE};
+use common::config::{DEFAULT_PARENT_EP, LINUX_APP_CNODE_RADIX_BITS, PAGE_SIZE, STACK_ALIGN_SIZE};
+use libc_core::elf::AuxType;
 use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::task::DEF_STACK_TOP;
 
-use super::{Sel4Task, auxv::AuxV};
+use super::Sel4Task;
 
 impl Sel4Task {
     /// 初始化用户栈，传递参数(args)，环境变量(env)和辅助向量(auxv)
     ///
     /// 需要传递的栈，环境变量和辅助向量需要提前填充到 [Sel4Task::info] 下
-    pub fn init_stack(&mut self) -> usize {
+    pub fn init_stack(&self) -> usize {
         // Other Strings 以 STACK_ALIGN_SIZE 对齐
         //
         // +------------------+  <- 用户栈顶
@@ -49,11 +50,12 @@ impl Sel4Task {
 
         let args_ptr: Vec<_> = self
             .info
+            .lock()
             .args
             .iter()
             .map(|arg| {
                 // TODO: set end bit was zeroed manually.
-                stack_ptr = (stack_ptr - arg.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                stack_ptr = (stack_ptr - arg.len() - 1).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, arg.as_bytes());
                 page_writer.write_u8(stack_ptr + arg.len(), 0);
                 stack_ptr
@@ -69,7 +71,7 @@ impl Sel4Task {
         let envps: Vec<_> = envs
             .iter()
             .map(|env| {
-                stack_ptr = (stack_ptr - env.bytes().len()).align_down(STACK_ALIGN_SIZE);
+                stack_ptr = (stack_ptr - env.len() - 1).align_down(STACK_ALIGN_SIZE);
                 page_writer.write_bytes(stack_ptr, env.as_bytes());
                 page_writer.write_u8(stack_ptr + env.len(), 0);
                 stack_ptr
@@ -82,14 +84,14 @@ impl Sel4Task {
         };
 
         let mut auxv = BTreeMap::new();
-        auxv.insert(AuxV::EXECFN, args_ptr[0]);
-        auxv.insert(AuxV::PAGESZ, PAGE_SIZE);
-        auxv.insert(AuxV::ENTRY, self.info.entry);
-        auxv.insert(AuxV::GID, 0);
-        auxv.insert(AuxV::EGID, 0);
-        auxv.insert(AuxV::UID, 0);
-        auxv.insert(AuxV::EUID, 0);
-        auxv.insert(AuxV::NULL, 0);
+        auxv.insert(AuxType::ExecFn, args_ptr[0]);
+        auxv.insert(AuxType::PageSize, PAGE_SIZE);
+        auxv.insert(AuxType::Entry, self.info.lock().entry);
+        auxv.insert(AuxType::GID, 0);
+        auxv.insert(AuxType::EGID, 0);
+        auxv.insert(AuxType::UID, 0);
+        auxv.insert(AuxType::EUID, 0);
+        auxv.insert(AuxType::Null, 0);
 
         // push auxiliary vector
         for (key, v) in auxv.into_iter() {
@@ -115,7 +117,7 @@ impl Sel4Task {
         self.tcb.tcb_configure(
             DEFAULT_PARENT_EP.cptr(),
             self.cnode,
-            CNodeCapData::new(0, sel4::WORD_SIZE - CNODE_RADIX_BITS),
+            CNodeCapData::new(0, sel4::WORD_SIZE - LINUX_APP_CNODE_RADIX_BITS),
             self.vspace,
             0,
             LeafSlot::new(0).cap(),
