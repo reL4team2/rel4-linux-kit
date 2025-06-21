@@ -136,7 +136,18 @@ pub(super) async fn sys_clone(
     let mut new_task = if flags.bits() > 0xff {
         if flags.contains(CloneFlags::CLONE_THREAD) {
             task.create_thread().unwrap()
+        } else if !flags.contains(CloneFlags::CLONE_VM) {
+            Sel4Task::new().unwrap()
         } else {
+            log::error!(
+                "flags: {:?} signal: {} stack: {:#x}, ptid: {:p}  tls: {:#x}, ctid: {:#p}",
+                flags,
+                signal,
+                stack,
+                ptid,
+                tls,
+                ctid
+            );
             panic!("Custom Clone is not supported");
         }
     } else {

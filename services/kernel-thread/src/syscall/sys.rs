@@ -5,7 +5,7 @@
 use core::time::Duration;
 
 use libc_core::{
-    resource::Rlimit,
+    resource::{Rlimit, Rusage},
     types::{TimeSpec, TimeVal},
     utsname::UTSName,
 };
@@ -20,11 +20,18 @@ use super::SysResult;
 pub(super) fn sys_uname(task: &Sel4Task, buf: *mut UTSName) -> SysResult {
     let mut utsname_bytes = task.read_bytes(buf as _, size_of::<UTSName>()).unwrap();
     let utsname = UTSName::mut_from_bytes(&mut utsname_bytes).unwrap();
-    let sysname = b"rel4-linux";
-    let nodename = b"rel4-beta1";
-    let release = b"vb0.1";
-    let version = b"vb0.1";
-    let machine = b"aarch64";
+    // let sysname = b"rel4-linux";
+    // let nodename = b"rel4-beta1";
+    // let release = b"vb0.1";
+    // let version = b"vb0.1";
+    // let machine = b"aarch64";
+
+    let sysname = b"Linux";
+    let nodename = b"debian";
+    let release = b"5.10.0-7-aarch64";
+    let version = b"#1 SMP Debian 5.10.40-1 (2021-05-28)";
+    let machine = b"aarch64 qemu";
+
     utsname.sysname[..sysname.len()].copy_from_slice(sysname);
     utsname.nodename[..nodename.len()].copy_from_slice(nodename);
     utsname.release[..release.len()].copy_from_slice(release);
@@ -126,5 +133,15 @@ pub(super) fn sys_prlimit64(
             warn!("need to finish prlimit64: resource {}", resource)
         }
     }
+    Ok(0)
+}
+
+pub(super) fn sys_getrusage(task: &Sel4Task, who: usize, usage_ptr: *mut Rusage) -> SysResult {
+    debug!("sys_getrusgae @ who: {}, usage_ptr: {:p}", who, usage_ptr);
+    let time = current_time().into();
+    let mut rusage = Rusage::default();
+    rusage.stime = time;
+    rusage.utime = time;
+    task.write_bytes(usage_ptr as _, rusage.as_bytes());
     Ok(0)
 }

@@ -59,6 +59,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
         Sysno::getpid => sys_getpid(task),
         Sysno::getppid => sys_getppid(task),
         Sysno::gettid => sys_gettid(task),
+        Sysno::getrusage => sys_getrusage(task, a0, a1 as _),
         Sysno::lseek => sys_lseek(task, a0 as _, a1 as _, a2 as _),
         Sysno::ioctl => sys_ioctl(task, a0, a1, a2, a3, a4),
         Sysno::clock_gettime => sys_clock_gettime(task, a0 as _, a1 as _),
