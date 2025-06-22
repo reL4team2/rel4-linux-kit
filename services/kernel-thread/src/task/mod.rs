@@ -14,7 +14,7 @@ use common::{
     config::{DEFAULT_PARENT_EP, DEFAULT_SERVE_EP, LINUX_APP_CNODE_RADIX_BITS, PAGE_SIZE},
     mem::CapMemSet,
     page::PhysPage,
-    slot::recycle_slot,
+    slot::{alloc_slot, recycle_slot},
 };
 use core::{
     cmp,
@@ -37,8 +37,10 @@ use zerocopy::IntoBytes;
 
 use crate::{
     child_test::{FutexTable, TASK_MAP, futex_wake, wake_hangs},
+    consts::task::VDSO_REGION_APP_ADDR,
     task::{pcb::ProcessControlBlock, shm::MapedSharedMemory},
     utils::obj::{alloc_untyped_unit, recycle_untyped_unit},
+    vdso::get_vdso_caps,
 };
 
 /// Sel4Task 结构体
@@ -360,6 +362,17 @@ impl Sel4Task {
             .fold(0, |acc, x| cmp::max(acc, x.address() + x.size()))
             .div_ceil(PAGE_SIZE as _) as usize
             * PAGE_SIZE;
+
+        get_vdso_caps().iter().enumerate().for_each(|(i, page)| {
+            let new_slot = alloc_slot();
+            new_slot
+                .copy_from(&LeafSlot::from_cap(*page), CapRights::all())
+                .unwrap();
+            self.map_page(
+                VDSO_REGION_APP_ADDR + i * PAGE_SIZE,
+                PhysPage::new(new_slot.cap()),
+            );
+        });
     }
 
     /// 退出当前任务

@@ -8,12 +8,14 @@
 #![feature(extract_if)]
 #![feature(const_trait_impl)]
 
+use ::fs::file::File;
 use common::{config::DEFAULT_SERVE_EP, root::shutdown};
 use futures::task::LocalSpawnExt;
 use libc_core::fcntl::OpenFlags;
 
 use crate::{
     child_test::TASK_MAP,
+    consts::task::{VDSO_AREA_SIZE, VDSO_KADDR},
     timer::handle_timer,
     utils::{blk::get_blk_dev, obj::OBJ_ALLOCATOR},
 };
@@ -42,6 +44,7 @@ pub mod syscall;
 pub mod task;
 pub mod timer;
 pub mod utils;
+pub mod vdso;
 
 // macro_rules! test_task {
 //     ($file:expr $(,$args:expr)*) => {{
@@ -96,6 +99,15 @@ fn main() {
 
     // 初始化定时器
     timer::init();
+
+    {
+        vdso::init_vdso_addr();
+        let vdso = File::open("/vdso.so", OpenFlags::RDONLY).unwrap();
+        let vdso_size = vdso
+            .read(unsafe { core::slice::from_raw_parts_mut(VDSO_KADDR as _, VDSO_AREA_SIZE) })
+            .unwrap();
+        assert!(vdso_size > 0);
+    }
 
     // test_task!("./pipe");
     test_task!("busybox", "sh", "/init.sh");

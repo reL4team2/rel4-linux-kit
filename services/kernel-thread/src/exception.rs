@@ -75,7 +75,7 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 /// - `tid` 是用户进程绑定的任务 ID
 /// - `vmfault` 是发生的错误，包含错误信息
 pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
-    log::debug!("trigger fault: {:#x?}", vmfault);
+    log::warn!("trigger fault: {:#x?}", vmfault);
     let vaddr = vmfault.addr() as usize / PAGE_SIZE * PAGE_SIZE;
     let mut task_map = TASK_MAP.lock();
     let task = task_map.get_mut(&tid).unwrap();

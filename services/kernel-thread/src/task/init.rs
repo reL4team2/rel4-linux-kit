@@ -91,6 +91,8 @@ impl Sel4Task {
         auxv.insert(AuxType::EGID, 0);
         auxv.insert(AuxType::UID, 0);
         auxv.insert(AuxType::EUID, 0);
+        // TODO: 在这里传输 VDSO 的地址
+        // auxv.insert(AuxType::SysInfoEhdr, VDSO_APP_ADDR);
         auxv.insert(AuxType::Null, 0);
 
         // push auxiliary vector

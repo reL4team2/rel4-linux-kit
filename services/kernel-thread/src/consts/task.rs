@@ -22,3 +22,18 @@ pub const DEF_WORK_DIR: &str = "/";
 
 /// 复制物理页的时候使用的地址
 pub const PAGE_COPY_TEMP: usize = 0x8_0000_0000;
+
+/// VDSO 内核线程加载的地址区域
+pub const VDSO_REGION_KADDR: usize = 0x4_0000_0000;
+
+/// VDSO KADDR
+pub const VDSO_KADDR: usize = 0x4_0000_0000;
+
+/// VDSO 用户程序加载的地址区域
+pub const VDSO_REGION_APP_ADDR: usize = 0x4_0000_0000;
+
+/// VDSO 用户程序加载的地址
+pub const VDSO_APP_ADDR: usize = 0x4_0000_0000;
+
+/// 默认的 VDSO 区域大小
+pub const VDSO_AREA_SIZE: usize = 0x2000;
