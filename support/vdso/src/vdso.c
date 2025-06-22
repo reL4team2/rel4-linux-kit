@@ -23,7 +23,7 @@ int __kernel_clock_gettime(uint64_t _id, struct timespec *tp)
     asm volatile("mrs %0, CNTFRQ_EL0": "=r"(cntfrq));
     
     uint64_t sec = cntpct / cntfrq;
-    uint32_t nsec = (cntpct * cntfrq) * 1000000000 / cntfrq;
+    uint32_t nsec = (cntpct % cntfrq) * 1000000000 / cntfrq;
     tp->tv_sec = sec;
     tp->tv_nsec = nsec;
     return 0;
