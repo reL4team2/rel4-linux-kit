@@ -63,7 +63,10 @@ qemu_cmd := \
 testcases:
 	wget -qO- https://github.com/reL4team2/rel4-linux-kit/releases/download/toolchain/testcases.tgz | tar -zxf - -C .
 
-disk_img: testcases
+support/vdso/vdso.so: support/vdso/vdso.so
+	make -C support/vdso
+
+disk_img: testcases support/vdso/vdso.so
 	mkdir -p mount
 	dd if=/dev/zero of=mount.img bs=4M count=64
 	sync
@@ -73,6 +76,7 @@ disk_img: testcases
 	sudo mount mount.img mount
 	sudo cp -r testcases/* mount/
 	sudo cp support/tests/init.sh mount/
+	sudo cp support/vdso/vdso.so mount/
 	sync
 	sudo umount mount
 	sync

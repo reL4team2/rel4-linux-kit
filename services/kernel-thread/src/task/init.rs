@@ -5,7 +5,7 @@ use memory_addr::MemoryAddr;
 use sel4::{CNodeCapData, init_thread::slot};
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::consts::task::DEF_STACK_TOP;
+use crate::consts::task::{DEF_STACK_TOP, VDSO_APP_ADDR};
 
 use super::Sel4Task;
 
@@ -91,6 +91,7 @@ impl Sel4Task {
         auxv.insert(AuxType::EGID, 0);
         auxv.insert(AuxType::UID, 0);
         auxv.insert(AuxType::EUID, 0);
+        auxv.insert(AuxType::SysInfoEhdr, VDSO_APP_ADDR);
         auxv.insert(AuxType::Null, 0);
 
         // push auxiliary vector

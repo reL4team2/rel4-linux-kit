@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use common::{ObjectAllocator, config::DEFAULT_CUSTOM_SLOT};
 use sel4::{
     Cap,
-    cap::{Notification, PT},
+    cap::{Granule, Notification, PT},
     cap_type,
 };
 use spin::Mutex;
@@ -15,6 +15,11 @@ pub(crate) static OBJ_ALLOCATOR: ObjectAllocator = ObjectAllocator::empty();
 #[inline]
 pub fn alloc_notification() -> Notification {
     OBJ_ALLOCATOR.alloc_notification()
+}
+
+/// 申请一个物理页，用于 VDSO
+pub fn alloc_vdso_page() -> Granule {
+    OBJ_ALLOCATOR.alloc_page()
 }
 
 /// 申请一个页表 [PT]
