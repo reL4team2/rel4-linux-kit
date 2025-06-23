@@ -8,12 +8,16 @@ use sel4::{
 };
 use sel4_kit::slot_manager::LeafSlot;
 
-use crate::slot::alloc_slot;
+use crate::{
+    page::PhysPage,
+    slot::{alloc_slot, recycle_slot},
+};
 
 pub struct CapMemSet {
     /// (Untyped, size in bytes)
     untypes: Vec<(Untyped, usize)>,
     alloc_func: Option<fn() -> (Untyped, usize)>,
+    recycle_frames: Vec<Cap<cap_type::Granule>>,
 }
 
 impl CapMemSet {
@@ -21,6 +25,7 @@ impl CapMemSet {
         CapMemSet {
             untypes: Vec::new(),
             alloc_func,
+            recycle_frames: Vec::new(),
         }
     }
 
@@ -96,7 +101,18 @@ impl CapMemSet {
 
     #[inline]
     pub fn alloc_page(&mut self) -> Cap<cap_type::Granule> {
-        self.alloc_fixed::<cap_type::Granule>().into()
+        match self.recycle_frames.pop() {
+            Some(recycled_frame) => {
+                PhysPage::new(recycled_frame).lock().fill(0);
+                recycled_frame
+            }
+            None => self.alloc_fixed::<cap_type::Granule>().into(),
+        }
+    }
+
+    #[inline]
+    pub fn recycle_page(&mut self, frame_cap: Cap<cap_type::Granule>) {
+        self.recycle_frames.push(frame_cap);
     }
 
     #[inline]
@@ -118,5 +134,14 @@ impl CapMemSet {
     #[inline]
     pub fn alloc_cnode(&mut self, size_bits: usize) -> Cap<cap_type::CNode> {
         self.alloc_variable::<cap_type::CNode>(size_bits).into()
+    }
+
+    pub fn release(&mut self) {
+        self.recycle_frames.iter().for_each(|page_cap| {
+            let slot = LeafSlot::from_cap(*page_cap);
+            slot.revoke().unwrap();
+            slot.delete().unwrap();
+            recycle_slot(slot);
+        });
     }
 }

@@ -17,5 +17,5 @@ common = { workspace = true }
 sel4-kit = { workspace = true }
 
 uart-thread = { path = "../../services/uart-thread" }
-zerocopy = "0.8.25"
+zerocopy = { workspace = true }
 srv-gate = { workspace = true }

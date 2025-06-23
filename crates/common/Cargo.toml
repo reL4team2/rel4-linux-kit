@@ -19,5 +19,5 @@ bitflags = "2.9.1"
 num_enum = { version = "0.7.3", default-features = false }
 spin = { workspace = true }
 syscalls = { workspace = true }
-zerocopy = { version = "0.8.20", default-features = false }
+zerocopy = { workspace = true }
 log = "0.4"

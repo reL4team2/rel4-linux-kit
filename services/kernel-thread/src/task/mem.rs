@@ -2,9 +2,8 @@
 //!
 //!
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
-use common::{config::PAGE_SIZE, page::PhysPage, slot::recycle_slot};
+use common::{config::PAGE_SIZE, page::PhysPage};
 use core::cmp;
-use sel4_kit::slot_manager::LeafSlot;
 
 use crate::consts::task::{DEF_HEAP_ADDR, DEF_STACK_BOTTOM, DEF_STACK_TOP};
 
@@ -184,10 +183,11 @@ impl Sel4Task {
     pub fn clear_maped(&self) {
         self.mem.lock().mapped_page.values().for_each(|x| {
             x.cap().frame_unmap().unwrap();
-            let slot = LeafSlot::from_cap(x.cap());
+            // self.capset.lock().recycle_page(x.cap());
+            let slot = sel4_kit::slot_manager::LeafSlot::from_cap(x.cap());
             slot.revoke().unwrap();
             slot.delete().unwrap();
-            recycle_slot(slot);
+            common::slot::recycle_slot(slot);
         });
         self.mem.lock().mapped_page.clear();
     }
