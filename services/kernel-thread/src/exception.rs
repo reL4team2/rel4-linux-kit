@@ -5,6 +5,7 @@
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
 use common::config::PAGE_SIZE;
+use libc_core::signal::SignalNum;
 use sel4::{
     Fault, MessageInfo, UserException, VCpuFault, VmFault, cap::Notification, init_thread,
     with_ipc_buffer,
@@ -112,12 +113,14 @@ pub fn handle_vcpu_fault(tid: u64, vcpufault: VCpuFault) {
     // 执行 BreakPoint 指令，且指令长度为 32bit
     if ec == 0b111100 && il == 1 {
         *user_ctx.pc_mut() += 4;
+        task.add_signal(SignalNum::TRAP, task.tid);
     } else {
         log::error!("Unhandled fault: {:#x?}", vcpufault);
         log::error!("{:#x?}", user_ctx);
 
         panic!("unspecific fault")
     }
+    task.check_signal(&mut user_ctx);
     task.tcb
         .tcb_write_all_registers(true, &mut user_ctx)
         .unwrap();
