@@ -16,12 +16,13 @@ FILE_DIR = path.dirname(path.realpath(__file__))
 
 class Task:
     def __init__(
-        self, name: str, file: str, mem: list, dma: list, deplist: list, cfglist: list
+        self, name: str, file: str, mem: list, dma: list, heap: list, deplist: list, cfglist: list
     ):
         self.name = name
         self.file = file
         self.mem = mem
         self.dma = dma
+        self.heap = heap
         self.deplist = deplist
         self.cfglist = cfglist
         self.deptask = []
@@ -33,6 +34,7 @@ class Task:
         ret += f"\tfile = {self.file}\n"
         ret += f"\tmem = {self.get_mems()}\n"
         ret += f"\tdma = {self.get_dmas()}\n"
+        ret += f"\theap = {self.heap}\n"
         ret += f"\tdeps = {self.deplist}\n"
         ret += "}"
         return ret
@@ -67,6 +69,14 @@ class Task:
             ret.extend(task.get_dmas())
         return ret
 
+    def get_heap(self):
+        ret = []
+        ret.extend(self.heap)
+        for task in self.deptask:
+            if task.in_degree > 1:
+                continue
+            ret.extend(task.get_heap())
+        return ret
 
 tasks: List[Task] = {}
 
@@ -88,6 +98,7 @@ def parse_config(config):
             task["file"],
             task.get("mem", []),
             task.get("dma", []),
+            task.get("heap", []),
             task.get("deps", []),
             task.get("cfg", []),
         )
@@ -111,6 +122,9 @@ def write_to_file(file):
 
         dma_list = ["(%s, %s)" % (dma[0], dma[1]) for dma in task.get_dmas()]
         output += "dma: &[%s],\n" % (",\n".join(dma_list))
+
+        heap_list = ["(%s, %s)" % (heap[0], heap[1]) for heap in task.get_heap()]
+        output += "heap: &[%s],\n" % (",\n".join(heap_list))
 
         output += "},"
 

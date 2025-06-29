@@ -1,6 +1,6 @@
 use sel4::{
     Cap, CapTypeForObjectOfFixedSize,
-    cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace},
+    cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace, LargePage},
     cap_type::{self},
     init_thread::slot,
 };
@@ -179,6 +179,26 @@ impl ObjectAllocator {
         self.untyped()
             .untyped_retype(
                 &cap_type::Granule::object_blueprint(),
+                &leaf_slot.cnode_abs_cptr(),
+                leaf_slot.offset_of_cnode(),
+                pages,
+            )
+            .unwrap();
+
+        (0..pages)
+            .map(|x| leaf_slot.next_nth_slot(x).cap())
+            .collect()
+    }
+
+    /// 申请多个大页
+    #[cfg(feature = "alloc")]
+    #[inline]
+    pub fn alloc_large_pages(&self, pages: usize) -> alloc::vec::Vec<LargePage> {
+        let leaf_slot = super::slot::alloc_slots(pages);
+
+        self.untyped()
+            .untyped_retype(
+                &cap_type::LargePage::object_blueprint(),
                 &leaf_slot.cnode_abs_cptr(),
                 leaf_slot.offset_of_cnode(),
                 pages,

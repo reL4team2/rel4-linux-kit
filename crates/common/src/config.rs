@@ -40,6 +40,9 @@ pub const VIRTIO_NET_IRQ: usize = 0x2f + 0x20;
 /// 默认的 DMA 分配开始的地址
 pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 
+/// 默认的堆的起始地址
+pub const HEAP_START: usize = 0x1_1000_0000;
+
 /// 默认 CSpace 一级占用的 bits
 pub const CNODE_RADIX_BITS: usize = 12;
 
@@ -48,6 +51,9 @@ pub const LINUX_APP_CNODE_RADIX_BITS: usize = 6;
 
 /// 默认的物理页大小
 pub const PAGE_SIZE: usize = 0x1000;
+
+/// 默认的物理大页大小
+pub const LARGE_PAGE_SIZE: usize = 0x1000 << 9;
 
 /// 默认的页的 mask 位
 pub const PAGE_MASK: usize = !0xfff;

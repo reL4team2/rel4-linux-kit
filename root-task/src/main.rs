@@ -13,7 +13,7 @@ mod utils;
 use alloc::vec::Vec;
 use common::{
     ObjectAllocator,
-    config::{DEFAULT_CUSTOM_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR},
+    config::{DEFAULT_CUSTOM_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR, LARGE_PAGE_SIZE},
     page::PhysPage,
 };
 use config::TASK_FILES;
@@ -142,6 +142,19 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             //     let page_cap = OBJ_ALLOCATOR.lock().alloc_page();
             //     tasks[t_idx].map_page(start + i * PAGE_SIZE, PhysPage::new(page_cap));
             // }
+        }
+
+        for (start, size) in t.heap {
+            // 申请多个大页
+            let pages_cap = OBJ_ALLOCATOR.alloc_large_pages(size / LARGE_PAGE_SIZE);
+            pages_cap.into_iter().enumerate().for_each(|(i, page)| {
+                debug_println!(
+                    "[RootTask] Mapping Heap {:#x} -> {:#x}",
+                    start + i * LARGE_PAGE_SIZE,
+                    page.frame_get_address().unwrap()
+                );
+                tasks[t_idx].map_large_page(start + i * LARGE_PAGE_SIZE, page);
+            });
         }
 
         // FIXME: 将分配内存的逻辑写成一个通用的逻辑

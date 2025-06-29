@@ -11,6 +11,7 @@ cfg = ["uart_ipc"]
 deps = ["uart-thread"]
 name = "test-demo"
 file = "test-demo"
+heap = [["HEAP_START", "0x20_0000"]]
 
 [[tasks]]
 name = "block-thread"

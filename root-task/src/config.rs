@@ -16,6 +16,8 @@ pub struct KernelServices {
     pub mem: &'static [(usize, usize, usize)],
     /// 格式： (虚拟地址, 内存大小)
     pub dma: &'static [(usize, usize)],
+    /// 格式： (虚拟地址, 内存大小)
+    pub heap: &'static [(usize, usize)],
 }
 
 impl Debug for KernelServices {
@@ -23,6 +25,7 @@ impl Debug for KernelServices {
         f.debug_struct(self.name)
             .field("mem", &format_args!("{:X?}", self.mem))
             .field("dma", &format_args!("{:X?}", self.dma))
+            .field("heap", &format_args!("{:X?}", self.heap))
             .finish()
     }
 }
@@ -33,14 +36,24 @@ macro_rules! service {
         name: $name:expr,
         file: $file:expr,
         mem: &[$(($mem_virt:expr, $mem_phys:expr, $mem_size:expr)),*],
-        dma: &[$(($dma_addr:expr, $dma_size:expr)),*]$(,)?
+        dma: &[$(($dma_addr:expr, $dma_size:expr)),*],
+        heap: &[$(($heap_addr:expr, $heap_size:expr)),*]$(,)?
     ) => {
         KernelServices {
             name: $name,
             file: include_bytes_aligned!(16, concat!("../../target/", $file)),
             mem: &[$(($mem_virt, $mem_phys, $mem_size)),*],
             dma: &[$(($dma_addr, $dma_size)),*],
+            heap: &[$(($heap_addr, $heap_size)),*],
         }
+    };
+    (
+        name: $name:expr,
+        file: $file:expr,
+        mem: &[$(($mem_virt:expr, $mem_phys:expr, $mem_size:expr)),*],
+        dma: &[$(($dma_addr:expr, $dma_size:expr)),*]$(,)?
+    ) => {
+        service!(name: $name, file:$file, mem: &[$(($mem_virt, $mem_phys, $mem_size)),*], dma: &[$(($dma_addr, $dma_size)),*], heap: &[])
     };
     (name: $name:expr,file: $file:expr $(,)?) => {
         service!(name: $name, file:$file, mem: &[], dma: &[])
