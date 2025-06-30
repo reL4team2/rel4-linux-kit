@@ -252,7 +252,10 @@ impl Sel4Task {
                         .unwrap();
                     self.mem.lock().mapped_pt.push(pt_cap);
                 }
-                _ => res.unwrap(),
+                _ => {
+                    log::error!("map page to {:#x}", vaddr);
+                    res.unwrap()
+                }
             }
         }
     }
@@ -264,10 +267,7 @@ impl Sel4Task {
         assert_eq!(vaddr % PAGE_SIZE, 0);
         if let Some(page) = self.mem.lock().mapped_page.remove(&vaddr) {
             page.cap().frame_unmap().unwrap();
-            let slot = LeafSlot::from_cap(page.cap());
-            slot.revoke().unwrap();
-            slot.delete().unwrap();
-            recycle_slot(slot);
+            self.capset.lock().recycle_page(page.cap());
         }
     }
 
@@ -424,7 +424,8 @@ impl Sel4Task {
                     root_cnode.absolute_cptr(phys_page.cap()).delete().unwrap();
                     recycle_slot(phys_page.cap().into());
                 });
-            let capset = self.capset.lock();
+            let mut capset = self.capset.lock();
+            capset.release();
             capset.untyped_list().iter().for_each(|(untyped, _)| {
                 root_cnode.absolute_cptr(*untyped).revoke().unwrap();
                 recycle_untyped_unit(*untyped);

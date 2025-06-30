@@ -26,7 +26,7 @@ use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
     child_test::{ArcTask, TASK_MAP, WaitAnyChild, WaitPid, futex_requeue, futex_wake, wait_futex},
-    consts::task::{DEF_STACK_TOP, PAGE_COPY_TEMP},
+    consts::task::{DEF_HEAP_ADDR, DEF_STACK_TOP, PAGE_COPY_TEMP},
     task::Sel4Task,
     timer::{set_process_timer, wait_time},
     utils::page::map_page_self,
@@ -251,6 +251,7 @@ pub(super) async fn sys_clone(
                     );
                 });
         });
+        new_task.mem.lock().heap = old_mem_info.heap;
     }
 
     new_task
@@ -294,6 +295,7 @@ pub(super) fn sys_execve(
     let file = File::open(path, OpenFlags::RDONLY)?;
 
     task.clear_maped();
+    task.mem.lock().heap = DEF_HEAP_ADDR;
 
     let mut file_data = vec![0u8; file.file_size().unwrap()];
     file.read(&mut file_data)?;

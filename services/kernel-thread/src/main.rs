@@ -68,7 +68,7 @@ macro_rules! test_task {
     }};
 }
 
-const DEF_HEAP_SIZE: usize = 0x300_0000;
+const DEF_HEAP_SIZE: usize = 0x380_0000;
 
 sel4_runtime::define_heap!(DEF_HEAP_SIZE);
 

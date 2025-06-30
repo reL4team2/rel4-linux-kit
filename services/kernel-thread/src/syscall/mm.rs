@@ -12,12 +12,7 @@ use crate::{
     utils::obj::alloc_untyped_unit,
 };
 use alloc::{sync::Arc, vec::Vec};
-use common::{
-    config::PAGE_SIZE,
-    mem::CapMemSet,
-    page::PhysPage,
-    slot::{alloc_slot, recycle_slot},
-};
+use common::{config::PAGE_SIZE, mem::CapMemSet, page::PhysPage, slot::alloc_slot};
 use libc_core::mman::MapFlags;
 use sel4::{Cap, CapRights, cap_type};
 use sel4_kit::slot_manager::LeafSlot;
@@ -80,10 +75,11 @@ pub(super) fn sys_munmap(task: &Sel4Task, start: usize, len: usize) -> SysResult
     task.mem.lock().mapped_page.retain(|vaddr, x| {
         if (start..start + len).contains(vaddr) {
             x.cap().frame_unmap().unwrap();
-            let slot = LeafSlot::from_cap(x.cap());
-            slot.revoke().unwrap();
-            slot.delete().unwrap();
-            recycle_slot(slot);
+            task.capset.lock().recycle_page(x.cap());
+            // let slot = LeafSlot::from_cap(x.cap());
+            // slot.revoke().unwrap();
+            // slot.delete().unwrap();
+            // common::slot::recycle_slot(slot);
             false
         } else {
             true
