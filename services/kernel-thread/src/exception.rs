@@ -5,10 +5,8 @@
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
 use common::config::PAGE_SIZE;
-use libc_core::signal::SignalNum;
 use sel4::{
-    Fault, MessageInfo, UserException, VCpuFault, VmFault, cap::Notification, init_thread,
-    with_ipc_buffer,
+    Fault, MessageInfo, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer,
 };
 use spin::Lazy;
 
@@ -86,45 +84,45 @@ pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
     drop(task_map);
 }
 
-/// 处理 vcpu Fault
-///
-/// # 参数
-/// - `tid` 用户进程绑定的任务 ID
-/// - `vcpufault` [VCpuFault] 是发生的错误包含错误信息
-///
-/// Note: 目前仅处理发生 BreakPoint 的情况，根据 HSR 指令进行检测
-///
-/// # 工具
-///
-/// - `ESR Decoder` <https://esr.arm64.dev/>
-/// - `ESR Manual` <https://developer.arm.com/documentation/ddi0601/2025-03/AArch64-Registers/ESR-EL2--Exception-Syndrome-Register--EL2->
-pub fn handle_vcpu_fault(tid: u64, vcpufault: VCpuFault) {
-    log::debug!("vcpu fault {:#x?}", vcpufault);
-    let task = TASK_MAP.lock().get(&tid).unwrap().clone();
-    let mut user_ctx = task
-        .tcb
-        .tcb_read_all_registers(true)
-        .expect("can't read task context");
-    let hsr = vcpufault.hsr();
-    // 产生异常的原因
-    let ec = (hsr >> 26) & 0x3f;
-    // 指令长度，0: 16bit 1: 32bit
-    let il = (hsr >> 25) & 0x1;
-    // 执行 BreakPoint 指令，且指令长度为 32bit
-    if ec == 0b111100 && il == 1 {
-        *user_ctx.pc_mut() += 4;
-        task.add_signal(SignalNum::TRAP, task.tid);
-    } else {
-        log::error!("Unhandled fault: {:#x?}", vcpufault);
-        log::error!("{:#x?}", user_ctx);
+// /// 处理 vcpu Fault
+// ///
+// /// # 参数
+// /// - `tid` 用户进程绑定的任务 ID
+// /// - `vcpufault` [VCpuFault] 是发生的错误包含错误信息
+// ///
+// /// Note: 目前仅处理发生 BreakPoint 的情况，根据 HSR 指令进行检测
+// ///
+// /// # 工具
+// ///
+// /// - `ESR Decoder` <https://esr.arm64.dev/>
+// /// - `ESR Manual` <https://developer.arm.com/documentation/ddi0601/2025-03/AArch64-Registers/ESR-EL2--Exception-Syndrome-Register--EL2->
+// pub fn handle_vcpu_fault(tid: u64, vcpufault: VCpuFault) {
+//     log::debug!("vcpu fault {:#x?}", vcpufault);
+//     let task = TASK_MAP.lock().get(&tid).unwrap().clone();
+//     let mut user_ctx = task
+//         .tcb
+//         .tcb_read_all_registers(true)
+//         .expect("can't read task context");
+//     let hsr = vcpufault.hsr();
+//     // 产生异常的原因
+//     let ec = (hsr >> 26) & 0x3f;
+//     // 指令长度，0: 16bit 1: 32bit
+//     let il = (hsr >> 25) & 0x1;
+//     // 执行 BreakPoint 指令，且指令长度为 32bit
+//     if ec == 0b111100 && il == 1 {
+//         *user_ctx.pc_mut() += 4;
+//         task.add_signal(SignalNum::TRAP, task.tid);
+//     } else {
+//         log::error!("Unhandled fault: {:#x?}", vcpufault);
+//         log::error!("{:#x?}", user_ctx);
 
-        panic!("unspecific fault")
-    }
-    task.check_signal(&mut user_ctx);
-    task.tcb
-        .tcb_write_all_registers(true, &mut user_ctx)
-        .unwrap();
-}
+//         panic!("unspecific fault")
+//     }
+//     task.check_signal(&mut user_ctx);
+//     task.tcb
+//         .tcb_write_all_registers(true, &mut user_ctx)
+//         .unwrap();
+// }
 
 /// 循环等待并处理异常
 pub async fn waiting_and_handle(tid: u64, message: MessageInfo) {
@@ -134,7 +132,7 @@ pub async fn waiting_and_handle(tid: u64, message: MessageInfo) {
     match fault {
         Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
         Fault::UserException(ue) => handle_user_exception(tid, ue).await,
-        Fault::VCpuFault(vcf) => handle_vcpu_fault(tid, vcf),
+        // Fault::VCpuFault(vcf) => handle_vcpu_fault(tid, vcf),
         _ => {
             log::error!("Unhandled fault: {:#x?}", fault);
             let task = TASK_MAP.lock().get(&tid).unwrap().clone();
