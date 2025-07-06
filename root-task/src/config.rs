@@ -41,7 +41,8 @@ macro_rules! service {
     ) => {
         KernelServices {
             name: $name,
-            file: include_bytes_aligned!(16, concat!("../../target/", $file)),
+            // file: include_bytes_aligned!(16, concat!("../../target/", $file)),
+            file: include_bytes_aligned!(16, $file),
             mem: &[$(($mem_virt, $mem_phys, $mem_size)),*],
             dma: &[$(($dma_addr, $dma_size)),*],
             heap: &[$(($heap_addr, $heap_size)),*],

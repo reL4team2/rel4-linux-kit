@@ -80,13 +80,25 @@ impl RootTaskHandler {
                 RootEvent::TranslateAddr => {
                     let addr = read_types!(ib, usize);
 
-                    let phys_addr = self.tasks[badge as usize]
+                    if let Some(phys_addr) = self.tasks[badge as usize]
                         .mapped_page
                         .get(&(addr & !0xfff))
                         .map(|x| x.addr())
-                        .unwrap();
-
-                    reply_with!(ib, phys_addr + addr % 0x1000);
+                    {
+                        reply_with!(ib, phys_addr + addr % 0x1000);
+                    } else if let Some(phys_addr) = self.tasks[badge as usize]
+                        .mapped_large_page
+                        .get(&(addr & !0xfff))
+                        .map(|c| c.frame_get_address().expect("can't get address of the physical page"))
+                    {
+                        reply_with!(ib, phys_addr + addr % 0x200000);
+                    } else {
+                        log::error!(
+                            "[RootTask] TranslateAddr failed: {:#x} not mapped",
+                            addr
+                        );
+                        reply_with!(ib, 0);
+                    }
                 }
                 RootEvent::FindService => {
                     let name = read_types!(ib, &str);

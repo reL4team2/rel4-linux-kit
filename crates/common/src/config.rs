@@ -41,7 +41,7 @@ pub const VIRTIO_NET_IRQ: usize = 0x2f + 0x20;
 pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 
 /// 默认的堆的起始地址
-pub const HEAP_START: usize = 0x1_1000_0000;
+pub const HEAP_START: usize = 0x2000_0000;
 
 /// 默认 CSpace 一级占用的 bits
 pub const CNODE_RADIX_BITS: usize = 12;
@@ -60,6 +60,12 @@ pub const PAGE_MASK: usize = !0xfff;
 
 /// 默认存储自定义 Capability 的 SLOT
 pub const DEFAULT_CUSTOM_SLOT: u64 = 26;
+
+/// 默认存储 杂项 Untyped 的 SLOT
+pub const DEFAULT_MISC_UNTYPED_SLOT: u64 = 23;
+
+/// 默认存储 堆 Untyped 的 SLOT
+pub const DEFAULT_MEM_UNTYPED_SLOT: u64 = 24; 
 
 /// 默认服务可分配的 SLOT 开始的地址
 pub const DEFAULT_EMPTY_SLOT_INDEX: usize = 32;

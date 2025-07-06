@@ -59,6 +59,8 @@ pub struct Sel4Task {
     pub mapped_pt: Arc<NotiMutex<Vec<cap::PT>>>,
     /// 已经映射的页
     pub mapped_page: BTreeMap<usize, PhysPage>,
+    /// 已经映射的大页
+    pub mapped_large_page: BTreeMap<usize, cap::LargePage>,
     /// 栈底
     pub stack_bottom: usize,
 }
@@ -72,6 +74,7 @@ impl Sel4Task {
         srv_ep: cap::Endpoint,
         vspace: cap::VSpace,
         mapped_page: BTreeMap<usize, PhysPage>,
+        mapped_large_page: BTreeMap<usize, cap::LargePage>,
         badge: u64,
     ) -> Self {
         let task = Self {
@@ -82,6 +85,7 @@ impl Sel4Task {
             srv_ep,
             mapped_pt: Arc::new(Mutex::new(Vec::new())),
             mapped_page,
+            mapped_large_page,
             stack_bottom: config::SERVICE_BOOT_STACK_TOP,
         };
 
@@ -152,6 +156,7 @@ impl Sel4Task {
                 Ok(_) => {
                     log::debug!("[TaskHelper] map device memory success");
                     // FIXME: Record The Mapped Page.
+                    self.mapped_large_page.insert(vaddr, page);
                     return;
                 }
                 // Map page tbale if the fault is Error::FailedLookup
@@ -230,6 +235,7 @@ impl Sel4Task {
             vspace: self.vspace,
             mapped_pt: self.mapped_pt.clone(),
             mapped_page: self.mapped_page.clone(),
+            mapped_large_page: self.mapped_large_page.clone(),
             stack_bottom: self.stack_bottom,
         }
     }
@@ -293,6 +299,7 @@ pub fn build_kernel_thread(
         srv_ep,
         vspace,
         mapped_page,
+        BTreeMap::new(),
         fault_ep.1,
     );
 
