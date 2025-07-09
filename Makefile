@@ -60,6 +60,10 @@ qemu_cmd := \
 		-nographic \
 		-kernel $(image)
 
+debug_cmd := \
+	${qemu_cmd} \
+	-s -S
+
 testcases:
 	wget -qO- https://github.com/reL4team2/rel4-linux-kit/releases/download/toolchain/testcases.tgz | tar -zxf - -C .
 
@@ -83,6 +87,10 @@ disk_img: testcases support/vdso/vdso.so
 
 run: buld_img
 	$(qemu_cmd)
+	@rm $(image)
+
+debug: buld_img
+	$(debug_cmd)
 	@rm $(image)
 
 examples:
