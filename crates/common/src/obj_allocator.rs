@@ -170,6 +170,12 @@ impl ObjectAllocator {
         self.allocate_and_retyped_fixed_sized::<cap_type::Notification>()
     }
 
+    /// 申请一个大页
+    pub fn alloc_large_page(&self) -> LargePage {
+        self.allocate_and_retype(cap_type::LargePage::object_blueprint())
+            .cast()
+    }
+
     /// 申请多个页
     #[cfg(feature = "alloc")]
     #[inline]

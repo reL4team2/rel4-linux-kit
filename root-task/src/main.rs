@@ -12,7 +12,7 @@ mod utils;
 
 use alloc::vec::Vec;
 use common::{
-    config::{DEFAULT_CUSTOM_SLOT, DEFAULT_MEM_UNTYPED_SLOT, DEFAULT_MISC_UNTYPED_SLOT, LARGE_PAGE_SIZE, PAGE_SIZE, VIRTIO_MMIO_ADDR}, page::PhysPage, ObjectAllocator
+    config::{DEFAULT_CUSTOM_SLOT, DEFAULT_MEM_UNTYPED_SLOT, DEFAULT_MISC_UNTYPED_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR, ARCEOS_INIT_HEAP_START}, page::PhysPage, ObjectAllocator
 };
 use config::TASK_FILES;
 use include_bytes_aligned::include_bytes_aligned;
@@ -142,19 +142,6 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
             // }
         }
 
-        for (start, size) in t.heap {
-            // 申请多个大页
-            let pages_cap = OBJ_ALLOCATOR.alloc_large_pages(size / LARGE_PAGE_SIZE);
-            pages_cap.into_iter().enumerate().for_each(|(i, page)| {
-                debug_println!(
-                    "[RootTask] Mapping Heap {:#x} -> {:#x}",
-                    start + i * LARGE_PAGE_SIZE,
-                    page.frame_get_address().unwrap()
-                );
-                tasks[t_idx].map_large_page(start + i * LARGE_PAGE_SIZE, page);
-            });
-        }
-
         // FIXME: 将分配内存的逻辑写成一个通用的逻辑
         if t.name == "kernel-thread" {
             let (mem_cap, _) = mem_untypes.pop().unwrap();
@@ -166,6 +153,15 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         }
 
         if t.name.contains("arceos") {
+            // 分配一个大页给 arceos 作为初始化时堆空间, 2M 空间足够使用
+            let cap = OBJ_ALLOCATOR.alloc_large_page();
+            debug_println!(
+                "[RootTask] Mapping Heap {:#x} -> {:#x}",
+                ARCEOS_INIT_HEAP_START,
+                cap.frame_get_address().unwrap()
+            );
+            tasks[t_idx].map_large_page(ARCEOS_INIT_HEAP_START, cap);
+
             log::info!("Allocating untyped for arceos task: {}", t.name);
             let (mem_cap, _) = mem_untypes.pop().unwrap();
             tasks[t_idx]
