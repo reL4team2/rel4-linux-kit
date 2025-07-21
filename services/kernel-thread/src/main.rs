@@ -110,7 +110,8 @@ fn main() {
     }
 
     // test_task!("./pipe");
-    test_task!("busybox", "sh", "/init.sh");
+    test_task!("fputest.elf");
+    // test_task!("busybox", "sh", "/init.sh");
     // test_task!("busybox", "sh", "/iozone_testcode.sh");
     // test_task!("busybox", "sh", "/lmbench_testcode.sh");
     // test_task!("./libc-bench");

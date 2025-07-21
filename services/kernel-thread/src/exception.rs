@@ -10,7 +10,7 @@ use sel4::{
 };
 use spin::Lazy;
 
-use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_notification};
+use crate::{child_test::TASK_MAP, consts::task::{DEF_STACK_BOTTOM, DEF_STACK_TOP}, syscall::handle_syscall, utils::obj::alloc_notification};
 
 /// 全局通知
 ///
@@ -76,6 +76,9 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 pub fn handle_vmfault(tid: u64, vmfault: VmFault) {
     log::warn!("trigger fault: {:#x?}", vmfault);
     let vaddr = vmfault.addr() as usize / PAGE_SIZE * PAGE_SIZE;
+    if !(DEF_STACK_BOTTOM..DEF_STACK_TOP).contains(&vaddr) {
+        panic!("vmfault in stack area: {:#x?}", vmfault);
+    }
     let mut task_map = TASK_MAP.lock();
     let task = task_map.get_mut(&tid).unwrap();
     task.map_blank_page(vaddr);

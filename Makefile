@@ -66,7 +66,7 @@ testcases:
 support/vdso/vdso.so: support/vdso/vdso.so
 	make -C support/vdso
 
-disk_img: testcases support/vdso/vdso.so
+disk_img: testcases support/vdso/vdso.so examples
 	mkdir -p mount
 	dd if=/dev/zero of=mount.img bs=4M count=64
 	sync
@@ -77,6 +77,7 @@ disk_img: testcases support/vdso/vdso.so
 	sudo cp -r testcases/* mount/
 	sudo cp support/tests/init.sh mount/
 	sudo cp support/vdso/vdso.so mount/
+	sudo cp examples/linux-apps/build/* mount/
 	sync
 	sudo umount mount
 	sync
