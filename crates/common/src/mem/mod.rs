@@ -130,7 +130,7 @@ impl CapMemSet {
         self.alloc_fixed::<cap_type::Tcb>().into()
     }
 
-    /// 申请一个 [CNode]
+    /// 申请一个 [sel4::cap::CNode]
     #[inline]
     pub fn alloc_cnode(&mut self, size_bits: usize) -> Cap<cap_type::CNode> {
         self.alloc_variable::<cap_type::CNode>(size_bits).into()

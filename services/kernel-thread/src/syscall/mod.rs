@@ -24,7 +24,7 @@ use crate::child_test::ArcTask;
 pub type SysResult = Result<usize, Errno>;
 
 /// 处理系统调用
-/// - `task` [Sel4Task]   需要处理的任务
+/// - `task` Sel4Task   需要处理的任务
 /// - `ctx` [UserContext] 系统调用上下文，修改后需要恢复
 pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult {
     let id = Sysno::new(*ctx.gpr(8) as _);

@@ -1,6 +1,7 @@
 # export RUSTFLAGS = --cfg=uart_ipc --cfg=blk_ipc
 # export RUSTFLAGS = --cfg=uart_ipc
 export RUSTFLAGS := --check-cfg=cfg(uart_ipc) --check-cfg=cfg(blk_ipc) --check-cfg=cfg(fs_ipc) 
+export RUSTDOCFLAGS := $(RUSTFLAGS)
 
 include tools/autoconfig.mk
 
@@ -41,6 +42,9 @@ build:
 	cargo build $(CARGO_BUILD_ARGS) --workspace --exclude $(app_crate)
 #	cargo build $(CARGO_BUILD_ARGS) -p uart-thread -p test-demo
 	cargo build $(CARGO_BUILD_ARGS) -p $(app_crate)
+
+doc:
+	cargo doc 
 
 image := $(BUILD_DIR)/image.elf
 

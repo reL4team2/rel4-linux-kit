@@ -5,7 +5,7 @@ pub(super) fn init() {
     UART_IMPLS[0].lock().init();
 }
 
-/// 从 [UartService] 中读取一个字符 (u8)
+/// 从 UartService 中读取一个字符 (u8)
 ///
 /// 如果没有读取到任何的数，直接返回 [Option::None]
 #[inline]
