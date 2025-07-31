@@ -3,8 +3,7 @@ name: Deploy pages
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+
 permissions: 
   contents: write
 
@@ -39,6 +38,7 @@ jobs:
       run: make doc
     - name: Deploy to GitHub Pages
       uses: crazy-max/ghaction-github-pages@v4
+      if: ${{ github.ref == 'refs/heads/main' }} # Run only on the main branch
       with:
         target_branch: gh-pages
         build_dir: target/aarch64-sel4/doc
