@@ -10,7 +10,7 @@ use spin::{Mutex, once::Once};
 static SLOT_MANAGER: Mutex<SlotManager> = Mutex::new(SlotManager::empty());
 static SLOT_EDGE_HANDLER: Once<fn(LeafSlot)> = Once::new();
 
-/// 初始化 [SLOT_MANAGER]
+/// 初始化 SLOT_MANAGER
 ///
 /// - `empty_slots`  空白的 slot 范围
 pub fn init(empty_slots: Range<usize>) {

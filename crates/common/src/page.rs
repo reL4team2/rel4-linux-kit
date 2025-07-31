@@ -1,7 +1,7 @@
 //! 提供页表操作的结构和方法抽象
 //!
 //! 这里提供一个占位页，然后将 sel4 的 Granule Capability 进行封装，作为 [PhysPage] 结构，提供一系列方法，用于操作物理页。
-//! 需要使用的时候使用 [PhysPage::lock] 方法对 [PAGE_MAP_LOCK] 进行上锁，保证同时只有一个页表映射到空白占位页上，同获取一
+//! 需要使用的时候使用 [PhysPage::lock] 方法对 PAGE_MAP_LOCK 进行上锁，保证同时只有一个页表映射到空白占位页上，同获取一
 //! 个 [PhysPageLocker] 对象，然后在这个对象上进行读写操作。在 [PhysPageLocker] 对象销毁的时候自动释放所占用的空白页。
 #![deny(missing_docs)]
 #![allow(static_mut_refs)]

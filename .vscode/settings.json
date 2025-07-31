@@ -5,5 +5,6 @@
   "rust-analyzer.check.allTargets": false,
   "rust-analyzer.check.extraEnv": {
     "RUSTFLAGS": "--check-cfg=cfg(uart_ipc) --check-cfg=cfg(fs_ipc) --check-cfg=cfg(blk_ipc)"
-  }
+  },
+  "editor.formatOnSave": true
 }

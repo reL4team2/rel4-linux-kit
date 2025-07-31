@@ -60,7 +60,7 @@ pub fn sys_null(sys: isize) {
 /// # 参数
 ///
 /// - `sys` reply 使用的系统调用号
-/// - `info` 回复的时候使用的 [seL4_MessageInfo]
+/// - `info` 回复的时候使用的 [sel4::sys::seL4_MessageInfo]
 /// - `mrx` 回复使用的消息
 #[cfg(not(feature = "mcs"))]
 pub fn sys_reply(
