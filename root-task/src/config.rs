@@ -50,8 +50,8 @@ macro_rules! service {
     };
 }
 
-#[cfg(clippy)]
+#[cfg(any(clippy, doc))]
 pub const TASK_FILES: &[KernelServices] = &[];
 
-#[cfg(not(clippy))]
+#[cfg(not(any(clippy, doc)))]
 include!("autoconfig.rs");
