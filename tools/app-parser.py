@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from os import path
 import sys
-import tomllib
+import tomli as tomllib
 from typing import List
 
 # 一个简单的图解析算法：

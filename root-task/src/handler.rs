@@ -1,7 +1,7 @@
 use core::sync::atomic::AtomicUsize;
 
 use common::{config::PAGE_SIZE, page::PhysPage, read_types, reply_with, root::RootEvent};
-use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer};
+use sel4::{CapRights, Fault, IpcBuffer, MessageInfoBuilder, init_thread::slot, with_ipc_buffer, UserContext};
 use sel4_kit::slot_manager::LeafSlot;
 
 use crate::{OBJ_ALLOCATOR, RootTaskHandler};
@@ -21,6 +21,20 @@ impl RootTaskHandler {
         let swap_slot = OBJ_ALLOCATOR.allocate_slot();
         loop {
             let (message, badge) = self.fault_ep.recv(());
+            if badge == u64::MAX {
+                log::info!("[RootTask] Resuming all timer tasks");
+                // iter all btreemap, get the tcb and resume it
+                for (fault_ip, tcb) in &self.timer_tasks {
+                    let mut ctx = tcb.tcb_read_all_registers(true).unwrap();
+                    let pc = *ctx.pc() as u64;
+                    *(ctx.pc_mut()) = *fault_ip as u64;
+                    *(ctx.gpr_mut(0)) = pc;
+                    log::info!("[RootTask] Resuming timer task pc: {:#x}, fault_ip: {:#x}", pc, fault_ip);
+                    tcb.tcb_write_all_registers(true,&mut ctx).unwrap();
+                }
+                crate::timer::timer_ack(core::time::Duration::from_millis(1000));
+                continue;
+            }
             self.badge = badge;
             let msg_label = match RootEvent::try_from(message.label()) {
                 Ok(x) => x,
@@ -78,27 +92,32 @@ impl RootTaskHandler {
                     }
                 }
                 RootEvent::TranslateAddr => {
-                    let addr = read_types!(ib, usize);
+                    let fault_ip = read_types!(ib, usize);
+                    log::info!("[RootTask] Append timer handler task badge: {:#x}, fault_ip: {:#x}", badge, fault_ip);
+                    // self.tasks[badge as usize].set_fault_ip(fault_ip, false);
+                    self.timer_tasks.insert(fault_ip, self.tasks[badge as usize].tcb);
+                    reply_with!(ib, 0);
+                    // let addr = read_types!(ib, usize);
 
-                    if let Some(phys_addr) = self.tasks[badge as usize]
-                        .mapped_page
-                        .get(&(addr & !0xfff))
-                        .map(|x| x.addr())
-                    {
-                        reply_with!(ib, phys_addr + addr % 0x1000);
-                    } else if let Some(phys_addr) = self.tasks[badge as usize]
-                        .mapped_large_page
-                        .get(&(addr & !0xfff))
-                        .map(|c| c.frame_get_address().expect("can't get address of the physical page"))
-                    {
-                        reply_with!(ib, phys_addr + addr % 0x200000);
-                    } else {
-                        log::error!(
-                            "[RootTask] TranslateAddr failed: {:#x} not mapped",
-                            addr
-                        );
-                        reply_with!(ib, 0);
-                    }
+                    // if let Some(phys_addr) = self.tasks[badge as usize]
+                    //     .mapped_page
+                    //     .get(&(addr & !0xfff))
+                    //     .map(|x| x.addr())
+                    // {
+                    //     reply_with!(ib, phys_addr + addr % 0x1000);
+                    // } else if let Some(phys_addr) = self.tasks[badge as usize]
+                    //     .mapped_large_page
+                    //     .get(&(addr & !0xfff))
+                    //     .map(|c| c.frame_get_address().expect("can't get address of the physical page"))
+                    // {
+                    //     reply_with!(ib, phys_addr + addr % 0x200000);
+                    // } else {
+                    //     log::error!(
+                    //         "[RootTask] TranslateAddr failed: {:#x} not mapped",
+                    //         addr
+                    //     );
+                    //     reply_with!(ib, 0);
+                    // }
                 }
                 RootEvent::FindService => {
                     let name = read_types!(ib, &str);
@@ -163,6 +182,11 @@ impl RootTaskHandler {
                     LeafSlot::new(0).delete().unwrap();
                 }
                 RootEvent::Shutdown => sel4_kit::arch::shutdown(),
+                RootEvent::AppendTimerTask => {
+                    let fault_ip = read_types!(ib, usize);
+                    log::debug!("[RootTask] Append timer handler task badge: {:#x}, fault_ip: {:#x}", badge, fault_ip);
+                    // self.timer_tasks.push(self.tasks[badge as usize].tcb);
+                }
             }
         }
     }

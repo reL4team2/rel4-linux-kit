@@ -17,7 +17,7 @@ use common::{
 };
 use object::{File, Object};
 use sel4::{
-    AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth,
+    AbsoluteCPtr, CNodeCapData, CPtr, CapRights, Error, HasCPtrWithDepth, UserContext,
     VmAttributes as VMAttributes,
     cap::{self, Endpoint, Granule, Notification, SmallPage},
     debug_println,

@@ -20,6 +20,7 @@ pub enum RootEvent {
     CreateChannel,
     JoinChannel,
     AllocUntyped,
+    AppendTimerTask,
 }
 
 macro_rules! call_ep {
@@ -147,3 +148,6 @@ pub fn shutdown() -> ! {
     );
     unreachable!()
 }
+
+#[generate_ipc_send(label = RootEvent::AppendTimerTask)]
+pub fn append_timer_task(fault_ip: usize) -> usize {}

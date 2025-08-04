@@ -9,8 +9,10 @@ mod cspace;
 mod handler;
 mod task;
 mod utils;
+mod timer;
 
 use alloc::vec::Vec;
+use alloc::collections::BTreeMap;
 use common::{
     config::{DEFAULT_CUSTOM_SLOT, DEFAULT_MEM_UNTYPED_SLOT, DEFAULT_MISC_UNTYPED_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR, ARCEOS_INIT_HEAP_START}, page::PhysPage, ObjectAllocator
 };
@@ -18,7 +20,7 @@ use config::TASK_FILES;
 use include_bytes_aligned::include_bytes_aligned;
 use sel4::{
     Cap, CapRights, ObjectBlueprintArm, UntypedDesc,
-    cap::{LargePage, SmallPage, Untyped},
+    cap::{self, LargePage, SmallPage, Untyped, Notification},
     cap_type::Endpoint,
     debug_println,
     init_thread::slot,
@@ -27,9 +29,13 @@ use sel4::{
 use sel4_kit::slot_manager::LeafSlot;
 use sel4_root_task::{Never, root_task};
 use task::*;
+use spin::Lazy;
 
 /// Object 分配器，可以用来申请 Capability
 pub(crate) static OBJ_ALLOCATOR: ObjectAllocator = ObjectAllocator::empty();
+pub static GLOBAL_NOTIFY: Lazy<Notification> = Lazy::new(|| {
+    OBJ_ALLOCATOR.alloc_notification()
+});
 
 #[root_task(heap_size = 0x12_0000)]
 fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
@@ -185,7 +191,11 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
         badge: 0,
         channels: Vec::new(),
         untyped: mem_untypes,
+        timer_tasks: BTreeMap::new(),
     };
+    
+    timer::init();
+    // timer::timer(core::time::Duration::from_millis(1000));
     with_ipc_buffer_mut(|ib| root_task_handler.waiting_and_handle(ib))
 }
 
@@ -195,4 +205,5 @@ pub struct RootTaskHandler {
     badge: u64,
     channels: Vec<(usize, Vec<SmallPage>)>,
     untyped: Vec<(Cap<sel4::cap_type::Untyped>, UntypedDesc)>,
+    timer_tasks: BTreeMap<usize, cap::Tcb>,
 }
