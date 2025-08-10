@@ -4,13 +4,16 @@
 //! 为传统宏内核应用。目前传统宏内核应用的 syscall 需要预处理，将 syscall 指令
 //! 更换为 `0xdeadbeef` 指令，这样在异常处理时可以区分用户异常和系统调用。且不用
 //! 为宏内核支持引入多余的部件。
+use alloc::sync::Arc;
 use common::config::PAGE_SIZE;
 use sel4::{
     Fault, MessageInfo, UserException, VmFault, cap::Notification, init_thread, with_ipc_buffer,
 };
 use spin::Lazy;
 
-use crate::{child_test::TASK_MAP, syscall::handle_syscall, utils::obj::alloc_notification};
+use crate::{
+    child_test::TASK_MAP, syscall::handle_syscall, task::Sel4Task, utils::obj::alloc_notification,
+};
 
 /// 全局通知
 ///
@@ -32,41 +35,50 @@ pub async fn handle_user_exception(tid: u64, exception: UserException) {
 
     // 如果是某个特定的指令，则说明此次调用是系统调用
     if Some(0xdeadbeef) == ins {
-        let mut user_ctx = task
-            .tcb
-            .tcb_read_all_registers(true)
-            .expect("can't read task context");
-        let result = handle_syscall(&task, &mut user_ctx).await;
-        debug!("\t SySCall Ret: {:x?}", result);
-        let ret_v = match result {
-            Ok(v) => v,
-            Err(e) => -(e.into_raw() as isize) as usize,
-        };
-
-        *user_ctx.gpr_mut(0) = ret_v as _;
-        *user_ctx.pc_mut() += 4;
-
-        if task.exit.lock().is_some() {
-            return;
-        }
-
-        // 写入返回值信息
-        task.tcb
-            .tcb_write_all_registers(false, &mut user_ctx)
-            .unwrap();
-
-        // 检查信号
-        task.check_signal(&mut user_ctx);
-
-        if task.exit.lock().is_some() {
-            return;
-        }
-
-        // 恢复任务运行状态
-        task.tcb.tcb_resume().unwrap();
+        // 8 表示使用 x8 寄存器作为 syscall number
+        // handle_user_fake_syscall(task, 8).await;
+        panic!("err")
     } else {
         log::debug!("trigger fault: {:#x?}", exception);
     }
+}
+
+/// 处理用户态系统调用
+///
+/// 模拟 linux 系统调用并且进行处理
+pub async fn handle_user_fake_syscall(task: Arc<Sel4Task>, number: usize) {
+    let mut user_ctx = task
+        .tcb
+        .tcb_read_all_registers(true)
+        .expect("can't read task context");
+    let result = handle_syscall(&task, &mut user_ctx, number).await;
+    debug!("\t SySCall Ret: {:x?}", result);
+    let ret_v = match result {
+        Ok(v) => v,
+        Err(e) => -(e.into_raw() as isize) as usize,
+    };
+
+    *user_ctx.gpr_mut(0) = ret_v as _;
+    *user_ctx.pc_mut() += 4;
+
+    if task.exit.lock().is_some() {
+        return;
+    }
+
+    // 写入返回值信息
+    task.tcb
+        .tcb_write_all_registers(false, &mut user_ctx)
+        .unwrap();
+
+    // 检查信号
+    task.check_signal(&mut user_ctx);
+
+    if task.exit.lock().is_some() {
+        return;
+    }
+
+    // 恢复任务运行状态
+    task.tcb.tcb_resume().unwrap();
 }
 
 /// 处理内存异常问题
@@ -132,6 +144,11 @@ pub async fn waiting_and_handle(tid: u64, message: MessageInfo) {
     match fault {
         Fault::VmFault(vmfault) => handle_vmfault(tid, vmfault),
         Fault::UserException(ue) => handle_user_exception(tid, ue).await,
+        Fault::UnknownSyscall(_) => {
+            let task = TASK_MAP.lock().get(&tid).unwrap().clone();
+            // 7 表示 使用 x7 寄存器作为 syscall number
+            handle_user_fake_syscall(task, 7).await
+        }
         // Fault::VCpuFault(vcf) => handle_vcpu_fault(tid, vcf),
         _ => {
             log::error!("Unhandled fault: {:#x?}", fault);

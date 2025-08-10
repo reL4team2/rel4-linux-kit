@@ -26,8 +26,8 @@ pub type SysResult = Result<usize, Errno>;
 /// 处理系统调用
 /// - `task` Sel4Task   需要处理的任务
 /// - `ctx` [UserContext] 系统调用上下文，修改后需要恢复
-pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult {
-    let id = Sysno::new(*ctx.gpr(8) as _);
+pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext, number: usize) -> SysResult {
+    let id = Sysno::new(*ctx.gpr(number) as _);
     let a0 = *ctx.gpr(0) as usize;
     let a1 = *ctx.gpr(1) as usize;
     let a2 = *ctx.gpr(2) as usize;
@@ -111,6 +111,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext) -> SysResult 
             log::warn!("get_robust_list not implementation");
             Ok(0)
         }
+        Sysno::pwritev2 | Sysno::preadv2 => Err(Errno::ENOTSUPP),
         Sysno::getuid | Sysno::getgid | Sysno::geteuid | Sysno::getegid => Ok(0),
         _ => Err(Errno::EPERM),
     }

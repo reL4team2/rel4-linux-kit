@@ -111,6 +111,7 @@ fn main() {
 
     // test_task!("./pipe");
     test_task!("busybox", "sh", "/init.sh");
+    // test_task!("./runtest.exe", "-w", "entry-static.exe", "fdopen");
     // test_task!("busybox", "sh", "/iozone_testcode.sh");
     // test_task!("busybox", "sh", "/lmbench_testcode.sh");
     // test_task!("./libc-bench");
