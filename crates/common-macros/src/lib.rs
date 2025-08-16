@@ -7,7 +7,7 @@ mod utils;
 use darling::{Error, FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Expr, Ident, ItemFn, ItemImpl, ItemTrait, parse_quote};
+use syn::{Expr, Ident, ItemFn, ItemImpl, ItemTrait, parse_quote, parse_macro_input};
 
 #[derive(Debug, FromMeta)]
 struct MacroArgs {
@@ -149,4 +149,29 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     }
     .into()
+}
+
+/// thread entry point macro for seL4 tasks.
+#[proc_macro_attribute]
+pub fn sel4_thread_entry(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemFn);
+    let vis = &input.vis;
+    let sig = &input.sig;
+    let block = &input.block;
+    let output = quote! {
+        #vis #sig {
+            // setup ipcbuffer
+            unsafe {
+                let mut ipc_buffer_addr: usize = 0;
+                core::arch::asm!{
+                    "mov {0}, x8",
+                    out(reg) ipc_buffer_addr,
+                };
+                sel4::set_ipc_buffer((ipc_buffer_addr as *mut sel4::IpcBuffer).as_mut().unwrap());
+            }
+            #block
+        }
+    };
+
+    TokenStream::from(output)
 }
