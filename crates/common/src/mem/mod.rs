@@ -119,4 +119,9 @@ impl CapMemSet {
     pub fn alloc_cnode(&mut self, size_bits: usize) -> Cap<cap_type::CNode> {
         self.alloc_variable::<cap_type::CNode>(size_bits).into()
     }
+
+    #[inline]
+    pub fn alloc_notification(&mut self) -> Cap<cap_type::Notification> {
+        self.alloc_fixed::<cap_type::Notification>().into()
+    }
 }

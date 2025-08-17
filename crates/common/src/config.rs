@@ -41,7 +41,7 @@ pub const VIRTIO_NET_IRQ: usize = 0x2f + 0x20;
 pub const DMA_ADDR_START: usize = 0x1_0000_3000;
 
 /// 默认的堆的起始地址
-pub const ARCEOS_INIT_HEAP_START: usize = 0x2000_0000;
+pub const ARCEOS_INIT_HEAP_START: usize = 0x800_0000;
 
 /// 默认 CSpace 一级占用的 bits
 pub const CNODE_RADIX_BITS: usize = 12;
