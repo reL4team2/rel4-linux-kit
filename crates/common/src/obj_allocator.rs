@@ -1,8 +1,9 @@
 use sel4::{
     Cap, CapTypeForObjectOfFixedSize,
-    cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VSpace},
+    cap::{CNode, Endpoint, Granule, Notification, PT, Tcb, Untyped, VCpu, VSpace},
     cap_type::{self},
     init_thread::slot,
+    sel4_cfg,
 };
 use sel4_kit::slot_manager::LeafSlot;
 use spin::Mutex;
@@ -163,6 +164,13 @@ impl ObjectAllocator {
     #[inline]
     pub fn alloc_tcb(&self) -> Tcb {
         self.allocate_and_retyped_fixed_sized::<cap_type::Tcb>()
+    }
+
+    /// 申请一个虚拟 CPU [VCpu]
+    #[inline]
+    #[sel4_cfg(ARM_HYPERVISOR_SUPPORT)]
+    pub fn alloc_vcpu(&self) -> VCpu {
+        self.allocate_and_retyped_fixed_sized::<cap_type::VCpu>()
     }
 
     /// 申请一个 Notification [Notification]

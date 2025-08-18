@@ -1327,6 +1327,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "vmm"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "include_bytes_aligned",
+ "log",
+ "object",
+ "sel4",
+ "sel4-kit",
+ "sel4-root-task",
+ "sel4-sync",
+ "serde",
+ "spin",
+ "toml",
+ "xmas-elf",
+]
+
+[[package]]
 name = "windows-sys"
 version = "0.59.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

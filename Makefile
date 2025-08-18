@@ -15,7 +15,11 @@ loader_artifacts_dir := $(SEL4_PREFIX)/bin
 loader := $(loader_artifacts_dir)/sel4-kernel-loader
 loader_cli := sel4-kernel-loader-add-payload
 
+ifeq ($(VMM), y)
+app_crate := vmm	
+else
 app_crate := root-task
+endif
 app := $(BUILD_DIR)/$(app_crate)
 
 qemu_args := -drive file=mount.img,if=none,format=raw,id=x0
@@ -104,5 +108,6 @@ clippy:
 
 cloc:
 	cloc . --not-match-d=.env --not-match-d=target/
+
 
 .PHONY: run clean examples

@@ -3,6 +3,7 @@
 resolver = "2"
 
 members = [
+  "vmm",
   "root-task",
   "crates/common",
   "crates/common-macros",
