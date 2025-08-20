@@ -167,6 +167,21 @@ pub(super) async fn sys_read(
     Ok(rlen)
 }
 
+pub(super) fn sys_readlinkat(
+    task: &Sel4Task,
+    dirfd: isize,
+    path_ptr: *const u8,
+    bufp: *mut u8,
+    bufsize: usize,
+) -> SysResult {
+    let path = task.fd_resolve(dirfd, path_ptr)?;
+    let file = File::open(path, OpenFlags::RDONLY)?;
+    let mut buffer = vec![0u8; bufsize];
+    let rlen = file.read(&mut buffer)?;
+    task.write_bytes(bufp as usize, &buffer[..rlen]);
+    Ok(rlen)
+}
+
 pub(super) async fn sys_readv(
     task: &Sel4Task,
     fd: usize,

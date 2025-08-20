@@ -38,5 +38,5 @@ echo Hello World!
 ./busybox sh lua_testcode.sh
 ./busybox sh iozone_testcode.sh
 ./libc-bench
-# ./busybox sh lmbench_testcode.sh
+./busybox sh lmbench_testcode.sh
 echo Exec Done

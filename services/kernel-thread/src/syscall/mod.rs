@@ -111,6 +111,7 @@ pub async fn handle_syscall(task: &ArcTask, ctx: &mut UserContext, number: usize
             log::warn!("get_robust_list not implementation");
             Ok(0)
         }
+        Sysno::readlinkat => sys_readlinkat(task, a0 as _, a1 as _, a2 as _, a3),
         Sysno::pwritev2 | Sysno::preadv2 => Err(Errno::ENOTSUPP),
         Sysno::getuid | Sysno::getgid | Sysno::geteuid | Sysno::getegid => Ok(0),
         _ => Err(Errno::EPERM),
