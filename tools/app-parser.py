@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from os import path
-import sys
+import os
 import tomllib
+import argparse
 from typing import List
 
 # 一个简单的图解析算法：
@@ -12,6 +13,10 @@ from typing import List
 #      编译 test-demo 时添加 uart-ipc，也许可以使用 cfg
 
 FILE_DIR = path.dirname(path.realpath(__file__))
+
+parser = argparse.ArgumentParser(description="app parser")
+parser.add_argument("--config", "-c", type=str, required=True, help="config file path")
+parser.add_argument("--single", "-s", action="store_true", help="select all tasks")
 
 
 class Task:
@@ -84,7 +89,8 @@ def parse_config(config):
     for task in config["tasks"]:
         task_obj = Task(
             task["name"],
-            task["file"],
+            # current dir relative path
+            os.path.join(os.path.dirname(os.path.abspath(args.config)), task["file"]),
             task.get("mem", []),
             task.get("dma", []),
             task.get("deps", []),
@@ -132,17 +138,16 @@ def write_to_file(file):
 
 
 if __name__ == "__main__":
-    file = open("apps.toml", "rb")
+    args = parser.parse_args()
+
+    file = open(args.config, "rb")
     data = tomllib.load(file)
     parse_config(data)
-    targets = sys.argv[1:]
-    if len(targets) == 0:
-        print("need at least one target to handle")
-        exit(0)
-    for selected in targets:
-        tasks[selected].select()
-        if tasks[selected].in_degree <= 1:
-            tasks[selected].in_degree += 1
+
+    for t in tasks.values():
+        t.select()
+        if t.in_degree <= 1:
+            t.in_degree += 1
     print(get_all_standalone_tasks())
     write_to_file(path.join(FILE_DIR, "../root-task/src/autoconfig.rs"))
 

@@ -9,7 +9,7 @@ TARGET := aarch64-sel4
 QEMU_LOG ?= n
 
 # sel4 installation directory
-SEL4_PREFIX :=  $(realpath .)/.env/seL4
+# SEL4_PREFIX :=  $(realpath .)/.env/seL4
 loader_artifacts_dir := $(SEL4_PREFIX)/bin
 loader := $(loader_artifacts_dir)/sel4-kernel-loader
 loader_cli := sel4-kernel-loader-add-payload

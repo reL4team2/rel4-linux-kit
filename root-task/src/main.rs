@@ -12,7 +12,12 @@ mod utils;
 
 use alloc::vec::Vec;
 use common::{
-    config::{DEFAULT_CUSTOM_SLOT, DEFAULT_MEM_UNTYPED_SLOT, DEFAULT_MISC_UNTYPED_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR, ARCEOS_INIT_HEAP_START}, page::PhysPage, ObjectAllocator
+    ObjectAllocator,
+    config::{
+        ARCEOS_INIT_HEAP_START, DEFAULT_CUSTOM_SLOT, DEFAULT_MEM_UNTYPED_SLOT,
+        DEFAULT_MISC_UNTYPED_SLOT, PAGE_SIZE, VIRTIO_MMIO_ADDR,
+    },
+    page::PhysPage,
 };
 use config::TASK_FILES;
 use include_bytes_aligned::include_bytes_aligned;
@@ -169,7 +174,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                 .absolute_cptr_from_bits_with_depth(DEFAULT_MEM_UNTYPED_SLOT, 64)
                 .copy(&LeafSlot::from_cap(mem_cap).abs_cptr(), CapRights::all())
                 .unwrap();
-            let misc_cap = OBJ_ALLOCATOR.alloc_untyped(12);
+            let misc_cap = OBJ_ALLOCATOR.alloc_untyped(24);
             tasks[t_idx]
                 .cnode
                 .absolute_cptr_from_bits_with_depth(DEFAULT_MISC_UNTYPED_SLOT, 64)
