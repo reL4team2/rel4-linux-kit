@@ -55,7 +55,7 @@ buld_img: build $(loader)
 qemu_cmd := \
 	qemu-system-aarch64 \
 		$(qemu_args) \
-		-machine virt,virtualization=on -cpu cortex-a57 -m size=1G \
+		-machine virt,virtualization=on -cpu cortex-a57 -m size=1G -smp 4 \
 		-serial mon:stdio \
 		-nographic \
 		-kernel $(image)

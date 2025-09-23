@@ -17,6 +17,7 @@ FILE_DIR = path.dirname(path.realpath(__file__))
 parser = argparse.ArgumentParser(description="app parser")
 parser.add_argument("--config", "-c", type=str, required=True, help="config file path")
 parser.add_argument("--single", "-s", action="store_true", help="select all tasks")
+parser.add_argument("--tasks", "-t", nargs='+', help="selected tasks", type=str)
 
 
 class Task:
@@ -144,10 +145,17 @@ if __name__ == "__main__":
     data = tomllib.load(file)
     parse_config(data)
 
-    for t in tasks.values():
-        t.select()
-        if t.in_degree <= 1:
-            t.in_degree += 1
+    if args.single:
+        for t in tasks.values():
+            t.select()
+            if t.in_degree <= 1:
+                t.in_degree += 1
+    else:
+        for selected in args.tasks:
+            tasks[selected].select()
+            if tasks[selected].in_degree <= 1:
+                tasks[selected].in_degree += 1
+
     print(get_all_standalone_tasks())
     write_to_file(path.join(FILE_DIR, "../root-task/src/autoconfig.rs"))
 
