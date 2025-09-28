@@ -174,7 +174,7 @@ fn main(bootinfo: &sel4::BootInfoPtr) -> sel4::Result<Never> {
                 .absolute_cptr_from_bits_with_depth(DEFAULT_MEM_UNTYPED_SLOT, 64)
                 .copy(&LeafSlot::from_cap(mem_cap).abs_cptr(), CapRights::all())
                 .unwrap();
-            let misc_cap = OBJ_ALLOCATOR.alloc_untyped(24);
+            let (misc_cap, _) = mem_untypes.pop().unwrap();
             tasks[t_idx]
                 .cnode
                 .absolute_cptr_from_bits_with_depth(DEFAULT_MISC_UNTYPED_SLOT, 64)

@@ -3,7 +3,7 @@ use core::ops::Range;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use common::{ObjectAllocator, config::PAGE_SIZE, page::PhysPage};
 use object::{
-    Object, ObjectSegment, SegmentFlags,
+    Object, ObjectSegment, ObjectSymbol, SegmentFlags,
     elf::{PF_R, PF_W, PF_X},
 };
 use sel4::{UntypedDesc, cap::Untyped};
@@ -112,11 +112,16 @@ pub fn map_image<'a>(
         .collect::<Vec<(sel4::cap::Granule, sel4::CapRightsBuilder)>>();
 
     for seg in image.segments() {
+        let mut segment_addr = usize::try_from(seg.address()).unwrap();
+        let mut segment_size = usize::try_from(seg.size()).unwrap();
+
         if seg.address() == 0 {
-            continue;
+            // add percpu area
+            let percpu_start = image.symbol_by_name("_percpu_start").unwrap().address() as usize;
+            let percpu_end = image.symbol_by_name("_percpu_end").unwrap().address() as usize;
+            segment_addr = percpu_start;
+            segment_size = percpu_end - percpu_start;
         }
-        let segment_addr = usize::try_from(seg.address()).unwrap();
-        let segment_size = usize::try_from(seg.size()).unwrap();
         let segment_footprint =
             coarsen_footprint(&(segment_addr..(segment_addr + segment_size)), PAGE_SIZE);
         let num_pages_spanned_by_segment = segment_footprint.len() / PAGE_SIZE;
