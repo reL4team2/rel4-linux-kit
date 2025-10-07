@@ -68,7 +68,8 @@ class Task:
         return ret
 
 
-tasks: List[Task] = {}
+# tasks: List[Task] = {}
+tasks: dict[str, Task] = {}
 
 
 def get_all_standalone_tasks():
@@ -131,12 +132,21 @@ def write_to_file(file):
         f.write(output)
         f.close()
 
+def parse_selected(file):
+    selected = tomllib.load(open(file, "rb"))
+    selected = selected.get("module-selected", [])
+    return selected
 
 if __name__ == "__main__":
     file = open("apps.toml", "rb")
     data = tomllib.load(file)
     parse_config(data)
-    targets = sys.argv[1:]
+    if len(sys.argv) < 2:
+        print("pass the config-select file, pls")
+        exit(0)
+    # targets = sys.argv[1:]
+    select_file = sys.argv[1]
+    targets = parse_selected(select_file)
     if len(targets) == 0:
         print("need at least one target to handle")
         exit(0)

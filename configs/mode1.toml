@@ -1,0 +1,5 @@
+module-selected = [
+  "kernel-thread",
+  "uart-thread",
+  "block-thread"
+]
