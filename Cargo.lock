@@ -44,6 +44,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
+name = "axplat-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f90dfaee06a112fe4f810c60af1a86bc080af2172185b491cacc307b84dff748"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -164,12 +175,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "const-str"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "451d0640545a0553814b4c646eb549343561618838e9b42495f466131fe3ad49"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca741a962e1b0bff6d724a1a0958b686406e853bb14061f218562e1896f95e6"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "crate_interface"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70272a03a2cef15589bac05d3d15c023752f5f8f2da8be977d983a9d9e6250fb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -456,7 +484,7 @@ dependencies = [
  "libc-core",
  "log",
  "lwext4-thread",
- "memory_addr",
+ "memory_addr 0.3.1",
  "num_enum",
  "object",
  "sel4",
@@ -470,6 +498,26 @@ dependencies = [
  "uart-thread",
  "vfscore",
  "zerocopy 0.8.25",
+]
+
+[[package]]
+name = "kernel_guard"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "307e6be468f3d6b6d895e191f63c11602e4e76575ecca68325d8c8dbebe2870e"
+dependencies = [
+ "cfg-if",
+ "crate_interface",
+]
+
+[[package]]
+name = "kspin"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d841fd3aeaa9a55871068f5c3ce48497a6dbcf14e20ca7784a9f68bfdb4c825"
+dependencies = [
+ "cfg-if",
+ "kernel_guard",
 ]
 
 [[package]]
@@ -578,6 +626,12 @@ name = "memory_addr"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f769efcf10b9dfb4c913bebb409cda77b1a3f072b249bf5465e250bcb30eb49"
+
+[[package]]
+name = "memory_addr"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d4054cba279515fa87761b101d857333ce06391dbe8f18a11347204a7111416"
 
 [[package]]
 name = "minimal-lexical"
@@ -905,6 +959,15 @@ version = "0.1.0"
 source = "git+https://github.com/seL4/rust-sel4?rev=5b9ebfd#5b9ebfd0a3a9805f28cc9222cd558e8d56a3919d"
 
 [[package]]
+name = "sel4-if"
+version = "0.1.0"
+dependencies = [
+ "axplat-macros",
+ "const-str",
+ "crate_interface",
+]
+
+[[package]]
 name = "sel4-immediate-sync-once-cell"
 version = "0.1.0"
 source = "git+https://github.com/seL4/rust-sel4?rev=5b9ebfd#5b9ebfd0a3a9805f28cc9222cd558e8d56a3919d"
@@ -932,6 +995,23 @@ source = "git+https://github.com/seL4/rust-sel4?rev=5b9ebfd#5b9ebfd0a3a9805f28cc
 dependencies = [
  "lock_api",
  "log",
+]
+
+[[package]]
+name = "sel4-oskit"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "common-macros",
+ "kspin",
+ "linkme",
+ "log",
+ "memory_addr 0.4.0",
+ "num_enum",
+ "sel4",
+ "sel4-kit",
+ "spin",
+ "zerocopy 0.8.25",
 ]
 
 [[package]]

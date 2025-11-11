@@ -1,0 +1,22 @@
+[package]
+name = "sel4-oskit"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+default = ["alloc"]
+alloc = ["common/alloc", "sel4-kit/alloc"]
+
+[dependencies]
+kspin = "0.1"
+memory_addr = "0.4"
+log = "0.4"
+num_enum = { version = "0.7.3", default-features = false }
+zerocopy = { version = "0.8.20", default-features = false }
+linkme = "0.3"
+
+sel4-kit = { workspace = true }
+common = { workspace = true }
+common-macros = { workspace = true }
+sel4 = { workspace = true }
+spin = { workspace = true }

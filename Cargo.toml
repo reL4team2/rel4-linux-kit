@@ -14,7 +14,7 @@ members = [
   "services/uart-thread",
   "services/kernel-thread",
   "tasks/simple-cli",
-  "tasks/test-demo",
+  "tasks/test-demo", "crates/sel4-if", "crates/sel4-oskit",
 ]
 
 [workspace.package]

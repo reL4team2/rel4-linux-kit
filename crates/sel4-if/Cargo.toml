@@ -1,0 +1,12 @@
+[package]
+name = "sel4-if"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+irq = []
+
+[dependencies]
+axplat-macros = "0.1"
+crate_interface = "0.1"
+const-str = "0.6.2"
