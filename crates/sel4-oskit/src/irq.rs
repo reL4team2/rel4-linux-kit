@@ -55,7 +55,7 @@ impl<'a, const N: usize> IrqManager<'a, N> {
         irq_slot.cap().irq_handler_ack()?;
 
         // 将 irq slot 的序号存到原子变量中
-        Ok(self.irq_caps[idx]
+        Ok(self.irq_caps[irq]
             .compare_exchange(0, irq_slot.raw(), Ordering::Acquire, Ordering::Relaxed)
             .is_ok())
     }

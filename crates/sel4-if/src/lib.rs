@@ -48,6 +48,9 @@ pub trait Sel4TaskIf {
 
     /// Get Current Sel4 Task ID
     fn sel4_task_id() -> usize;
+
+    /// Set Current Sel4 Task ID
+    fn set_sel4_task_id(tid: usize);
 }
 
 /// 事件处理接口
