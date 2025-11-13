@@ -2,12 +2,20 @@ name: Qemu Test
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      artifact_name:
+        required: true
+        type: string
   push:
 jobs:
   test-build:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        repository: 'rel4team2/rel4-linux-kit'
+        ref: ${{ github.event_name == 'workflow_call' && github.ref || 'main' }}
     - uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: nightly-2024-12-25
@@ -22,10 +30,18 @@ jobs:
         packages: |
           lief
           capstone
+    - run: mkdir -p .env
+    - name: download-sel4
+      if: ${{ github.event_name == 'workflow_call' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: .env/seL4
+    - name: download-sel4
+      if: ${{ github.event_name != 'workflow_call' }}  
+      run: wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
     - name: Build Environment
       run: |
-        mkdir -p .env
-        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
         wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
         mkdir -p testcases
         ./tools/modify-multi.py .env/aarch64 testcases
