@@ -10,7 +10,10 @@ TARGET := aarch64-sel4
 QEMU_LOG ?= n
 
 # sel4 installation directory
-SEL4_PREFIX :=  $(realpath .)/.env/seL4
+export SEL4_PREFIX :=  $(realpath .)/.env/seL4
+
+RUST_SEL4_TOOLS_TOOLCHAIN=nightly-2024-08-01
+RUST_SEL4_TOOLS_TARGET=aarch64-unknown-none-softfloat
 loader_artifacts_dir := $(SEL4_PREFIX)/bin
 loader := $(loader_artifacts_dir)/sel4-kernel-loader
 loader_cli := sel4-kernel-loader-add-payload
@@ -48,8 +51,18 @@ doc:
 
 image := $(BUILD_DIR)/image.elf
 
+$(loader):
+	rustup target add $(RUST_SEL4_TOOLS_TARGET) --toolchain $(RUST_SEL4_TOOLS_TOOLCHAIN)
+	rustup component add rust-src --toolchain $(RUST_SEL4_TOOLS_TOOLCHAIN) --target $(RUST_SEL4_TOOLS_TARGET)
+	CC_aarch64_unknown_none_softfloat=aarch64-linux-gnu-gcc  rustup run $(RUST_SEL4_TOOLS_TOOLCHAIN) cargo install -Z build-std=core,compiler_builtins -Z build-std-features=compiler-builtins-mem \
+		--git https://github.com/reL4team2/rust-sel4.git --rev 642b58d807c5e5fc22f0c15d1467d6bec328faa9 \
+		--target $(RUST_SEL4_TOOLS_TARGET) \
+		--locked \
+		--root $(SEL4_PREFIX) \
+		sel4-kernel-loader
+
 # Append the payload to the loader using the loader CLI
-buld_img: build $(loader)
+build_img: build $(loader)
 	$(loader_cli) \
 		--loader $(loader) \
 		--sel4-prefix $(SEL4_PREFIX) \
@@ -85,7 +98,7 @@ disk_img: testcases support/vdso/vdso.so
 	sudo umount mount
 	sync
 
-run: buld_img
+run: build_img
 	$(qemu_cmd)
 	@rm $(image)
 
