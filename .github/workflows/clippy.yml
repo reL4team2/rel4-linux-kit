@@ -1,4 +1,4 @@
-name: Qemu Test
+name: Test Clippy
 
 on:
   workflow_dispatch:
