@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["sel4_cfg","sel4_cfg_attr","sel4_cfg_enum","sel4_cfg_match","sel4_cfg_struct"],"macro":["sel4_cfg_bool","sel4_cfg_if","sel4_cfg_str","sel4_cfg_usize","sel4_cfg_word","sel4_cfg_wrap_match"],"mod":["consts"]};

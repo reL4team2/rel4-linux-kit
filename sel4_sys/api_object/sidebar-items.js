@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["seL4_CapTableObject","seL4_EndpointObject","seL4_NonArchObjectTypeCount","seL4_NotificationObject","seL4_TCBObject","seL4_UntypedObject"],"type":["Type"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PollWakeEvent"],"mod":["file","info","init","mem","pcb","shm","signal"],"static":["ID_COUNTER"],"struct":["Sel4Task"]};

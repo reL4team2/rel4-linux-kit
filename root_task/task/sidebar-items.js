@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_kernel_thread","cnode_relative","make_child_vspace","run_tasks"],"struct":["Sel4Task","ThreadNotification"],"type":["NotiMutex"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["generate_ipc_send","ipc_trait","ipc_trait_impl"],"macro":["init_log","read_types","reply_with","write_values"],"mod":["config","ipc_saver","ipcrw","log_impl","macros","mem","page","root","slot"],"struct":["Logger","LoggerBuilder","ObjectAllocator"]};

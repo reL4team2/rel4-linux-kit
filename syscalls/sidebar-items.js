@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Sysno"],"fn":["syscall","syscall0","syscall1","syscall2","syscall3","syscall4","syscall5","syscall6"],"macro":["raw_syscall","syscall","syscall_args"],"mod":["aarch64","raw"],"struct":["Errno","SyscallArgs","SysnoMap","SysnoMapIter","SysnoMapValues","SysnoSet","SysnoSetIter"],"trait":["ErrnoSentinel"]};

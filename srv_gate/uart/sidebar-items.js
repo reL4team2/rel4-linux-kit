@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["_UartIfaceEvent_eventid"],"enum":["UartIfaceEvent"],"trait":["UartIface"]};

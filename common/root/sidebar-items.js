@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["RootEvent"],"fn":["alloc_page","alloc_untyped","create_channel","find_service","join_channel","register_irq","register_notify","shutdown","translate_addr"]};

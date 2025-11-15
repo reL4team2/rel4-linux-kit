@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DlmallocGlobalAlloc","StaticDlmallocAllocator","StaticHeap","StaticHeapBounds"],"trait":["GetStaticHeapBounds"],"type":["StaticDlmallocGlobalAlloc"]};

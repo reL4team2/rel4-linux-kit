@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["root_task"],"constant":["DEFAULT_STACK_SIZE"],"enum":["Never"],"fn":["set_global_allocator_mutex_notification"],"macro":["abort","debug_print","debug_println"],"mod":["panicking"],"trait":["Termination"]};

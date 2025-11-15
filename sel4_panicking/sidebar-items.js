@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["SMALL_PAYLOAD_MAX_SIZE"],"fn":["catch_unwind","panic_any","set_hook"],"struct":["ExternalPanicInfo","PanicMessage","Payload"],"trait":["SmallPayload","UpcastIntoPayload"],"type":["PanicHook"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FMT_RECORD_DEFAULT"],"enum":["LevelFilter"],"fn":["fmt_with_line","fmt_with_module"],"struct":["Logger","LoggerBuilder","SynchronizedLogger"],"type":["FmtRecordFn"]};

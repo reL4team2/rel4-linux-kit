@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Tock Register Interface"><title>tock_registers - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tock_registers" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-302de22f.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tock_registers/index.html">tock_<wbr>registers</a><span class="version">0.8.1</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#author" title="Author">Author</a></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>tock_registers</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/tock_registers/lib.rs.html#1-128">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Tock Register Interface</p>
+<p>Provides efficient mechanisms to express and use type-checked
+memory mapped registers and bitfields.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>
+<span class="kw">use </span>tock_registers::registers::{ReadOnly, ReadWrite};
+<span class="kw">use </span>tock_registers::register_bitfields;
+
+<span class="comment">// Register maps are specified like this:
+</span><span class="attr">#[repr(C)]
+</span><span class="kw">struct </span>Registers {
+    <span class="comment">// Control register: read-write
+    </span>cr: ReadWrite&lt;u32, Control::Register&gt;,
+    <span class="comment">// Status register: read-only
+    </span>s: ReadOnly&lt;u32, Status::Register&gt;,
+}
+
+<span class="comment">// Register fields and definitions look like this:
+</span><span class="macro">register_bitfields!</span>[u32,
+    <span class="comment">// Simpler bitfields are expressed concisely:
+    </span>Control [
+        <span class="doccomment">/// Stop the Current Transfer
+        </span>STOP <span class="number">8</span>,
+        <span class="doccomment">/// Software Reset
+        </span>SWRST <span class="number">7</span>,
+        <span class="doccomment">/// Master Disable
+        </span>MDIS <span class="number">1</span>,
+        <span class="doccomment">/// Master Enable
+        </span>MEN <span class="number">0
+    </span>],
+
+    <span class="comment">// More complex registers can express subtypes:
+    </span>Status [
+        TXCOMPLETE  OFFSET(<span class="number">0</span>) NUMBITS(<span class="number">1</span>) [],
+        TXINTERRUPT OFFSET(<span class="number">1</span>) NUMBITS(<span class="number">1</span>) [],
+        RXCOMPLETE  OFFSET(<span class="number">2</span>) NUMBITS(<span class="number">1</span>) [],
+        RXINTERRUPT OFFSET(<span class="number">3</span>) NUMBITS(<span class="number">1</span>) [],
+        MODE        OFFSET(<span class="number">4</span>) NUMBITS(<span class="number">3</span>) [
+            FullDuplex = <span class="number">0</span>,
+            HalfDuplex = <span class="number">1</span>,
+            Loopback = <span class="number">2</span>,
+            Disabled = <span class="number">3
+        </span>],
+        ERRORCOUNT OFFSET(<span class="number">6</span>) NUMBITS(<span class="number">3</span>) []
+    ]
+];</code></pre></div>
+<h3 id="author"><a class="doc-anchor" href="#author">§</a>Author</h3>
+<ul>
+<li>Shane Leonard <a href="mailto:shanel@stanford.edu">shanel@stanford.edu</a></li>
+</ul>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="fields/index.html" title="mod tock_registers::fields">fields</a></dt><dd>Register bitfield types and macros</dd><dt><a class="mod" href="interfaces/index.html" title="mod tock_registers::interfaces">interfaces</a></dt><dd>Interfaces (traits) to register types</dd><dt><a class="mod" href="macros/index.html" title="mod tock_registers::macros">macros</a></dt><dd>Macros for cleanly defining peripheral registers.</dd><dt><a class="mod" href="registers/index.html" title="mod tock_registers::registers">registers</a></dt><dd>Implementation of included register types.</dd></dl><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><dl class="item-table"><dt><a class="macro" href="macro.bitmask.html" title="macro tock_registers::bitmask">bitmask</a></dt><dd>Helper macro for computing bitmask of variable number of bits</dd><dt><a class="macro" href="macro.register_bitfields.html" title="macro tock_registers::register_bitfields">register_<wbr>bitfields</a></dt><dd>Define register types and fields.</dd><dt><a class="macro" href="macro.register_bitmasks.html" title="macro tock_registers::register_bitmasks">register_<wbr>bitmasks</a></dt><dd>Helper macro for defining register fields.</dd><dt><a class="macro" href="macro.register_fields.html" title="macro tock_registers::register_fields">register_<wbr>fields</a></dt><dt><a class="macro" href="macro.register_structs.html" title="macro tock_registers::register_structs">register_<wbr>structs</a></dt><dt><a class="macro" href="macro.test_fields.html" title="macro tock_registers::test_fields">test_<wbr>fields</a></dt><dd>Statically validate the size and offsets of the fields defined
+within the register struct through the <code>register_structs!()</code>
+macro.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.LocalRegisterCopy.html" title="struct tock_registers::LocalRegisterCopy">Local<wbr>Register<wbr>Copy</a></dt><dd>A read-write copy of register contents.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.RegisterLongName.html" title="trait tock_registers::RegisterLongName">Register<wbr>Long<wbr>Name</a></dt><dd>Descriptive name for each register.</dd><dt><a class="trait" href="trait.UIntLike.html" title="trait tock_registers::UIntLike">UInt<wbr>Like</a></dt><dd>Trait representing the base type of registers.</dd></dl></section></div></main></body></html>

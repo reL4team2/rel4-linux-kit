@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sel4_async_single_threaded_executor", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCreate a new, empty pool of tasks.\nRun a future to completion on the current thread.\nGet a clonable handle to the pool as a <code>Spawn</code>.")

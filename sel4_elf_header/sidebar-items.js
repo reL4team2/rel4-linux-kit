@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ELFMAG","PT_GNU_EH_FRAME","PT_LOAD","PT_NULL","PT_TLS"],"struct":["ElfHeader","ElfHeaderIdent","ProgramHeader"]};

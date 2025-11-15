@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["_BlockIfaceEvent_eventid"],"enum":["BlockIfaceEvent"],"trait":["BlockIface"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_test_child","futex_requeue","futex_signal_task","futex_wake","wait_futex","wake_hangs"],"static":["TASK_MAP","WAITING_PID"],"struct":["WaitAnyChild","WaitFutex","WaitPid"],"type":["ArcTask","FutexTable"]};

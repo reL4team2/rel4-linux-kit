@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Statically validate the size and offsets of the fields defined within the register struct through the `register_structs!()` macro."><title>test_fields in tock_registers - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tock_registers" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-302de22f.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc macro"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tock_registers/index.html">tock_<wbr>registers</a><span class="version">0.8.1</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">tock_registers</a></div><h1>Macro <span class="macro">test_fields</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/tock_registers/macros.rs.html#165-355">Source</a> </span></div><pre class="rust item-decl"><code>macro_rules! test_fields {
+    (@root $struct:ident $(&lt;$life:lifetime&gt;)? { $($input:tt)* } ) =&gt; { ... };
+    (@munch $struct:ident $(&lt;$life:lifetime&gt;)?
+        (
+            $(#[$attr_end:meta])*
+            ($size:expr =&gt; @END),
+        )
+        : $stmts:expr
+    ) =&gt; { ... };
+    (@munch $struct:ident $(&lt;$life:lifetime&gt;)?
+        (
+            $(#[$attr:meta])*
+            ($offset_start:expr =&gt; $vis:vis $field:ident: $ty:ty),
+            $(#[$attr_next:meta])*
+            ($offset_end:expr =&gt; $($next:tt)*),
+            $($after:tt)*
+        )
+        : $output:expr
+    ) =&gt; { ... };
+    (@munch $struct:ident $(&lt;$life:lifetime&gt;)?
+        (
+            $(#[$attr:meta])*
+            ($offset_start:expr =&gt; $padding:ident),
+            $(#[$attr_next:meta])*
+            ($offset_end:expr =&gt; $($next:tt)*),
+            $($after:tt)*
+        )
+        : $output:expr
+    ) =&gt; { ... };
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Statically validate the size and offsets of the fields defined
+within the register struct through the <code>register_structs!()</code>
+macro.</p>
+<p>This macro expands to an expression which contains static
+assertions about various parameters of the individual fields in
+the register struct definition. It will test for:</p>
+<ul>
+<li>
+<p>Proper start offset of padding fields. It will fail in cases
+such as</p>
+<div class="example-wrap"><pre class="language-should_fail"><code># #[macro_use]
+# extern crate tock_registers;
+# use tock_registers::register_structs;
+# use tock_registers::registers::ReadWrite;
+register_structs! {
+    UartRegisters {
+        (0x04 =&gt; _reserved),
+        (0x08 =&gt; foo: ReadWrite&lt;u32&gt;),
+        (0x0C =&gt; @END),
+    }
+}
+# // This is required for rustdoc to not place this code snipped into an
+# // fn main() {...} function.
+# fn main() { }</code></pre></div>
+<p>In this example, the start offset of <code>_reserved</code> should have been <code>0x00</code>
+instead of <code>0x04</code>.</p>
+</li>
+<li>
+<p>Correct start offset and end offset (start offset of next field) in actual
+fields. It will fail in cases such as</p>
+<div class="example-wrap"><pre class="language-should_fail"><code># #[macro_use]
+# extern crate tock_registers;
+# use tock_registers::register_structs;
+# use tock_registers::registers::ReadWrite;
+register_structs! {
+    UartRegisters {
+        (0x00 =&gt; foo: ReadWrite&lt;u32&gt;),
+        (0x05 =&gt; bar: ReadWrite&lt;u32&gt;),
+        (0x08 =&gt; @END),
+    }
+}
+# // This is required for rustdoc to not place this code snipped into an
+# // fn main() {...} function.
+# fn main() { }</code></pre></div>
+<p>In this example, the start offset of <code>bar</code> and thus the end offset of
+<code>foo</code> should have been <code>0x04</code> instead of <code>0x05</code>.</p>
+</li>
+<li>
+<p>Invalid alignment of fields.</p>
+</li>
+<li>
+<p>That the end marker matches the actual generated struct size. This will
+fail in cases such as</p>
+<div class="example-wrap"><pre class="language-should_fail"><code># #[macro_use]
+# extern crate tock_registers;
+# use tock_registers::register_structs;
+# use tock_registers::registers::ReadWrite;
+register_structs! {
+    UartRegisters {
+        (0x00 =&gt; foo: ReadWrite&lt;u32&gt;),
+        (0x04 =&gt; bar: ReadWrite&lt;u32&gt;),
+        (0x10 =&gt; @END),
+    }
+}
+# // This is required for rustdoc to not place this code snipped into an
+# // fn main() {...} function.
+# fn main() { }</code></pre></div></li>
+</ul>
+</div></details></section></div></main></body></html>

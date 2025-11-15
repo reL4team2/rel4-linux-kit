@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sel4_sync_trivial", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")

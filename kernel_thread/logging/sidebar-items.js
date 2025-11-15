@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["fmt_with_module","init"],"static":["LOGGER"]};

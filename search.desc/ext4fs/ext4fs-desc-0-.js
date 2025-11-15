@@ -1,0 +1,1 @@
+searchState.loadedDescShard("ext4fs", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCreate a new disk.\nGet the position of the cursor.\nSet the position of the cursor.")

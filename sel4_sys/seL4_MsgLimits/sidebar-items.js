@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["seL4_MsgExtraCapBits","seL4_MsgLengthBits","seL4_MsgMaxLength"],"type":["Type"]};

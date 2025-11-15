@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["_enum_pad_seL4_UserException_Msg","seL4_UserException_Code","seL4_UserException_FaultIP","seL4_UserException_Length","seL4_UserException_Number","seL4_UserException_SP","seL4_UserException_SPSR"],"type":["Type"]};

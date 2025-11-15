@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["map_ext4_type"],"struct":["Ext4DiskWrapper","Ext4FileSystem","Ext4FileWrapper"]};

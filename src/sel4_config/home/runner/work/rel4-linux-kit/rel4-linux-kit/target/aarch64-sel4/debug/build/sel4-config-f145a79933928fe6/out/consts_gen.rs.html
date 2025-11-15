@@ -1,0 +1,277 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/work/rel4-linux-kit/rel4-linux-kit/target/aarch64-sel4/debug/build/sel4-config-f145a79933928fe6/out/consts_gen.rs`."><title>consts_gen.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../../../../../../../../../../../../../" data-static-root-path="../../../../../../../../../../../../../static.files/" data-current-crate="sel4_config" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../../../../../../../../../../../../../static.files/storage-302de22f.js"></script><script defer src="../../../../../../../../../../../../../static.files/src-script-8fee9dc5.js"></script><script defer src="../../../../../../../../../../../../../src-files.js"></script><script defer src="../../../../../../../../../../../../../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../../../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">sel4_config/home/runner/work/rel4-linux-kit/rel4-linux-kit/target/aarch64-sel4/debug/build/sel4-config-f145a79933928fe6/out/</div>consts_gen.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
+<a href="#2" id="2">2</a>
+<a href="#3" id="3">3</a>
+<a href="#4" id="4">4</a>
+<a href="#5" id="5">5</a>
+<a href="#6" id="6">6</a>
+<a href="#7" id="7">7</a>
+<a href="#8" id="8">8</a>
+<a href="#9" id="9">9</a>
+<a href="#10" id="10">10</a>
+<a href="#11" id="11">11</a>
+<a href="#12" id="12">12</a>
+<a href="#13" id="13">13</a>
+<a href="#14" id="14">14</a>
+<a href="#15" id="15">15</a>
+<a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+<a href="#20" id="20">20</a>
+<a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
+<a href="#49" id="49">49</a>
+<a href="#50" id="50">50</a>
+<a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a></pre></div><pre class="rust"><code><span class="kw">pub const </span>AARCH32_FPU_ENABLE_CONTEXT_SWITCH: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>AARCH64_SERROR_IGNORE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>AARCH64_USER_CACHE_ENABLE: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>AARCH64_VSPACE_S2_START_L1: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ALLOW_SMC_CALLS: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARCH: <span class="kw-2">&amp;</span>str = <span class="string">"arm"</span>;
+<span class="kw">pub const </span>ARCH_AARCH32: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_AARCH64: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARCH_ARM: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARCH_ARM_HYP: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_ARM_V7A: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_ARM_V7VE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_ARM_V8A: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARCH_IA32: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_RISCV32: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_RISCV64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARCH_X86_64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A15: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A35: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A53: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A55: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A57: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A7: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A72: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A8: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_CORTEX_A9: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_ERRATA_430973: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_ERRATA_773022: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_GIC_V3_SUPPORT: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_HIKEY_OUTSTANDING_PREFETCHERS: <span class="kw-2">&amp;</span>str = <span class="string">"0"</span>;
+<span class="kw">pub const </span>ARM_HIKEY_PREFETCHER_NPFSTRM: <span class="kw-2">&amp;</span>str = <span class="string">"0"</span>;
+<span class="kw">pub const </span>ARM_HIKEY_PREFETCHER_STBPFDIS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_HIKEY_PREFETCHER_STBPFRS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_HIKEY_PREFETCHER_STRIDE: <span class="kw-2">&amp;</span>str = <span class="string">"0"</span>;
+<span class="kw">pub const </span>ARM_HYPERVISOR_SUPPORT: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARM_HYP_ENABLE_VCPU_CP14_SAVE_AND_RESTORE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_ICACHE_VIPT: <span class="kw-2">&amp;</span>str = <span class="string">""</span>;
+<span class="kw">pub const </span>ARM_MACH: <span class="kw-2">&amp;</span>str = <span class="string">""</span>;
+<span class="kw">pub const </span>ARM_PA_SIZE_BITS_40: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ARM_PA_SIZE_BITS_44: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>ARM_PLAT: <span class="kw-2">&amp;</span>str = <span class="string">"qemu-arm-virt"</span>;
+<span class="kw">pub const </span>ARM_SMMU: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>BENCHMARK_GENERIC: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>BENCHMARK_TRACEPOINTS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>BENCHMARK_TRACK_KERNEL_ENTRIES: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>BENCHMARK_TRACK_UTILISATION: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>BINARY_VERIFICATION_BUILD: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>CLZ_32: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>CLZ_64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>CLZ_NO_BUILTIN: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>COLOUR_PRINTING: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>CTZ_32: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>CTZ_64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>CTZ_NO_BUILTIN: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DANGEROUS_CODE_INJECTION: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DEBUG_BUILD: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>DEBUG_DISABLE_BRANCH_PREDICTION: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DEBUG_DISABLE_L1_DCACHE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DEBUG_DISABLE_L1_ICACHE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DEBUG_DISABLE_L2_CACHE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DEBUG_DISABLE_PREFETCHERS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>DISABLE_WFI_WFE_TRAPS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ENABLE_A9_PREFETCHER: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ENABLE_BENCHMARKS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>ENABLE_SMP_SUPPORT: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>EXCEPTION_FASTPATH: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>EXPORT_PCNT_USER: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>EXPORT_PMU_USER: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>EXPORT_PTMR_USER: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>EXPORT_VCNT_USER: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>EXPORT_VTMR_USER: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>FASTPATH: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>FPU_MAX_RESTORES_SINCE_SWITCH: <span class="kw-2">&amp;</span>str = <span class="string">"64"</span>;
+<span class="kw">pub const </span>HARDWARE_DEBUG_API: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>HAVE_FPU: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>IRQ_REPORTING: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>KERNEL_BENCHMARK: <span class="kw-2">&amp;</span>str = <span class="string">"none"</span>;
+<span class="kw">pub const </span>KERNEL_FWHOLE_PROGRAM: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_INVOCATION_REPORT_ERROR_IPC: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_LOG_BUFFER: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_MCS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_OPTIMISATION_CLONE_FUNCTIONS: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL: <span class="kw-2">&amp;</span>str = <span class="string">"-O2"</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL_O0: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL_O1: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL_O2: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL_O3: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_OPT_LEVEL_OS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>KERNEL_STACK_BITS: <span class="kw-2">&amp;</span>str = <span class="string">"12"</span>;
+<span class="kw">pub const </span>L1_CACHE_LINE_SIZE_BITS: <span class="kw-2">&amp;</span>str = <span class="string">"6"</span>;
+<span class="kw">pub const </span>LIB_SEL4_DEFAULT_FUNCTION_ATTRIBUTES: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>LIB_SEL4_FUNCTION_ATTRIBUTE: <span class="kw-2">&amp;</span>str = <span class="string">"inline"</span>;
+<span class="kw">pub const </span>LIB_SEL4_INLINE_INVOCATIONS: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>LIB_SEL4_PRINT_INVOCATION_ERRORS: <span class="kw-2">&amp;</span>str = <span class="string">"0"</span>;
+<span class="kw">pub const </span>LIB_SEL4_PUBLIC_SYMBOLS: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>LIB_SEL4_STUBS_USE_IPC_BUFFER_ONLY: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>MAX_NUM_BOOTINFO_UNTYPED_CAPS: <span class="kw-2">&amp;</span>str = <span class="string">"230"</span>;
+<span class="kw">pub const </span>MAX_NUM_NODES: <span class="kw-2">&amp;</span>str = <span class="string">"1"</span>;
+<span class="kw">pub const </span>MAX_NUM_TRACE_POINTS: <span class="kw-2">&amp;</span>str = <span class="string">"0"</span>;
+<span class="kw">pub const </span>MAX_NUM_WORK_UNITS_PER_PREEMPTION: <span class="kw-2">&amp;</span>str = <span class="string">"100"</span>;
+<span class="kw">pub const </span>NO_BENCHMARKS: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>NUM_DOMAINS: <span class="kw-2">&amp;</span>str = <span class="string">"1"</span>;
+<span class="kw">pub const </span>NUM_PRIORITIES: <span class="kw-2">&amp;</span>str = <span class="string">"256"</span>;
+<span class="kw">pub const </span>PADDR_USER_DEVICE_TOP: <span class="kw-2">&amp;</span>str = <span class="string">"17592186044416"</span>;
+<span class="kw">pub const </span>PLAT: <span class="kw-2">&amp;</span>str = <span class="string">"qemu-arm-virt"</span>;
+<span class="kw">pub const </span>PLAT_BCM2711: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_BCM2837: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_FVP: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_HIKEY: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_IMX7: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_IMX8MM_EVK: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_IMX8MP_EVK: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_IMX8MQ_EVK: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_MAAXBOARD: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_ODROIDC2: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_ODROIDC4: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_QEMU_ARM_VIRT: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>PLAT_QUARTZ64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_ROCKPRO64: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_TQMA8XQP1GB: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_TX1: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_TX2: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PLAT_ZYNQMP: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>PRINTING: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>RESET_CHUNK_BITS: <span class="kw-2">&amp;</span>str = <span class="string">"8"</span>;
+<span class="kw">pub const </span>RETYPE_FAN_OUT_LIMIT: <span class="kw-2">&amp;</span>str = <span class="string">"256"</span>;
+<span class="kw">pub const </span>ROOT_CNODE_SIZE_BITS: <span class="kw-2">&amp;</span>str = <span class="string">"12"</span>;
+<span class="kw">pub const </span>SEL4_ARCH: <span class="kw-2">&amp;</span>str = <span class="string">"aarch64"</span>;
+<span class="kw">pub const </span>SET_TLS_BASE_SELF: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>SIGNAL_FASTPATH: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>SMMU_INTERRUPT_ENABLE: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>TIMER_TICK_MS: <span class="kw-2">&amp;</span>str = <span class="string">"2"</span>;
+<span class="kw">pub const </span>TIME_SLICE: <span class="kw-2">&amp;</span>str = <span class="string">"5"</span>;
+<span class="kw">pub const </span>TK1_SMMU: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>USER_STACK_TRACE_LENGTH: <span class="kw-2">&amp;</span>str = <span class="string">"16"</span>;
+<span class="kw">pub const </span>VERIFICATION_BUILD: bool = <span class="bool-val">false</span>;
+<span class="kw">pub const </span>VTIMER_UPDATE_VOFFSET: bool = <span class="bool-val">true</span>;
+<span class="kw">pub const </span>WORD_SIZE: <span class="kw-2">&amp;</span>str = <span class="string">"64"</span>;
+</code></pre></div></section></main></body></html>

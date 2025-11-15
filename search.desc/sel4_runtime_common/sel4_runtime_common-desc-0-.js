@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sel4_runtime_common", 0, "Returns the argument unchanged.\nCalls <code>U::from(self)</code>.")

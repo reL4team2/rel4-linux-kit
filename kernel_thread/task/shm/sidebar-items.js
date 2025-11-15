@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"static":["SHARED_MEMORY"],"struct":["MapedSharedMemory","SharedMemory"]};

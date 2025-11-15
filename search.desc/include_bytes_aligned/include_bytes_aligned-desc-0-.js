@@ -1,0 +1,1 @@
+searchState.loadedDescShard("include_bytes_aligned", 0, "A simple macro that embeds the bytes of an external file …")

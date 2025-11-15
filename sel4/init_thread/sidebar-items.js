@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["suspend_self"],"mod":["slot"],"struct":["Slot","SlotRegion"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ALLOC_SIZE_BITS"],"fn":["alloc_notification","alloc_pt","alloc_untyped_unit","alloc_vdso_page","init","recycle_untyped_unit"],"static":["OBJ_ALLOCATOR","RECYCLED_UNTYPED"]};

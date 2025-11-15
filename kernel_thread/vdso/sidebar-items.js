@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_vdso_caps","init_vdso_addr"],"static":["VDSO_CAPS"]};

@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sel4_elf_header", 0, "Returns the argument unchanged.\nReturns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")

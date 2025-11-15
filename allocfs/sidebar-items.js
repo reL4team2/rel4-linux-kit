@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FileContainer"],"struct":["AllocFS","FSDir","FSDirInner","FSFile","FSFileInner","FSLink","FSLinkInner"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["HEAP_SIZE"],"fn":["main"],"static":["GLOBAL_ALLOCATOR","STATIC_HEAP"]};

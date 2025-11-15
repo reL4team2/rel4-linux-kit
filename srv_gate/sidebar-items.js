@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_print"],"macro":["def_blk_impl","def_event_handler","def_fs_impl","def_uart_impl","paste","print","println"],"mod":["blk","consts","event","fs","uart"],"static":["BLK_IMPLS","FS_IMPLS","UART_IMPLS"],"struct":["Console"]};

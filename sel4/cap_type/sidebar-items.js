@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AsidControl","AsidPool","CNode","Endpoint","HugePage","IrqControl","IrqHandler","LargePage","Notification","Null","PT","SmallPage","Smc","Tcb","Unspecified","UnspecifiedIntermediateTranslationTable","UnspecifiedPage","Untyped","VCpu","VSpace"],"type":["Granule"]};

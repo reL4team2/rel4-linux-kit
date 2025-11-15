@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEF_HEAP_SIZE","HEAP_SIZE"],"fn":["main"],"macro":["test_task"],"mod":["arch","child_test","consts","device","exception","fs","logging","rasync","syscall","task","timer","utils","vdso"],"static":["GLOBAL_ALLOCATOR","STATIC_HEAP"]};

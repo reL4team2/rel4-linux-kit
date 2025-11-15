@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["_FSIfaceEvent_eventid"],"enum":["FSIfaceEvent"],"trait":["FSIface"]};

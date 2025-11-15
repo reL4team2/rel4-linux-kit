@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["__sel4_root_task__main","main"],"mod":["config","cspace","handler","task","utils"],"static":["OBJ_ALLOCATOR","__sel4_runtime_common__stack_bottom"],"struct":["RootTaskHandler"]};

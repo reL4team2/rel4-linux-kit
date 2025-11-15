@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_SET_THREAD_POINTER_FN"],"enum":["ContArg"],"struct":["InvalidTlsImageError","Region","RegionLayoutError","StaticTlsAllocation","TlsImage","TlsReservationLayout","UncheckedTlsImage"],"type":["ContFn","SetThreadPointerFn"]};

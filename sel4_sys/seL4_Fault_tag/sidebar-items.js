@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["seL4_Fault_CapFault","seL4_Fault_NullFault","seL4_Fault_UnknownSyscall","seL4_Fault_UserException","seL4_Fault_VCPUFault","seL4_Fault_VGICMaintenance","seL4_Fault_VMFault","seL4_Fault_VPPIEvent"]};

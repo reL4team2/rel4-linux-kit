@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_ipc_buffer","init_ipc_buffer"]};

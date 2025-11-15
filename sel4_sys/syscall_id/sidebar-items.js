@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["Call","DebugCapIdentify","DebugDumpScheduler","DebugHalt","DebugNameThread","DebugPutChar","DebugSnapshot","NBRecv","NBSend","Recv","Reply","ReplyRecv","Send","Yield"]};

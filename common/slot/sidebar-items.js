@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["alloc_slot","alloc_slots","init","init_recv_slot","init_slot_edge_handler","recycle_slot"]};

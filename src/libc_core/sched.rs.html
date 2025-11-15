@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libc-core-0.2.5/src/sched.rs`."><title>sched.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="libc_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-302de22f.js"></script><script defer src="../../static.files/src-script-8fee9dc5.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">libc_core/</div>sched.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
+<a href="#2" id="2">2</a>
+<a href="#3" id="3">3</a>
+<a href="#4" id="4">4</a>
+<a href="#5" id="5">5</a>
+<a href="#6" id="6">6</a>
+<a href="#7" id="7">7</a>
+<a href="#8" id="8">8</a>
+<a href="#9" id="9">9</a>
+<a href="#10" id="10">10</a>
+<a href="#11" id="11">11</a>
+<a href="#12" id="12">12</a>
+<a href="#13" id="13">13</a>
+<a href="#14" id="14">14</a>
+<a href="#15" id="15">15</a>
+<a href="#16" id="16">16</a>
+<a href="#17" id="17">17</a>
+<a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+<a href="#20" id="20">20</a>
+<a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
+<a href="#46" id="46">46</a>
+<a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
+<a href="#49" id="49">49</a>
+<a href="#50" id="50">50</a>
+<a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a></pre></div><pre class="rust"><code><span class="doccomment">//! This module provides the `libc` types for SCHED (scheduling).
+//!
+//! MUSL: &lt;https://github.com/bminor/musl/blob/c47ad25ea3b484e10326f933e927c0bc8cded3da/include/sched.h&gt;
+
+</span><span class="macro">bitflags!</span> {
+    <span class="doccomment">/// 克隆标志，用于 `clone(2)` 或 `clone3(2)` 系统调用。
+    ///
+    /// MUSL: &lt;https://github.com/bminor/musl/blob/c47ad25ea3b484e10326f933e927c0bc8cded3da/include/sched.h#L50&gt;
+    </span><span class="attr">#[derive(Debug)]
+    </span><span class="kw">pub struct </span>CloneFlags: u32 {
+        <span class="doccomment">/// 指定发送给子进程的信号（低 8 位），如 SIGCHLD
+        </span><span class="kw">const </span>CSIGNAL                = <span class="number">0x000000ff</span>;
+        <span class="doccomment">/// 使用新的 time 命名空间（Linux 5.6+）
+        </span><span class="kw">const </span>CLONE_NEWTIME          = <span class="number">0x00000080</span>;
+        <span class="doccomment">/// 与父进程共享内存空间（即使用相同地址空间）
+        </span><span class="kw">const </span>CLONE_VM               = <span class="number">0x00000100</span>;
+        <span class="doccomment">/// 与父进程共享文件系统信息（当前目录、root 等）
+        </span><span class="kw">const </span>CLONE_FS               = <span class="number">0x00000200</span>;
+        <span class="doccomment">/// 与父进程共享打开的文件描述符
+        </span><span class="kw">const </span>CLONE_FILES            = <span class="number">0x00000400</span>;
+        <span class="doccomment">/// 与父进程共享信号处理函数
+        </span><span class="kw">const </span>CLONE_SIGHAND          = <span class="number">0x00000800</span>;
+        <span class="doccomment">/// 将 PIDFD 文件描述符写入 clone 参数中指定的位置
+        </span><span class="kw">const </span>CLONE_PIDFD            = <span class="number">0x00001000</span>;
+        <span class="doccomment">/// 被调试器使用，子进程会被 trace（如 ptrace）
+        </span><span class="kw">const </span>CLONE_PTRACE           = <span class="number">0x00002000</span>;
+        <span class="doccomment">/// 以 vfork 语义启动子进程，阻塞父进程直到 exec/exit
+        </span><span class="kw">const </span>CLONE_VFORK            = <span class="number">0x00004000</span>;
+        <span class="doccomment">/// 设置父进程为新进程的 parent，而不是调用进程
+        </span><span class="kw">const </span>CLONE_PARENT           = <span class="number">0x00008000</span>;
+        <span class="doccomment">/// 与父进程成为线程（共享 signal、VM、文件等）
+        </span><span class="kw">const </span>CLONE_THREAD           = <span class="number">0x00010000</span>;
+        <span class="doccomment">/// 使用新的挂载命名空间（mount namespace）
+        </span><span class="kw">const </span>CLONE_NEWNS            = <span class="number">0x00020000</span>;
+        <span class="doccomment">/// 与父进程共享 System V 信号量
+        </span><span class="kw">const </span>CLONE_SYSVSEM          = <span class="number">0x00040000</span>;
+        <span class="doccomment">/// 设置 TLS（线程局部存储）指针
+        </span><span class="kw">const </span>CLONE_SETTLS           = <span class="number">0x00080000</span>;
+        <span class="doccomment">/// 在指定地址写入子进程的 TID（parent 设置）
+        </span><span class="kw">const </span>CLONE_PARENT_SETTID    = <span class="number">0x00100000</span>;
+        <span class="doccomment">/// 进程退出时自动清除 TID（通常用于 futex 唤醒）
+        </span><span class="kw">const </span>CLONE_CHILD_CLEARTID   = <span class="number">0x00200000</span>;
+        <span class="doccomment">/// 被废弃，曾用于标记 detached 线程
+        </span><span class="kw">const </span>CLONE_DETACHED         = <span class="number">0x00400000</span>;
+        <span class="doccomment">/// 禁用子进程被 trace
+        </span><span class="kw">const </span>CLONE_UNTRACED         = <span class="number">0x00800000</span>;
+        <span class="doccomment">/// 在指定地址写入子进程的 TID（child 设置）
+        </span><span class="kw">const </span>CLONE_CHILD_SETTID     = <span class="number">0x01000000</span>;
+        <span class="doccomment">/// 使用新的 cgroup 命名空间（隔离控制组）
+        </span><span class="kw">const </span>CLONE_NEWCGROUP        = <span class="number">0x02000000</span>;
+        <span class="doccomment">/// 使用新的 UTS 命名空间（隔离主机名/域名）
+        </span><span class="kw">const </span>CLONE_NEWUTS           = <span class="number">0x04000000</span>;
+        <span class="doccomment">/// 使用新的 IPC 命名空间（隔离 System V IPC）
+        </span><span class="kw">const </span>CLONE_NEWIPC           = <span class="number">0x08000000</span>;
+        <span class="doccomment">/// 使用新的用户命名空间（user namespace）
+        </span><span class="kw">const </span>CLONE_NEWUSER          = <span class="number">0x10000000</span>;
+        <span class="doccomment">/// 使用新的 PID 命名空间（隔离进程号）
+        </span><span class="kw">const </span>CLONE_NEWPID           = <span class="number">0x20000000</span>;
+        <span class="doccomment">/// 使用新的网络命名空间（network namespace）
+        </span><span class="kw">const </span>CLONE_NEWNET           = <span class="number">0x40000000</span>;
+        <span class="doccomment">/// 启用 I/O 上下文的共享（Linux 2.6.25+）
+        </span><span class="kw">const </span>CLONE_IO               = <span class="number">0x80000000</span>;
+    }
+
+    <span class="doccomment">/// wait4 函数中使用的 option
+    ///
+    /// MUSL: &lt;https://github.com/bminor/musl/blob/86373b4999bfd9a9379bc4a3ca877b1c80a2a340/include/sys/wait.h#L36-L42&gt;
+    </span><span class="attr">#[derive(Debug, Clone, Copy)]
+    </span><span class="kw">pub struct </span>WaitOption: u32 {
+        <span class="doccomment">/// 如果没有子进程退出，wait4 立即返回 0，而不会阻塞等待。
+        </span><span class="kw">const </span>WHOHANG    =     <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
+        <span class="doccomment">/// 让 wait4 也返回因 SIGSTOP (如 CTRL+Z) 暂停的子进程信息。
+        /// 默认情况下，wait4 只会返回已退出的子进程。
+        </span><span class="kw">const </span>WUNTRACED  =     <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
+        <span class="doccomment">/// 返回已经被暂停后又通过 `SIGCONT` 恢复运行的子进程。
+        </span><span class="kw">const </span>WCONTINUED =     <span class="number">1 </span>&lt;&lt; <span class="number">3</span>;
+        <span class="doccomment">/// 不清除子进程的终止状态，使其之后还能再次被 `wait` 系列函数查询。
+        </span><span class="kw">const </span>WNOWAIT    = <span class="number">0x01000000</span>;
+    }
+}
+</code></pre></div></section></main></body></html>

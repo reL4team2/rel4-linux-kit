@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Register bitfield types and macros"><title>tock_registers::fields - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="tock_registers" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../../static.files/storage-302de22f.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../tock_registers/index.html">tock_<wbr>registers</a><span class="version">0.8.1</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module fields</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#register_bitfields-macro" title="`register_bitfields` macro"><code>register_bitfields</code> macro</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#traits" title="Traits">Traits</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate tock_<wbr>registers</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">tock_registers</a></div><h1>Module <span>fields</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/tock_registers/fields.rs.html#1-771">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Register bitfield types and macros</p>
+<p>To conveniently access and manipulate fields of a register, this
+library provides types and macros to describe and access bitfields
+of a register. This can be especially useful in conjuction with
+the APIs defined in <a href="../interfaces/index.html" title="mod tock_registers::interfaces"><code>interfaces</code></a>, which make
+use of these types and hence allow to access and manipulate
+bitfields of proper registers directly.</p>
+<p>A specific section (bitfield) in a register is described by the
+<a href="struct.Field.html" title="struct tock_registers::fields::Field"><code>Field</code></a> type, consisting of an unshifted bitmask over the base
+register <a href="../trait.UIntLike.html" title="trait tock_registers::UIntLike"><code>UIntLike</code></a> type, and a shift
+parameter. It is further associated with a specific
+<a href="../trait.RegisterLongName.html" title="trait tock_registers::RegisterLongName"><code>RegisterLongName</code></a>, which can prevent its use with incompatible
+registers.</p>
+<p>A value of a section of a register is described by the
+<a href="struct.FieldValue.html" title="struct tock_registers::fields::FieldValue"><code>FieldValue</code></a> type. It stores the information of the respective
+section in the register, as well as the associated value. A
+<a href="struct.FieldValue.html" title="struct tock_registers::fields::FieldValue"><code>FieldValue</code></a> can be created from a <a href="struct.Field.html" title="struct tock_registers::fields::Field"><code>Field</code></a> through the
+<a href="struct.Field.html#method.val" title="method tock_registers::fields::Field::val"><code>val</code></a> method.</p>
+<h3 id="register_bitfields-macro"><a class="doc-anchor" href="#register_bitfields-macro">§</a><code>register_bitfields</code> macro</h3>
+<p>For defining register layouts with an associated
+<a href="../trait.RegisterLongName.html" title="trait tock_registers::RegisterLongName"><code>RegisterLongName</code></a>, along with
+<a href="struct.Field.html" title="struct tock_registers::fields::Field"><code>Field</code></a>s and matching <a href="struct.FieldValue.html" title="struct tock_registers::fields::FieldValue"><code>FieldValue</code></a>s, a convenient macro-based
+interface can be used.</p>
+<p>The following example demonstrates how two registers can be
+defined, over a <code>u32</code> base type:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="macro">register_bitfields!</span>[u32,
+    Uart [
+        ENABLE OFFSET(<span class="number">0</span>) NUMBITS(<span class="number">4</span>) [
+            ON = <span class="number">8</span>,
+            OFF = <span class="number">0
+        </span>]
+    ],
+    Psel [
+        PIN OFFSET(<span class="number">0</span>) NUMBITS(<span class="number">6</span>),
+        CONNECT OFFSET(<span class="number">31</span>) NUMBITS(<span class="number">1</span>)
+    ],
+];
+
+<span class="comment">// In this scope, `Uart` is a module, representing the register and
+// its fields. `Uart::Register` is a `RegisterLongName` type
+// identifying this register. `Uart::ENABLE` is a field covering the
+// first 4 bits of this register. `Uart::ENABLE::ON` is a
+// `FieldValue` over that field, with the associated value 8.
+// We can now use the types like so:
+</span><span class="kw">let </span>reg: InMemoryRegister&lt;u32, Uart::Register&gt; = InMemoryRegister::new(<span class="number">0</span>);
+<span class="macro">assert!</span>(reg.read(Uart::ENABLE) == <span class="number">0x00000000</span>);
+reg.modify(Uart::ENABLE::ON);
+<span class="macro">assert!</span>(reg.get() == <span class="number">0x00000008</span>);</code></pre></div>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Field.html" title="struct tock_registers::fields::Field">Field</a></dt><dd>Specific section of a register.</dd><dt><a class="struct" href="struct.FieldValue.html" title="struct tock_registers::fields::FieldValue">Field<wbr>Value</a></dt><dd>Values for the specific register fields.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.TryFromValue.html" title="trait tock_registers::fields::TryFromValue">TryFrom<wbr>Value</a></dt><dd>Conversion of raw register value into enumerated values member.
+Implemented inside register_bitfields! macro for each bit field.</dd></dl></section></div></main></body></html>

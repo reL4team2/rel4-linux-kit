@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["seL4_AlignmentError","seL4_DeleteFirst","seL4_FailedLookup","seL4_IllegalOperation","seL4_InvalidArgument","seL4_InvalidCapability","seL4_NoError","seL4_NotEnoughMemory","seL4_NumErrors","seL4_RangeError","seL4_RevokeFirst","seL4_TruncatedMessage"],"type":["Type"]};

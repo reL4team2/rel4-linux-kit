@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["_enum_pad_seL4_LookupFailureType","seL4_DepthMismatch","seL4_GuardMismatch","seL4_InvalidRoot","seL4_MissingCapability","seL4_NoFailure"],"type":["Type"]};

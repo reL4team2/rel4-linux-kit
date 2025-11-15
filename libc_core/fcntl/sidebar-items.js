@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["AT_EACCESS","AT_FDCWD","AT_REMOVEDIR","AT_SYMLINK_FOLLOW","AT_SYMLINK_NOFOLLOW"],"enum":["FcntlCmd"],"struct":["OpenFlags"]};

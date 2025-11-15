@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get","get_bit","get_bits","set","set_bits","set_bits_from_slice"],"struct":["Bitfield"],"trait":["PrimInt","UnsignedPrimInt"]};

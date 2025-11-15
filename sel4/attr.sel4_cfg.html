@@ -1,0 +1,22 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Make the attached code conditional on a seL4 kernel configuration expression."><title>sel4_cfg in sel4 - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-cf3c48c1.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sel4" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (854f22563 2025-01-31)" data-channel="nightly" data-search-js="search-2d513d54.js" data-settings-js="settings-6dad6058.js" ><script src="../static.files/storage-302de22f.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-9b5d7e41.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sel4/index.html">sel4</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">sel4</a></div><h1>Attribute Macro <span class="attr">sel4_cfg</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"></span></div><pre class="rust item-decl"><code>#[sel4_cfg]</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Make the attached code conditional on a seL4 kernel configuration expression.</p>
+<p>Supports the same syntax as <code>#[cfg]</code>, except primitive expressions are based on seL4 kernel
+configuration rather than <code>rustc</code> configuration.</p>
+<p>Suppose <code>$SEL4_PREFIX/libsel4/include/kernel/gen_config.json</code> contains:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>{
+    <span class="string">"KERNEL_MCS"</span>: <span class="bool-val">false</span>,
+    <span class="string">"HAVE_FPU"</span>: <span class="bool-val">true
+    </span><span class="string">"ARM_PLAT"</span>: <span class="string">"bcm2711"</span>,
+    <span class="string">"MAX_NUM_NODES"</span>: <span class="string">"4"</span>,
+    ...
+}</code></pre></div>
+<p>Note that values are either booleans or strings. Configuration keys corresponding to boolean
+values are used as in <code>#[sel4_cfg(KERNEL_MCS)]</code>, whereas those corresponding to strings are used
+in equalities as in <code>#[sel4_cfg(MAX_NUM_NODES = 4)]</code>. Expressions can be combined using <code>not()</code>,
+<code>any()</code>, and <code>all()</code>, just like expressions in <code>#[cfg]</code>.</p>
+<p>Unlike in <code>#[cfg]</code>, using a configuration key that is not present in the seL4 kernel
+configuration will result in an error rather than just evaluating to false. That is, a key that
+is not part of an equality expression evaluates to itsqqqqqqqqqq boolean value, whereas in <code>#[cfg]</code> a key
+that is not part of an equality expression evaluates to whether it is present in the
+configuration.</p>
+</div></details></section></div></main></body></html>

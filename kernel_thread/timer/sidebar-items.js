@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TimerType"],"fn":["handle_process_timer","handle_timer","init","set_process_timer","wait_time"],"static":["TIMER_IRQ_NOTIFY","TIMER_IRQ_SLOT","TIME_QUEUE"],"struct":["WaitForTime"]};

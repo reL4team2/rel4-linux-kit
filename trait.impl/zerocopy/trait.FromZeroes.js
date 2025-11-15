@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["virtio_drivers",[["impl <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a> for <a class=\"struct\" href=\"virtio_drivers/device/blk/struct.BlkResp.html\" title=\"struct virtio_drivers::device::blk::BlkResp\">BlkResp</a><div class=\"where\">where\n    <a class=\"struct\" href=\"virtio_drivers/device/blk/struct.RespStatus.html\" title=\"struct virtio_drivers::device::blk::RespStatus\">RespStatus</a>: <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a>,</div>"],["impl <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a> for <a class=\"struct\" href=\"virtio_drivers/device/blk/struct.RespStatus.html\" title=\"struct virtio_drivers::device::blk::RespStatus\">RespStatus</a><div class=\"where\">where\n    u8: <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a>,</div>"],["impl <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a> for <a class=\"struct\" href=\"virtio_drivers/device/net/struct.VirtioNetHdr.html\" title=\"struct virtio_drivers::device::net::VirtioNetHdr\">VirtioNetHdr</a><div class=\"where\">where\n    Flags: <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a>,\n    GsoType: <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a>,\n    u16: <a class=\"trait\" href=\"zerocopy/trait.FromZeroes.html\" title=\"trait zerocopy::FromZeroes\">FromZeroes</a>,</div>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1696]}

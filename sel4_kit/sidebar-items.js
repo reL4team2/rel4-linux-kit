@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["arch","ipc","ipc_buffer","slot_manager"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_rights","coarsen_footprint","display_bootinfo","footprint","map_image","map_intermediate_translation_tables","round_down"]};
