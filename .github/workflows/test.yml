@@ -1,4 +1,4 @@
-name: Qemu Test
+name: Test Run In Qemu
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         type: string
   push:
 jobs:
-  test-build:
+  test-qemu:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
@@ -42,9 +42,13 @@ jobs:
       run: wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-26/seL4.tar.gz | gunzip | tar -xvf - -C .env --strip-components 1
     - name: Build Environment
       run: |
-        wget -qO- https://github.com/yfblock/rel4-kernel-autobuild/releases/download/release-2025-03-06/aarch64.tgz | tar -xf - -C .env
-        mkdir -p testcases
-        ./tools/modify-multi.py .env/aarch64 testcases
-    - run: tools/app-parser.py kernel-thread uart-thread block-thread fs-thread test-demo
+        cargo install --git https://github.com/seL4/rust-sel4 --rev 1cd063a0f69b2d2045bfa224a36c9341619f0e9b sel4-kernel-loader-add-payload
+        sudo apt-get -y install qemu-system-arm
+    - run: tools/app-parser.py kernel-thread block-thread uart-thread
     - name: Test Build 
-      run: make build
+      run: make build && make disk_img
+    - name: Test run
+      run: make run LOG=error | tee output.log
+      timeout-minutes: 20
+    - name: cat log
+      run: cat output.log | grep "system run done😸🎆🎆🎆"
