@@ -6,7 +6,7 @@ pub use timer::{GENERIC_TIMER_PCNT_IRQ, current_time, get_cval, set_timer};
 ///               Platform Design Document
 /// 手册: https://developer.arm.com/documentation/den0022/latest
 /// 章节: CHAPTER 5.1.9 SYSTEM_OFF
-const SYSMTEM_OFF: u32 = 0x8400_0008;
+// const SYSMTEM_OFF: u32 = 0x8400_0008;
 
 /// 关机指令
 ///
@@ -34,6 +34,7 @@ pub fn shutdown() -> ! {
     //         &mut resp
     //     );
     // });
+    /*
     sel4::init_thread::slot::SMC
         .cap()
         .smc_call(&sel4::sys::seL4_ARM_SMCContext {
@@ -41,7 +42,9 @@ pub fn shutdown() -> ! {
             ..Default::default()
         })
         .unwrap();
-    unreachable!()
+    */
+    loop {}
+    //unreachable!()
 }
 
 /// 执行无参数的系统调用

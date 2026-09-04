@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from os import path
 import os
-import tomllib
+# import tomllib
+import tomli as tomllib
 import argparse
 from typing import List
 

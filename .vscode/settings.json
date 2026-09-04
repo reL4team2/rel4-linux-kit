@@ -1,4 +1,7 @@
 {
+  "rust-analyzer.linkedProjects": [
+    "Cargo.toml"
+  ],
   "rust-analyzer.cargo.target": "aarch64-unknown-linux-gnu",
   "rust-analyzer.cargo.buildScripts.enable": true,
   "rust-analyzer.cargo.buildScripts.useRustcWrapper": true,
